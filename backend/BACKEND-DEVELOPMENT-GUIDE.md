@@ -1,6 +1,6 @@
 # 🚀 Backend Development Guide
 
-## Spring Boot + IntelliJ + MySQL for Beginners
+## Spring Boot + IntelliJ + MySQL
 
 Welcome to your journey into backend development! 🎉 This guide will help you understand our project structure and get your development environment set up for collaborative work. Don't worry if you're new to this - we'll take it step by step.
 
