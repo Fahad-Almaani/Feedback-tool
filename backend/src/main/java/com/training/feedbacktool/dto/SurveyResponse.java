@@ -1,4 +1,4 @@
-package com.training.feedbacktool.survey.api.dto;
+package com.training.feedbacktool.dto;
 
 import java.time.Instant;
 

@@ -1,4 +1,4 @@
-package com.training.feedbacktool.survey.api.dto;
+package com.training.feedbacktool.dto;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;

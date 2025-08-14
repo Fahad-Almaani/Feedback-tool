@@ -1,9 +1,9 @@
-package com.training.feedbacktool.survey;
+package com.training.feedbacktool.service;
 
 import com.training.feedbacktool.entity.Survey;
 import com.training.feedbacktool.repository.SurveyRepository;
-import com.training.feedbacktool.survey.api.dto.CreateSurveyRequest;
-import com.training.feedbacktool.survey.api.dto.SurveyResponse;
+import com.training.feedbacktool.dto.CreateSurveyRequest;
+import com.training.feedbacktool.dto.SurveyResponse;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
