@@ -1,0 +1,32 @@
+package com.training.feedbacktool.controller;
+
+import com.training.feedbacktool.service.SurveyService;
+import com.training.feedbacktool.dto.CreateSurveyRequest;
+import com.training.feedbacktool.dto.SurveyResponse;
+import jakarta.validation.Valid;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import java.net.URI;
+
+@RestController
+@RequestMapping("/surveys")
+public class SurveyController {
+
+    private final SurveyService service;
+
+    public SurveyController(SurveyService service) {
+        this.service = service;
+    }
+
+    @PostMapping("/create")
+    @PreAuthorize("hasRole('ADMIN')") // Admin only
+    public ResponseEntity<SurveyResponse> create(@Valid @RequestBody CreateSurveyRequest req) {
+        SurveyResponse created = service.create(req);
+        return ResponseEntity.created(URI.create("/surveys/" + created.id())).body(created);
+    }
+}
