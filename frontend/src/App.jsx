@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import Login from './pages/Login/Login'
+import Dashbord from './pages/Dashbord';
 // import './App.css'
 
 function App() {
@@ -13,7 +14,7 @@ function App() {
         <Route path="/login" element={<Login />} />
 
         {/* Placeholder for future routes */}
-        <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/dashboard" element={<Dashbord />} />
         <Route path="/signup" element={<SignUp />} />
         <Route path="/forgot" element={<ForgotPassword />} />
 
