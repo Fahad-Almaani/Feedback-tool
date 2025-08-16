@@ -1,7 +1,6 @@
 package com.training.feedbacktool.controller;
 
-
-import com.training.feedbacktool.entity.Responses;
+import com.training.feedbacktool.entity.Response;
 import com.training.feedbacktool.repository.ResponsesRepository;
 import org.springframework.web.bind.annotation.*;
 
@@ -14,29 +13,24 @@ public class ResponsesController {
 
     private final ResponsesRepository responsesRepository;
 
-
     public ResponsesController(ResponsesRepository responsesRepository) {
         this.responsesRepository = responsesRepository;
     }
 
-
     @GetMapping
-    public List<Responses> getAllResponses() {
+    public List<Response> getAllResponses() {
         return responsesRepository.findAll();
     }
 
-
     @GetMapping("/{id}")
-    public Optional<Responses> getResponseById(@PathVariable Long id) {
+    public Optional<Response> getResponseById(@PathVariable Long id) {
         return responsesRepository.findById(id);
     }
 
-
     @PostMapping
-    public Responses createResponse(@RequestBody Responses response) {
+    public Response createResponse(@RequestBody Response response) {
         return responsesRepository.save(response);
     }
-
 
     @DeleteMapping("/{id}")
     public void deleteResponse(@PathVariable Long id) {
