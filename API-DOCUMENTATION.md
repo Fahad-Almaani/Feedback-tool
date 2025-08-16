@@ -20,10 +20,52 @@ http://localhost:8080
 
 ## 🔐 Authentication
 
-The API uses role-based authentication. Some endpoints require specific roles:
+The API uses JWT-based role authentication. Some endpoints require specific roles:
 
 - **Public**: No authentication required
 - **ADMIN**: Requires admin role authentication
+
+### Login
+
+Authenticates a user and returns a JWT token for accessing protected endpoints.
+
+**Endpoint:** `POST /auth/login`  
+**Authentication:** Public (No authentication required)
+
+#### Request Body
+
+```json
+{
+  "email": "string",
+  "password": "string"
+}
+```
+
+#### Response
+
+```json
+{
+  "token": "string",
+  "email": "string",
+  "name": "string",
+  "role": "string",
+  "id": "number"
+}
+```
+
+#### Use Cases
+
+- User authentication
+- Obtaining JWT token for protected endpoints
+- Role-based access verification
+
+#### Example Usage
+
+After successful login, include the JWT token in the Authorization header for protected endpoints:
+
+```
+Authorization: Bearer <your-jwt-token>
+```
 
 ---
 
@@ -40,7 +82,7 @@ Creates a new user account in the system.
 
 ```json
 {
-  "username": "string",
+  "name": "string",
   "email": "string",
   "password": "string"
 }
@@ -51,7 +93,7 @@ Creates a new user account in the system.
 ```json
 {
   "id": "number",
-  "username": "string",
+  "name": "string",
   "email": "string",
   "role": "string",
   "createdAt": "datetime"
