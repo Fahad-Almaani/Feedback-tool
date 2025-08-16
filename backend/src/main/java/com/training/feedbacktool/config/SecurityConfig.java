@@ -26,6 +26,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/actuator/**").permitAll()
                         .requestMatchers("/users/create").permitAll() // Allow unauthenticated user creation
+                        .requestMatchers("/auth/login").permitAll() // Allow unauthenticated login
                         .anyRequest().authenticated())
                 .httpBasic(Customizer.withDefaults());
         return http.build();

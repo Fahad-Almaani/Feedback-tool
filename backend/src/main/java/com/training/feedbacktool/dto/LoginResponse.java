@@ -1,4 +1,9 @@
 package com.training.feedbacktool.dto;
 
-public class LoginResponse {
-}
+public record LoginResponse(
+        String token,
+        String email,
+        String name,
+        String role,
+        Long userId
+) {}
