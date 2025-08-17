@@ -1,8 +1,8 @@
-package com.training.feedbacktool.survey.api;
+package com.training.feedbacktool.controller;
 
-import com.training.feedbacktool.survey.SurveyService;
-import com.training.feedbacktool.survey.api.dto.CreateSurveyRequest;
-import com.training.feedbacktool.survey.api.dto.SurveyResponse;
+import com.training.feedbacktool.service.SurveyService;
+import com.training.feedbacktool.dto.CreateSurveyRequest;
+import com.training.feedbacktool.dto.SurveyResponse;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;

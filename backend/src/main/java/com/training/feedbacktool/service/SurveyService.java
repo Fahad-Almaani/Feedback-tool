@@ -1,15 +1,11 @@
-package com.training.feedbacktool.survey;
+package com.training.feedbacktool.service;
 
 import com.training.feedbacktool.entity.Survey;
 import com.training.feedbacktool.repository.SurveyRepository;
-import com.training.feedbacktool.survey.api.dto.CreateSurveyRequest;
-import com.training.feedbacktool.survey.api.dto.SurveyResponse;
-import org.springframework.data.domain.Sort;
+import com.training.feedbacktool.dto.CreateSurveyRequest;
+import com.training.feedbacktool.dto.SurveyResponse;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 public class SurveyService {
@@ -32,35 +28,24 @@ public class SurveyService {
         s.setTitle(req.title().trim());
         s.setDescription(req.description());
 
-        // Map "active" flag to current "status" field
+        // Map "active" (if provided) to your current "status" field
+        // default remains "DRAFT" as defined in the entity
         if (Boolean.TRUE.equals(req.active())) {
             s.setStatus("ACTIVE");
         } else {
+            // if active == null or false, keep DRAFT (or set explicitly)
             s.setStatus("DRAFT");
         }
 
         Survey saved = repo.save(s);
-        return toDto(saved);
-    }
 
-    // ---- NEW: list all surveys (newest first) ----
-    @Transactional(readOnly = true)
-    public List<SurveyResponse> listAll() {
-        return repo.findAll(Sort.by(Sort.Direction.DESC, "createdAt"))
-                .stream()
-                .map(this::toDto)
-                .collect(Collectors.toList());
-    }
-
-    // ---- mapper ----
-    private SurveyResponse toDto(Survey s) {
         return new SurveyResponse(
-                s.getId(),
-                s.getTitle(),
-                s.getDescription(),
-                s.getStatus(),
-                s.getCreatedAt(),
-                s.getUpdatedAt()
+                saved.getId(),
+                saved.getTitle(),
+                saved.getDescription(),
+                saved.getStatus(),
+                saved.getCreatedAt(),
+                saved.getUpdatedAt()
         );
     }
 }
