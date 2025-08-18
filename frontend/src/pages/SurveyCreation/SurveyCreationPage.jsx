@@ -399,7 +399,7 @@ export default function SurveyCreationPage() {
                             <svg className={styles.backIcon} viewBox="0 0 24 24" fill="currentColor">
                                 <path d="M19 12H5m0 0l7 7m-7-7l7-7" />
                             </svg>
-                            Back to Dashboard
+                            Back
                         </button>
                         <div className={styles.titleSection}>
                             <h1 className={styles.pageTitle}>
@@ -573,152 +573,84 @@ export default function SurveyCreationPage() {
             {/* Main Content */}
             <main className={styles.mainContent}>
                 <div className={styles.surveyBuilder}>
-                    {/* Progress Indicator */}
-                    <div className={styles.progressSection}>
-                        <div className={styles.progressBar}>
-                            <div className={styles.progressSteps}>
-                                <div className={`${styles.progressStep} ${survey.title ? styles.completed : styles.active}`}>
-                                    <span className={styles.stepNumber}>1</span>
-                                    <span className={styles.stepLabel}>Survey Info</span>
-                                </div>
-                                <div className={`${styles.progressStep} ${questions.length > 0 ? styles.completed : questions.length === 0 && survey.title ? styles.active : ''}`}>
-                                    <span className={styles.stepNumber}>2</span>
-                                    <span className={styles.stepLabel}>Questions</span>
-                                </div>
-                                <div className={`${styles.progressStep} ${questions.length > 0 && survey.title ? styles.active : ''}`}>
-                                    <span className={styles.stepNumber}>3</span>
-                                    <span className={styles.stepLabel}>Review & Publish</span>
-                                </div>
+                    {/* Main Content Area */}
+                    <div className={styles.mainContentArea}>
+                        {/* Survey Information */}
+                        <div className={styles.section}>
+                            <div className={styles.sectionHeader}>
+                                <h2 className={styles.sectionTitle}>
+                                    <svg className={styles.sectionIcon} viewBox="0 0 24 24" fill="currentColor">
+                                        <path d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25zM6.75 12h.008v.008H6.75V12zm0 3h.008v.008H6.75V15zm0 3h.008v.008H6.75V18z" />
+                                    </svg>
+                                    Survey Information
+                                    {survey.title && <span className={styles.completedBadge}>✓</span>}
+                                </h2>
+                                <p className={styles.sectionSubtitle}>Basic details about your survey</p>
                             </div>
-                        </div>
-                    </div>
-
-                    {/* Survey Information */}
-                    <div className={styles.section}>
-                        <div className={styles.sectionHeader}>
-                            <h2 className={styles.sectionTitle}>
-                                <svg className={styles.sectionIcon} viewBox="0 0 24 24" fill="currentColor">
-                                    <path d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25zM6.75 12h.008v.008H6.75V12zm0 3h.008v.008H6.75V15zm0 3h.008v.008H6.75V18z" />
-                                </svg>
-                                Survey Information
-                                {survey.title && <span className={styles.completedBadge}>✓</span>}
-                            </h2>
-                            <p className={styles.sectionSubtitle}>Basic details about your survey</p>
-                        </div>
-                        <div className={styles.sectionContent}>
-                            <div className={styles.formGroup}>
-                                <label className={styles.label}>
-                                    Survey Title <span className={styles.required}>*</span>
-                                </label>
-                                <input
-                                    type="text"
-                                    className={`${styles.input} ${errors.title ? styles.error : ''} ${survey.title ? styles.valid : ''}`}
-                                    placeholder="Enter survey title..."
-                                    value={survey.title}
-                                    onChange={(e) => {
-                                        setSurvey(prev => ({ ...prev, title: e.target.value }));
-                                        setUnsavedChanges(true);
-                                        if (errors.title) {
-                                            setErrors(prev => ({ ...prev, title: null }));
-                                        }
-                                    }}
-                                />
-                                {errors.title && <span className={styles.errorText}>{errors.title}</span>}
-                                {survey.title && !errors.title && (
-                                    <span className={styles.validText}>✓ Title looks good</span>
-                                )}
-                            </div>
-
-                            <div className={styles.formGroup}>
-                                <label className={styles.label}>
-                                    Description
-                                    <span className={styles.optional}>(optional)</span>
-                                </label>
-                                <textarea
-                                    className={styles.textarea}
-                                    placeholder="Describe your survey's purpose and instructions..."
-                                    value={survey.description}
-                                    onChange={(e) => {
-                                        setSurvey(prev => ({ ...prev, description: e.target.value }));
-                                        setUnsavedChanges(true);
-                                    }}
-                                    rows={4}
-                                />
-                                <div className={styles.characterCount}>
-                                    {survey.description.length}/500
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Questions Section */}
-                    <div className={styles.section}>
-                        <div className={styles.sectionHeader}>
-                            <h2 className={styles.sectionTitle}>
-                                <svg className={styles.sectionIcon} viewBox="0 0 24 24" fill="currentColor">
-                                    <path d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9 5.25h.008v.008H12v-.008z" />
-                                </svg>
-                                Survey Questions
-                                <span className={styles.questionCount}>({questions.length})</span>
-                                {questions.length > 0 && <span className={styles.completedBadge}>✓</span>}
-                            </h2>
-                            <p className={styles.sectionSubtitle}>Add and configure your survey questions</p>
-                        </div>
-                        <div className={styles.sectionContent}>
-                            {errors.questions && <div className={styles.errorBanner}>{errors.questions}</div>}
-
-                            <div className={styles.questionsList}>
-                                {questions.map((question, index) => (
-                                    <QuestionEditor
-                                        key={question.id}
-                                        question={question}
-                                        index={index}
-                                        onUpdate={updateQuestion}
-                                        onRemove={removeQuestion}
-                                        onDragStart={handleDragStart}
-                                        onDragOver={handleDragOver}
-                                        onDrop={handleDrop}
-                                        onUpdateMultipleChoice={updateMultipleChoiceOptions}
-                                        onUpdateRating={updateRatingOptions}
-                                        errors={errors}
-                                        isDragging={draggedIndex === index}
-                                        isFocused={focusedQuestionIndex === index}
-                                        questionTypes={QUESTION_TYPES}
+                            <div className={styles.sectionContent}>
+                                <div className={styles.formGroup}>
+                                    <label className={styles.label}>
+                                        Survey Title <span className={styles.required}>*</span>
+                                    </label>
+                                    <input
+                                        type="text"
+                                        className={`${styles.input} ${errors.title ? styles.error : ''} ${survey.title ? styles.valid : ''}`}
+                                        placeholder="Enter survey title..."
+                                        value={survey.title}
+                                        onChange={(e) => {
+                                            setSurvey(prev => ({ ...prev, title: e.target.value }));
+                                            setUnsavedChanges(true);
+                                            if (errors.title) {
+                                                setErrors(prev => ({ ...prev, title: null }));
+                                            }
+                                        }}
                                     />
-                                ))}
+                                    {errors.title && <span className={styles.errorText}>{errors.title}</span>}
+                                    {survey.title && !errors.title && (
+                                        <span className={styles.validText}>✓ Title looks good</span>
+                                    )}
+                                </div>
 
-                                {questions.length === 0 && (
-                                    <div className={styles.emptyQuestions}>
-                                        <svg className={styles.emptyIcon} viewBox="0 0 24 24" fill="currentColor">
+                                <div className={styles.formGroup}>
+                                    <label className={styles.label}>
+                                        Description
+                                        <span className={styles.optional}>(optional)</span>
+                                    </label>
+                                    <textarea
+                                        className={styles.textarea}
+                                        placeholder="Describe your survey's purpose and instructions..."
+                                        value={survey.description}
+                                        onChange={(e) => {
+                                            setSurvey(prev => ({ ...prev, description: e.target.value }));
+                                            setUnsavedChanges(true);
+                                        }}
+                                        rows={3}
+                                    />
+                                    <div className={styles.characterCount}>
+                                        {survey.description.length}/500
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Questions Section */}
+                        <div className={styles.section}>
+                            <div className={styles.sectionHeader}>
+                                <div className={styles.sectionTitleWrapper}>
+                                    <h2 className={styles.sectionTitle}>
+                                        <svg className={styles.sectionIcon} viewBox="0 0 24 24" fill="currentColor">
                                             <path d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9 5.25h.008v.008H12v-.008z" />
                                         </svg>
-                                        <h3 className={styles.emptyTitle}>No questions yet</h3>
-                                        <p className={styles.emptyDescription}>
-                                            Start building your survey by adding your first question
-                                        </p>
-                                        <div className={styles.emptyActions}>
-                                            <button
-                                                onClick={addQuestion}
-                                                className={styles.emptyActionButton}
-                                            >
-                                                Add First Question
-                                            </button>
-                                            <button
-                                                onClick={() => setShowTemplates(true)}
-                                                className={styles.emptyActionButtonSecondary}
-                                            >
-                                                Use Template
-                                            </button>
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-
-                            {questions.length > 0 && (
-                                <div className={styles.addQuestionSection}>
+                                        Survey Questions
+                                        <span className={styles.questionCount}>({questions.length})</span>
+                                        {questions.length > 0 && <span className={styles.completedBadge}>✓</span>}
+                                    </h2>
+                                    <p className={styles.sectionSubtitle}>Add and configure your survey questions</p>
+                                </div>
+                                <div className={styles.sectionActions}>
                                     <button
                                         onClick={addQuestion}
-                                        className={styles.addQuestionButton}
+                                        className={styles.addQuestionHeaderButton}
                                     >
                                         <svg className={styles.addIcon} viewBox="0 0 24 24" fill="currentColor">
                                             <path d="M12 4.5v15m7.5-7.5h-15" />
@@ -727,113 +659,168 @@ export default function SurveyCreationPage() {
                                     </button>
                                     <button
                                         onClick={() => setShowQuickAdd(true)}
-                                        className={styles.quickAddButton}
+                                        className={styles.quickAddHeaderButton}
                                     >
                                         ⚡ Quick Add
                                     </button>
                                 </div>
-                            )}
-                        </div>
-                    </div>
-
-                    {/* Survey Preview */}
-                    {questions.length > 0 && survey.title && (
-                        <div className={styles.section}>
-                            <div className={styles.sectionHeader}>
-                                <h2 className={styles.sectionTitle}>
-                                    <svg className={styles.sectionIcon} viewBox="0 0 24 24" fill="currentColor">
-                                        <path d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
-                                        <path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                    </svg>
-                                    Survey Preview
-                                </h2>
-                                <p className={styles.sectionSubtitle}>See how your survey will look to respondents</p>
                             </div>
                             <div className={styles.sectionContent}>
-                                <div className={styles.surveyPreview}>
-                                    <h3 className={styles.previewTitle}>{survey.title}</h3>
-                                    {survey.description && (
-                                        <p className={styles.previewDescription}>{survey.description}</p>
-                                    )}
-                                    <div className={styles.previewQuestions}>
-                                        {questions.map((question, index) => (
-                                            <div key={question.id} className={styles.previewQuestion}>
-                                                <h4>{index + 1}. {question.questionText || "Question text"}</h4>
-                                                <QuestionPreview
-                                                    question={question}
-                                                    ratingConfig={question.optionsJson && question.type === "RATING"
-                                                        ? JSON.parse(question.optionsJson)
-                                                        : { scale: 5, labels: { min: "Poor", max: "Excellent" } }
-                                                    }
-                                                    multipleChoiceOptions={question.optionsJson && question.type === "MULTIPLE_CHOICE"
-                                                        ? JSON.parse(question.optionsJson)
-                                                        : ["Option 1", "Option 2"]
-                                                    }
-                                                />
+                                {errors.questions && <div className={styles.errorBanner}>{errors.questions}</div>}
+
+                                <div className={styles.questionsList}>
+                                    {questions.map((question, index) => (
+                                        <QuestionEditor
+                                            key={question.id}
+                                            question={question}
+                                            index={index}
+                                            onUpdate={updateQuestion}
+                                            onRemove={removeQuestion}
+                                            onDragStart={handleDragStart}
+                                            onDragOver={handleDragOver}
+                                            onDrop={handleDrop}
+                                            onUpdateMultipleChoice={updateMultipleChoiceOptions}
+                                            onUpdateRating={updateRatingOptions}
+                                            errors={errors}
+                                            isDragging={draggedIndex === index}
+                                            isFocused={focusedQuestionIndex === index}
+                                            questionTypes={QUESTION_TYPES}
+                                        />
+                                    ))}
+
+                                    {questions.length === 0 && (
+                                        <div className={styles.emptyQuestions}>
+                                            <svg className={styles.emptyIcon} viewBox="0 0 24 24" fill="currentColor">
+                                                <path d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9 5.25h.008v.008H12v-.008z" />
+                                            </svg>
+                                            <h3 className={styles.emptyTitle}>No questions yet</h3>
+                                            <p className={styles.emptyDescription}>
+                                                Start building your survey by adding your first question
+                                            </p>
+                                            <div className={styles.emptyActions}>
+                                                <button
+                                                    onClick={addQuestion}
+                                                    className={styles.emptyActionButton}
+                                                >
+                                                    Add First Question
+                                                </button>
+                                                <button
+                                                    onClick={() => setShowTemplates(true)}
+                                                    className={styles.emptyActionButtonSecondary}
+                                                >
+                                                    Use Template
+                                                </button>
                                             </div>
-                                        ))}
-                                    </div>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         </div>
-                    )}
 
-                    {/* Action Buttons */}
-                    <div className={styles.actionSection}>
-                        {errors.submit && <div className={styles.errorBanner}>{errors.submit}</div>}
 
-                        <div className={styles.actionButtons}>
-                            <button
-                                onClick={() => navigate("/admin")}
-                                className={styles.cancelButton}
-                                disabled={isSubmitting}
-                            >
-                                Cancel
-                            </button>
+                    </div>
 
-                            <button
-                                onClick={() => handleSubmit("DRAFT")}
-                                className={styles.saveDraftButton}
-                                disabled={isSubmitting || (!survey.title.trim() && questions.length === 0)}
-                            >
-                                {isSubmitting ? (
-                                    <>
-                                        <div className={styles.spinner}></div>
-                                        Saving...
-                                    </>
-                                ) : (
-                                    <>
-                                        <svg className={styles.saveIcon} viewBox="0 0 24 24" fill="currentColor">
-                                            <path d="M17.593 3.322c1.1.128 1.907 1.077 1.907 2.185V21L12 17.25 4.5 21V5.507c0-1.108.806-2.057 1.907-2.185a48.507 48.507 0 0111.186 0z" />
-                                        </svg>
-                                        Save Draft
-                                    </>
-                                )}
-                            </button>
-
-                            <button
-                                onClick={() => handleSubmit("ACTIVE")}
-                                className={styles.publishButton}
-                                disabled={isSubmitting || !survey.title.trim() || questions.length === 0}
-                            >
-                                {isSubmitting ? (
-                                    <>
-                                        <div className={styles.spinner}></div>
-                                        Publishing...
-                                    </>
-                                ) : (
-                                    <>
-                                        <svg className={styles.publishIcon} viewBox="0 0 24 24" fill="currentColor">
-                                            <path d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
-                                        </svg>
-                                        Publish Survey
-                                        {survey.title.trim() && questions.length > 0 && (
-                                            <span className={styles.readyBadge}>Ready!</span>
-                                        )}
-                                    </>
-                                )}
-                            </button>
+                    {/* Progress Sidebar */}
+                    <div className={styles.progressSection}>
+                        <div className={styles.progressHeader}>
+                            <h3 className={styles.progressTitle}>Survey Progress</h3>
                         </div>
+
+                        <div className={styles.progressChecklist}>
+                            <div className={`${styles.progressItem} ${survey.title ? styles.completed : styles.active}`}>
+                                <div className={styles.progressIcon}>
+                                    {survey.title ? '✓' : '1'}
+                                </div>
+                                <span className={styles.progressText}>Survey Information</span>
+                            </div>
+                            <div className={`${styles.progressItem} ${questions.length > 0 ? styles.completed : questions.length === 0 && survey.title ? styles.active : ''}`}>
+                                <div className={styles.progressIcon}>
+                                    {questions.length > 0 ? '✓' : '2'}
+                                </div>
+                                <span className={styles.progressText}>Add Questions ({questions.length})</span>
+                            </div>
+                        </div>
+
+                        {/* Action Buttons */}
+                        <div className={styles.actionSection}>
+                            {errors.submit && <div className={styles.errorBanner}>{errors.submit}</div>}
+
+                            <div className={styles.actionButtons}>
+                                <button
+                                    onClick={() => navigate("/admin")}
+                                    className={styles.cancelButton}
+                                    disabled={isSubmitting}
+                                >
+                                    Cancel
+                                </button>
+
+                                <button
+                                    onClick={() => handleSubmit("DRAFT")}
+                                    className={styles.saveDraftButton}
+                                    disabled={isSubmitting || (!survey.title.trim() && questions.length === 0)}
+                                >
+                                    {isSubmitting ? (
+                                        <>
+                                            <div className={styles.spinner}></div>
+                                            Saving...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <svg className={styles.saveIcon} viewBox="0 0 24 24" fill="currentColor">
+                                                <path d="M17.593 3.322c1.1.128 1.907 1.077 1.907 2.185V21L12 17.25 4.5 21V5.507c0-1.108.806-2.057 1.907-2.185a48.507 48.507 0 0111.186 0z" />
+                                            </svg>
+                                            Save Draft
+                                        </>
+                                    )}
+                                </button>
+
+                                <button
+                                    onClick={() => handleSubmit("ACTIVE")}
+                                    className={styles.publishButton}
+                                    disabled={isSubmitting || !survey.title.trim() || questions.length === 0}
+                                >
+                                    {isSubmitting ? (
+                                        <>
+                                            <div className={styles.spinner}></div>
+                                            Publishing...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <svg className={styles.publishIcon} viewBox="0 0 24 24" fill="currentColor">
+                                                <path d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
+                                            </svg>
+                                            Publish Survey
+                                            {survey.title.trim() && questions.length > 0 && (
+                                                <span className={styles.readyBadge}>Ready!</span>
+                                            )}
+                                        </>
+                                    )}
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Survey Preview in Sidebar */}
+                        {questions.length > 0 && survey.title && (
+                            <div className={styles.sidebarPreview}>
+                                <h4>Quick Preview</h4>
+                                <div className={styles.miniPreview}>
+                                    <h5>{survey.title}</h5>
+                                    {survey.description && <p>{survey.description.slice(0, 100)}...</p>}
+                                    <div className={styles.miniQuestions}>
+                                        {questions.slice(0, 3).map((q, i) => (
+                                            <div key={q.id} className={styles.miniQuestion}>
+                                                {i + 1}. {q.questionText || "Question text"}
+                                            </div>
+                                        ))}
+                                        {questions.length > 3 && (
+                                            <div className={styles.moreQuestions}>
+                                                +{questions.length - 3} more questions
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </div>
             </main>
@@ -879,7 +866,7 @@ function QuestionEditor({
         return { scale: 5, labels: { min: "Poor", max: "Excellent" } };
     });
 
-    const [isExpanded, setIsExpanded] = useState(isFocused || !question.questionText);
+    const [isExpanded, setIsExpanded] = useState(!question.questionText.trim());
     const [validationState, setValidationState] = useState("");
 
     // Real-time validation
