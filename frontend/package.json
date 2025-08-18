@@ -10,15 +10,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
-<<<<<<< HEAD
-<<<<<<< HEAD
     "@tailwindcss/vite": "^4.1.12",
-=======
-    "@tailwindcss/vite": "^4.1.11",
->>>>>>> 81ee5153c1011bfc5f5667c5462e9d0f87fceab2
-=======
-    "@tailwindcss/vite": "^4.1.12",
->>>>>>> 17537b4436d464dde29d53a2888ca4c8d9c5d570
+    "lucide-react": "^0.540.0",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "react-router-dom": "^7.8.0",
