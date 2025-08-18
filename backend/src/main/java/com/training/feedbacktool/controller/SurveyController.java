@@ -34,6 +34,13 @@ public class SurveyController {
         return ResponseEntity.created(URI.create("/surveys/" + created.id())).body(created);
     }
 
+    @PostMapping
+    @PreAuthorize("hasRole('ADMIN')") // Admin only
+    public ResponseEntity<SurveyResponse> createSurvey(@Valid @RequestBody CreateSurveyRequest req) {
+        SurveyResponse created = service.create(req);
+        return ResponseEntity.created(URI.create("/surveys/" + created.id())).body(created);
+    }
+
     @GetMapping
     @PreAuthorize("hasRole('ADMIN')") // Admin only
     public List<SurveyResponse> listAll() {

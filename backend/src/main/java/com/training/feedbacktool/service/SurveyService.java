@@ -4,6 +4,7 @@ import com.training.feedbacktool.entity.Survey;
 import com.training.feedbacktool.entity.Question;
 import com.training.feedbacktool.repository.SurveyRepository;
 import com.training.feedbacktool.dto.CreateSurveyRequest;
+import com.training.feedbacktool.dto.CreateQuestionRequest;
 import com.training.feedbacktool.dto.SurveyResponse;
 import com.training.feedbacktool.dto.PublicSurveyResponse;
 import com.training.feedbacktool.dto.QuestionResponse;
@@ -11,6 +12,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.ArrayList;
 import java.util.stream.Collectors;
 
 @Service
@@ -41,6 +43,21 @@ public class SurveyService {
         } else {
             // if active == null or false, keep DRAFT (or set explicitly)
             s.setStatus("DRAFT");
+        }
+
+        // Create questions if provided
+        if (req.questions() != null && !req.questions().isEmpty()) {
+            List<Question> questions = new ArrayList<>();
+            for (CreateQuestionRequest questionReq : req.questions()) {
+                Question question = new Question();
+                question.setType(questionReq.type());
+                question.setQuestionText(questionReq.questionText());
+                question.setOptionsJson(questionReq.optionsJson());
+                question.setOrderNumber(questionReq.orderNumber());
+                question.setSurvey(s);
+                questions.add(question);
+            }
+            s.setQuestions(questions);
         }
 
         Survey saved = repo.save(s);
