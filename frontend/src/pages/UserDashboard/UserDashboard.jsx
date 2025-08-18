@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
+import LoadingSpinner from '../../components/LoadingSpinner';
 import styles from './UserDashboard.module.css';
 
 const UserDashboard = () => {
@@ -118,19 +119,12 @@ const UserDashboard = () => {
 
     if (loading) {
         return (
-            <div className={styles.dashboardPage}>
-                <div className={styles.backgroundElements}>
-                    <div className={styles.floatingShape1}></div>
-                    <div className={styles.floatingShape2}></div>
-                    <div className={styles.floatingShape3}></div>
-                    <div className={styles.floatingShape4}></div>
-                </div>
-
-                <div className={styles.loadingContainer}>
-                    <div className={styles.spinner}></div>
-                    <div className={styles.loadingText}>Loading your dashboard...</div>
-                </div>
-            </div>
+            <LoadingSpinner
+                fullScreen={true}
+                text="Loading your dashboard..."
+                size="large"
+                variant="primary"
+            />
         );
     }
 

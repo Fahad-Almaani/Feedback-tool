@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
+import { SimpleSpinner } from "../../components/LoadingSpinner";
 import styles from "./Login.module.css";
 
 export default function Login() {
@@ -193,7 +194,7 @@ export default function Login() {
               >
                 {loading ? (
                   <>
-                    <div className={styles.spinner}></div>
+                    <SimpleSpinner size="small" variant="white" />
                     Signing In...
                   </>
                 ) : (
