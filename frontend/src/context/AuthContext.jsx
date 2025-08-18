@@ -38,7 +38,7 @@ export const AuthProvider = ({ children }) => {
 
     const login = async (email, password) => {
         try {
-            const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8080/api';
+            const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8080';
             const response = await fetch(`${backendUrl}/auth/login`, {
                 method: 'POST',
                 headers: {
@@ -76,15 +76,15 @@ export const AuthProvider = ({ children }) => {
             return { success: true, user: data };
         } catch (error) {
             console.error('Login error:', error);
-            
+
             // Handle specific CORS errors
             if (error.name === 'TypeError' && error.message.includes('fetch')) {
-                return { 
-                    success: false, 
-                    error: 'Unable to connect to server. Please check if the backend is running and CORS is configured properly.' 
+                return {
+                    success: false,
+                    error: 'Unable to connect to server. Please check if the backend is running and CORS is configured properly.'
                 };
             }
-            
+
             return { success: false, error: error.message };
         }
     };
