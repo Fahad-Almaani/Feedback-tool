@@ -24,7 +24,7 @@ export default function SurveyFormPage() {
             try {
                 setLoading(true);
                 const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8080';
-                const response = await fetch(`${backendUrl}/api/surveys/${surveyId}/public`);
+                const response = await fetch(`${backendUrl}/surveys/${surveyId}/public`);
 
                 if (!response.ok) {
                     throw new Error('Survey not found or not available');
@@ -66,6 +66,18 @@ export default function SurveyFormPage() {
             ...prev,
             [questionId]: value
         }));
+    };
+
+    // Calculate progress
+    const calculateProgress = () => {
+        if (!survey || !survey.questions) return 0;
+
+        const totalQuestions = survey.questions.length;
+        const answeredQuestions = Object.values(answers).filter(answer =>
+            answer && answer.toString().trim() !== ""
+        ).length;
+
+        return Math.round((answeredQuestions / totalQuestions) * 100);
     };
 
     // Check if survey is private and handle authentication
@@ -219,6 +231,22 @@ export default function SurveyFormPage() {
                             <p className={styles.surveyDescription}>{survey.description}</p>
                         )}
                     </div>
+
+                    {/* Progress Bar */}
+                    <div className={styles.progressContainer}>
+                        <div className={styles.progressInfo}>
+                            <span className={styles.progressText}>
+                                Progress: {Object.values(answers).filter(answer => answer && answer.toString().trim() !== "").length} of {survey.questions.length} questions answered
+                            </span>
+                            <span className={styles.progressPercentage}>{calculateProgress()}%</span>
+                        </div>
+                        <div className={styles.progressBar}>
+                            <div
+                                className={styles.progressFill}
+                                style={{ width: `${calculateProgress()}%` }}
+                            ></div>
+                        </div>
+                    </div>
                 </div>
 
                 {/* Survey Form */}
@@ -326,7 +354,8 @@ export default function SurveyFormPage() {
 // Question Input Component
 function QuestionInput({ question, value, onChange }) {
     const handleRatingChange = (rating) => {
-        onChange(rating.toString());
+        // Handle both string and number ratings
+        onChange(typeof rating === 'string' ? rating : rating.toString());
     };
 
     switch (question.type) {
@@ -375,27 +404,54 @@ function QuestionInput({ question, value, onChange }) {
             );
 
         case "RATING":
-            const ratingConfig = question.optionsJson ? JSON.parse(question.optionsJson) : { scale: 5, labels: { min: "Poor", max: "Excellent" } };
+            const ratingOptions = question.optionsJson ? JSON.parse(question.optionsJson) : [];
+
+            // Handle different rating formats
+            let ratingConfig;
+            if (Array.isArray(ratingOptions)) {
+                // Handle array format like ["Very Dissatisfied", "Dissatisfied", "Neutral", "Satisfied", "Very Satisfied"]
+                ratingConfig = {
+                    scale: ratingOptions.length,
+                    labels: {
+                        min: ratingOptions[0] || "Poor",
+                        max: ratingOptions[ratingOptions.length - 1] || "Excellent"
+                    },
+                    options: ratingOptions
+                };
+            } else {
+                // Handle object format like { scale: 5, labels: { min: "Poor", max: "Excellent" } }
+                ratingConfig = ratingOptions.scale ? ratingOptions : { scale: 5, labels: { min: "Poor", max: "Excellent" } };
+            }
+
             return (
                 <div className={styles.ratingInput}>
                     <div className={styles.ratingScale}>
                         <span className={styles.ratingLabel}>{ratingConfig.labels.min}</span>
                         <div className={styles.ratingButtons}>
-                            {Array.from({ length: ratingConfig.scale }, (_, i) => (
-                                <button
-                                    key={i}
-                                    type="button"
-                                    className={`${styles.ratingButton} ${value === (i + 1).toString() ? styles.selected : ''}`}
-                                    onClick={() => handleRatingChange(i + 1)}
-                                >
-                                    {i + 1}
-                                </button>
-                            ))}
+                            {Array.from({ length: ratingConfig.scale }, (_, i) => {
+                                const buttonValue = ratingConfig.options ? ratingConfig.options[i] : (i + 1).toString();
+                                const isSelected = value === buttonValue;
+
+                                return (
+                                    <button
+                                        key={i}
+                                        type="button"
+                                        className={`${styles.ratingButton} ${isSelected ? styles.selected : ''}`}
+                                        onClick={() => handleRatingChange(buttonValue)}
+                                        title={ratingConfig.options ? ratingConfig.options[i] : `Rating ${i + 1}`}
+                                    >
+                                        {i + 1}
+                                    </button>
+                                );
+                            })}
                         </div>
                         <span className={styles.ratingLabel}>{ratingConfig.labels.max}</span>
                     </div>
                     <div className={styles.ratingHint}>
-                        Click a number to rate from {ratingConfig.labels.min} to {ratingConfig.labels.max}
+                        {ratingConfig.options
+                            ? `Click a number to select your rating`
+                            : `Click a number to rate from ${ratingConfig.labels.min} to ${ratingConfig.labels.max}`
+                        }
                     </div>
                 </div>
             );

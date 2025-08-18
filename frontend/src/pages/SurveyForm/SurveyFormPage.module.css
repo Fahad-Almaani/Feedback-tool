@@ -9,7 +9,7 @@
   display: flex;
   align-items: flex-start;
   justify-content: center;
-  padding: var(--space-lg);
+  padding: var(--space-md) var(--space-xs);
 }
 
 /* Animated Background Elements */
@@ -88,7 +88,7 @@
   position: relative;
   z-index: 10;
   width: 100%;
-  max-width: 800px;
+  max-width: 1200px;
   background: var(--bg-overlay);
   backdrop-filter: blur(20px);
   border-radius: var(--radius-2xl);
@@ -108,10 +108,76 @@
 /* Survey Header */
 .surveyHeader {
   background: var(--primary-gradient);
-  padding: var(--space-2xl);
+  padding: var(--space-lg) var(--space-xl);
   text-align: center;
   color: var(--text-white);
   position: relative;
+}
+
+/* Progress Bar */
+.progressContainer {
+  margin-bottom: var(--space-lg);
+  padding: 0 var(--space-md);
+}
+
+.progressInfo {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-sm);
+  font-size: var(--font-size-sm);
+  opacity: 0.9;
+}
+
+.progressText {
+  font-weight: 600;
+}
+
+.progressPercentage {
+  font-weight: 700;
+}
+
+.progressBar {
+  width: 100%;
+  height: 8px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.progressFill {
+  height: 100%;
+  background: linear-gradient(90deg, #ffffff, #f0f0f0);
+  border-radius: var(--radius-full);
+  transition: width 0.5s ease-in-out;
+  box-shadow: 0 2px 8px rgba(255, 255, 255, 0.3);
+  position: relative;
+}
+
+.progressFill::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 20px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4));
+  animation: shimmer 2s infinite;
+}
+
+@keyframes shimmer {
+  0% {
+    transform: translateX(-20px);
+    opacity: 0;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(20px);
+    opacity: 0;
+  }
 }
 
 .surveyHeader::before {
@@ -219,13 +285,15 @@
 /* Form Container */
 .formContainer {
   background: var(--bg-primary);
-  padding: var(--space-2xl);
+  padding: var(--space-lg) var(--space-xl);
 }
 
 .surveyForm {
   display: flex;
   flex-direction: column;
   gap: var(--space-xl);
+  max-width: 1000px;
+  margin: 0 auto;
 }
 
 /* Question Card */
@@ -834,9 +902,23 @@
 }
 
 /* Responsive Design */
+@media (min-width: 1400px) {
+  .surveyContainer {
+    max-width: 1400px;
+  }
+
+  .formContainer {
+    padding: var(--space-xl) var(--space-2xl);
+  }
+
+  .surveyHeader {
+    padding: var(--space-xl) var(--space-2xl);
+  }
+}
+
 @media (max-width: 768px) {
   .surveyPage {
-    padding: var(--space-md);
+    padding: var(--space-sm);
   }
 
   .surveyContainer {
@@ -845,7 +927,7 @@
 
   .surveyHeader,
   .formContainer {
-    padding: var(--space-lg);
+    padding: var(--space-md);
   }
 
   .questionCard {
@@ -884,16 +966,26 @@
   .authOptions {
     gap: var(--space-sm);
   }
+
+  .progressContainer {
+    padding: 0 var(--space-sm);
+  }
+
+  .progressInfo {
+    flex-direction: column;
+    gap: var(--space-xs);
+    text-align: center;
+  }
 }
 
 @media (max-width: 480px) {
   .surveyPage {
-    padding: var(--space-sm);
+    padding: var(--space-xs);
   }
 
   .surveyHeader,
   .formContainer {
-    padding: var(--space-md);
+    padding: var(--space-sm) var(--space-md);
   }
 
   .surveyTitle {
