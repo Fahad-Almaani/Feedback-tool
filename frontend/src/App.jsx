@@ -10,6 +10,7 @@ import ForgotPassword from './pages/ForgotPassword';
 import NotFound from './pages/NotFound';
 import AdminDashboard from './pages/AdminDashboard/AdminDashboard'
 import UserDashboard from './pages/UserDashboard/UserDashboard';
+import SurveyCreationPage from './pages/SurveyCreation/SurveyCreationPage';
 
 // Component that handles initial routing based on auth state
 const AppRoutes = () => {
@@ -40,6 +41,18 @@ const AppRoutes = () => {
       <Route path="/admin/dashboard" element={
         <ProtectedRoute requiredRole="ADMIN">
           <AdminDashboard />
+        </ProtectedRoute>
+      } />
+      <Route path="/admin/surveys/create" element={
+        <ProtectedRoute requiredRole="ADMIN">
+          <SurveyCreationPage />
+        </ProtectedRoute>
+      } />
+
+      {/* Legacy admin routes */}
+      <Route path="/admin" element={
+        <ProtectedRoute requiredRole="ADMIN">
+          <Navigate to="/admin/dashboard" replace />
         </ProtectedRoute>
       } />
 

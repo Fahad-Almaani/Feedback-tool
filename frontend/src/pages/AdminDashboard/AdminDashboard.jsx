@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useAuth } from "../../context/AuthContext";
+import { useNavigate } from "react-router-dom";
 import {
   LineChart,
   Line,
@@ -109,6 +110,7 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [isVisible, setIsVisible] = useState(false);
   const { user, logout } = useAuth();
+  const navigate = useNavigate();
 
   useEffect(() => {
     // Trigger entrance animation
@@ -344,7 +346,7 @@ export default function AdminDashboard() {
             </div>
             <div className={styles.sectionContent}>
               <div className={styles.quickActions}>
-                <div className={styles.actionCard}>
+                <div className={styles.actionCard} onClick={() => navigate("/admin/surveys/create")}>
                   <svg className={styles.actionIcon} viewBox="0 0 24 24" fill="currentColor">
                     <path d="M12 4.5v15m7.5-7.5h-15" />
                   </svg>
