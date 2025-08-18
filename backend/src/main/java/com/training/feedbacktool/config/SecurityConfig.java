@@ -30,13 +30,14 @@ public class SecurityConfig {
     SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
                 // Use the CORS bean defined in CorsConfig (do NOT redeclare it here)
-                .cors(cors -> {})
+                .cors(cors -> {
+                })
                 .csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/actuator/**", "/users/create", "/auth/login").permitAll()
-                        .anyRequest().authenticated()
-                )
+                        .requestMatchers("/surveys/*/public").permitAll() // Allow public survey access
+                        .anyRequest().authenticated())
                 // Register JWT filter BEFORE UsernamePasswordAuthenticationFilter
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 

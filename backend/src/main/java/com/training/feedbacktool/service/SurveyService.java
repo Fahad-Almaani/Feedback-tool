@@ -1,13 +1,18 @@
 package com.training.feedbacktool.service;
 
 import com.training.feedbacktool.entity.Survey;
+import com.training.feedbacktool.entity.Question;
 import com.training.feedbacktool.repository.SurveyRepository;
 import com.training.feedbacktool.dto.CreateSurveyRequest;
+import com.training.feedbacktool.dto.CreateQuestionRequest;
 import com.training.feedbacktool.dto.SurveyResponse;
+import com.training.feedbacktool.dto.PublicSurveyResponse;
+import com.training.feedbacktool.dto.QuestionResponse;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.ArrayList;
 import java.util.stream.Collectors;
 
 @Service
@@ -40,6 +45,21 @@ public class SurveyService {
             s.setStatus("DRAFT");
         }
 
+        // Create questions if provided
+        if (req.questions() != null && !req.questions().isEmpty()) {
+            List<Question> questions = new ArrayList<>();
+            for (CreateQuestionRequest questionReq : req.questions()) {
+                Question question = new Question();
+                question.setType(questionReq.type());
+                question.setQuestionText(questionReq.questionText());
+                question.setOptionsJson(questionReq.optionsJson());
+                question.setOrderNumber(questionReq.orderNumber());
+                question.setSurvey(s);
+                questions.add(question);
+            }
+            s.setQuestions(questions);
+        }
+
         Survey saved = repo.save(s);
 
         return new SurveyResponse(
@@ -50,7 +70,6 @@ public class SurveyService {
                 saved.getCreatedAt(),
                 saved.getUpdatedAt());
     }
-
 
     public List<SurveyResponse> listAll() {
         List<Survey> surveys = repo.findAll();
@@ -66,5 +85,29 @@ public class SurveyService {
 
                 .collect(Collectors.toList());
 
+    }
+
+    public PublicSurveyResponse findByIdWithQuestions(Long id) {
+        Survey survey = repo.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Survey not found with id: " + id));
+
+        // Convert questions to DTOs
+        List<QuestionResponse> questionResponses = survey.getQuestions().stream()
+                .map(question -> new QuestionResponse(
+                        question.getId(),
+                        question.getType(),
+                        question.getQuestionText(),
+                        question.getOptionsJson(),
+                        question.getOrderNumber()))
+                .collect(Collectors.toList());
+
+        return new PublicSurveyResponse(
+                survey.getId(),
+                survey.getTitle(),
+                survey.getDescription(),
+                survey.getStatus(),
+                survey.getCreatedAt(),
+                survey.getUpdatedAt(),
+                questionResponses);
     }
 }
