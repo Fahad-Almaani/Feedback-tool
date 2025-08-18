@@ -1,7 +1,7 @@
-/* Modern Professional Login Page Styles */
+/* Modern Professional SignUp Page Styles */
 
-/* Main Login Page Container */
-.loginPage {
+/* Main SignUp Page Container */
+.signupPage {
   min-height: 100vh;
   position: relative;
   overflow: hidden;
@@ -84,7 +84,7 @@
 }
 
 /* Main Content Container */
-.loginContainer {
+.signupContainer {
   position: relative;
   z-index: 10;
   width: 100%;
@@ -102,7 +102,7 @@
   transition: all var(--transition-slow);
 }
 
-.loginContainer.fadeIn {
+.signupContainer.fadeIn {
   opacity: 1;
   transform: translateY(0px);
 }
@@ -227,14 +227,14 @@
   margin: 0 auto;
 }
 
-/* Features Section */
-.features {
+/* Benefits Section */
+.benefits {
   display: flex;
   flex-direction: column;
   gap: var(--space-md);
 }
 
-.feature {
+.benefit {
   display: flex;
   align-items: center;
   gap: var(--space-md);
@@ -245,24 +245,24 @@
   transition: all var(--transition-normal);
 }
 
-.feature:hover {
+.benefit:hover {
   background: rgba(255, 255, 255, 0.15);
   transform: translateX(10px);
 }
 
-.featureIcon {
+.benefitIcon {
   font-size: var(--font-size-2xl);
   min-width: 50px;
   text-align: center;
 }
 
-.feature h3 {
+.benefit h3 {
   font-size: var(--font-size-lg);
   font-weight: 600;
   margin: 0 0 0.25rem 0;
 }
 
-.feature p {
+.benefit p {
   font-size: var(--font-size-sm);
   margin: 0;
   opacity: 0.8;
@@ -383,21 +383,49 @@
   height: 20px;
 }
 
-/* Form Options */
-.formOptions {
+/* Password Strength Indicator */
+.passwordStrength {
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  gap: var(--space-sm);
+  margin-top: var(--space-xs);
+}
+
+.strengthBar {
+  flex: 1;
+  height: 4px;
+  background: #e5e7eb;
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.strengthProgress {
+  height: 100%;
+  transition: all var(--transition-normal);
+  border-radius: 2px;
+}
+
+.strengthText {
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  min-width: 60px;
+  text-align: right;
+}
+
+/* Terms Section */
+.termsSection {
+  margin: var(--space-md) 0;
 }
 
 .checkboxLabel {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: var(--space-xs);
   font-size: var(--font-size-sm);
   color: var(--text-secondary);
   cursor: pointer;
   user-select: none;
+  line-height: 1.5;
 }
 
 .checkboxLabel input[type="checkbox"] {
@@ -410,10 +438,12 @@
   position: relative;
   width: 18px;
   height: 18px;
+  min-width: 18px;
   border: 2px solid var(--border-color);
   border-radius: var(--radius-sm);
   background: var(--bg-primary);
   transition: all var(--transition-fast);
+  margin-top: 2px;
 }
 
 .checkboxLabel input[type="checkbox"]:checked + .checkmark {
@@ -433,15 +463,14 @@
   transform: rotate(45deg);
 }
 
-.forgotLink {
+.termsLink {
   color: var(--primary-color);
   text-decoration: none;
-  font-size: var(--font-size-sm);
   font-weight: 500;
   transition: all var(--transition-fast);
 }
 
-.forgotLink:hover {
+.termsLink:hover {
   color: var(--secondary-color);
   text-decoration: underline;
 }
@@ -612,28 +641,28 @@
   height: 20px;
 }
 
-/* Signup Text */
-.signupText {
+/* Login Text */
+.loginText {
   text-align: center;
   color: var(--text-secondary);
   font-size: var(--font-size-sm);
 }
 
-.signupLink {
+.loginLink {
   color: var(--primary-color);
   text-decoration: none;
   font-weight: 600;
   transition: color var(--transition-fast);
 }
 
-.signupLink:hover {
+.loginLink:hover {
   color: var(--secondary-color);
   text-decoration: underline;
 }
 
 /* Responsive Design */
 @media (max-width: 1024px) {
-  .loginContainer {
+  .signupContainer {
     grid-template-columns: 1fr;
     max-width: 500px;
   }
@@ -651,32 +680,32 @@
     font-size: var(--font-size-3xl);
   }
 
-  .features {
+  .benefits {
     flex-direction: row;
     gap: var(--space-sm);
   }
 
-  .feature {
+  .benefit {
     flex-direction: column;
     text-align: center;
     padding: var(--space-sm);
   }
 
-  .feature h3 {
+  .benefit h3 {
     font-size: var(--font-size-base);
   }
 
-  .feature p {
+  .benefit p {
     font-size: var(--font-size-xs);
   }
 }
 
 @media (max-width: 768px) {
-  .loginPage {
+  .signupPage {
     padding: var(--space-md);
   }
 
-  .loginContainer {
+  .signupContainer {
     gap: 0;
   }
 
@@ -693,19 +722,19 @@
     font-size: var(--font-size-2xl);
   }
 
-  .features {
+  .benefits {
     flex-direction: column;
     gap: var(--space-sm);
   }
 
-  .feature {
+  .benefit {
     flex-direction: row;
     text-align: left;
   }
 }
 
 @media (max-width: 480px) {
-  .loginPage {
+  .signupPage {
     padding: var(--space-sm);
   }
 
@@ -735,5 +764,15 @@
   .passwordToggle svg {
     width: 16px;
     height: 16px;
+  }
+
+  .checkboxLabel {
+    font-size: var(--font-size-xs);
+  }
+
+  .checkmark {
+    width: 16px;
+    height: 16px;
+    min-width: 16px;
   }
 }
