@@ -92,7 +92,7 @@ export const AuthProvider = ({ children }) => {
     const register = async (name, email, password) => {
         try {
             const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8080';
-            const response = await fetch(`${backendUrl}/auth/register`, {
+            const response = await fetch(`${backendUrl}/users/create`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
