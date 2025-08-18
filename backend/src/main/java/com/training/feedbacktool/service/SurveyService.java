@@ -45,7 +45,18 @@ public class SurveyService {
                 saved.getDescription(),
                 saved.getStatus(),
                 saved.getCreatedAt(),
-                saved.getUpdatedAt()
-        );
+                saved.getUpdatedAt());
+    }
+
+    public java.util.List<SurveyResponse> listAll() {
+        return repo.findAll().stream()
+                .map(survey -> new SurveyResponse(
+                        survey.getId(),
+                        survey.getTitle(),
+                        survey.getDescription(),
+                        survey.getStatus(),
+                        survey.getCreatedAt(),
+                        survey.getUpdatedAt()))
+                .collect(java.util.stream.Collectors.toList());
     }
 }
