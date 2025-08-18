@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import styles from "./SignUp.module.css";
 
@@ -19,6 +19,7 @@ export default function SignUp() {
 
     const { register } = useAuth();
     const navigate = useNavigate();
+    const location = useLocation();
 
     useEffect(() => {
         // Trigger entrance animation
@@ -69,12 +70,8 @@ export default function SignUp() {
         const result = await register(formData.name, formData.email, formData.password);
 
         if (result.success) {
-            // Redirect based on user role
-            if (result.user.role === 'ADMIN') {
-                navigate('/admin/dashboard');
-            } else {
-                navigate('/user/dashboard');
-            }
+            console.log('Registration successful! Navigation will be handled by App routing.');
+            // No need to handle navigation here - App.jsx will handle it
         } else {
             setError(result.error);
         }
@@ -378,7 +375,14 @@ export default function SignUp() {
                         {/* Login Link */}
                         <p className={styles.loginText}>
                             Already have an account?{" "}
-                            <a href="/login" className={styles.loginLink}>
+                            <a
+                                href="/login"
+                                onClick={(e) => {
+                                    e.preventDefault();
+                                    navigate('/login', { state: location.state });
+                                }}
+                                className={styles.loginLink}
+                            >
                                 Sign in here
                             </a>
                         </p>

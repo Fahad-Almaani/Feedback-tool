@@ -180,6 +180,85 @@
   }
 }
 
+/* Sticky Progress Bar */
+.stickyProgressBar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+  z-index: 1000;
+  animation: slideDown 0.3s ease-out;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+}
+
+.stickyProgressContent {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: var(--space-md) var(--space-md);
+}
+
+.stickyProgressInfo {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-xs);
+  font-size: var(--font-size-sm);
+}
+
+.stickyProgressText {
+  font-weight: 600;
+  color: var(--text-white);
+  opacity: 0.9;
+}
+
+.stickyProgressPercentage {
+  font-weight: 700;
+  color: var(--text-white);
+}
+
+.stickyProgressBarTrack {
+  width: 100%;
+  height: 8px;
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.stickyProgressFill {
+  height: 100%;
+  background: linear-gradient(90deg, #ffffff, #f8f9ff);
+  border-radius: var(--radius-full);
+  transition: width 0.5s ease-in-out;
+  box-shadow: 0 2px 8px rgba(255, 255, 255, 0.5);
+  position: relative;
+}
+
+.stickyProgressFill::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 15px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4));
+  animation: shimmer 2s infinite;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 .surveyHeader::before {
   content: "";
   position: absolute;
@@ -261,6 +340,137 @@
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+}
+
+/* Auth Prompt for Non-Authenticated Users */
+.authPrompt {
+  margin: var(--space-md) 0;
+  padding: var(--space-md);
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(10px);
+}
+
+.authPromptContent {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-md);
+  text-align: left;
+}
+
+.authPromptLeft {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  flex: 1;
+}
+
+.authButtons {
+  display: flex;
+  gap: var(--space-xs);
+  flex-shrink: 0;
+}
+
+.authIcon {
+  width: 20px;
+  height: 20px;
+  opacity: 0.8;
+  flex-shrink: 0;
+}
+
+.authPromptText {
+  font-size: var(--font-size-sm);
+  opacity: 0.85;
+  line-height: 1.4;
+  flex: 1;
+}
+
+.loginButton {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  padding: var(--space-xs) var(--space-md);
+  background: rgba(255, 255, 255, 0.15);
+  color: var(--text-white);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  font-family: var(--font-family);
+  cursor: pointer;
+  transition: all var(--transition-normal);
+  backdrop-filter: blur(10px);
+  flex-shrink: 0;
+}
+
+.loginButton:hover {
+  background: rgba(255, 255, 255, 0.25);
+  border-color: rgba(255, 255, 255, 0.4);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(255, 255, 255, 0.15);
+}
+
+.loginIcon {
+  width: 14px;
+  height: 14px;
+}
+
+.signupButton {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  padding: var(--space-xs) var(--space-md);
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-white);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  font-family: var(--font-family);
+  cursor: pointer;
+  transition: all var(--transition-normal);
+  backdrop-filter: blur(10px);
+  flex-shrink: 0;
+}
+
+.signupButton:hover {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.35);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(255, 255, 255, 0.1);
+}
+
+.signupIcon {
+  width: 14px;
+  height: 14px;
+}
+
+/* Welcome Message for Authenticated Users */
+.welcomeMessage {
+  margin: var(--space-md) 0;
+  padding: var(--space-sm) var(--space-md);
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-sm);
+  backdrop-filter: blur(10px);
+}
+
+.welcomeIcon {
+  width: 18px;
+  height: 18px;
+  opacity: 0.85;
+}
+
+.welcomeText {
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  opacity: 0.9;
 }
 
 .surveyInfo {
@@ -976,6 +1186,21 @@
     gap: var(--space-xs);
     text-align: center;
   }
+
+  .stickyProgressContent {
+    padding: var(--space-xs) var(--space-sm);
+  }
+
+  .stickyProgressInfo {
+    flex-direction: column;
+    gap: var(--space-xs);
+    text-align: center;
+    margin-bottom: var(--space-xs);
+  }
+
+  .stickyProgressText {
+    font-size: var(--font-size-xs);
+  }
 }
 
 @media (max-width: 480px) {
@@ -1015,5 +1240,59 @@
   .submitButton {
     padding: var(--space-sm) var(--space-lg);
     font-size: var(--font-size-base);
+  }
+
+  .stickyProgressContent {
+    padding: var(--space-xs);
+  }
+
+  .stickyProgressText {
+    font-size: var(--font-size-xs);
+    text-align: center;
+  }
+
+  .stickyProgressBarTrack {
+    height: 4px;
+  }
+
+  .authPrompt {
+    margin: var(--space-sm) 0;
+    padding: var(--space-sm);
+  }
+
+  .authPromptContent {
+    flex-direction: column;
+    gap: var(--space-sm);
+    text-align: center;
+  }
+
+  .authPromptLeft {
+    justify-content: center;
+  }
+
+  .authPromptText {
+    font-size: var(--font-size-xs);
+  }
+
+  .authButtons {
+    justify-content: center;
+  }
+
+  .loginButton,
+  .signupButton {
+    padding: var(--space-xs) var(--space-sm);
+    font-size: var(--font-size-xs);
+  }
+
+  .welcomeMessage {
+    margin: var(--space-md) 0;
+    padding: var(--space-sm) var(--space-md);
+    flex-direction: column;
+    gap: var(--space-xs);
+  }
+
+  .welcomeText {
+    font-size: var(--font-size-sm);
+    text-align: center;
   }
 }
