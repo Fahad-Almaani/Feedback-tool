@@ -51,9 +51,11 @@ public class SurveyService {
                 saved.getUpdatedAt());
     }
 
+
     public List<SurveyResponse> listAll() {
         List<Survey> surveys = repo.findAll();
         return surveys.stream()
+
                 .map(survey -> new SurveyResponse(
                         survey.getId(),
                         survey.getTitle(),
@@ -61,6 +63,8 @@ public class SurveyService {
                         survey.getStatus(),
                         survey.getCreatedAt(),
                         survey.getUpdatedAt()))
+
                 .collect(Collectors.toList());
+
     }
 }
