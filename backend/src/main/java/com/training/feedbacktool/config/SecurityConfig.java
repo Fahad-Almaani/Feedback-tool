@@ -37,6 +37,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/actuator/**", "/users/create", "/auth/login").permitAll()
                         .requestMatchers("/surveys/*/public").permitAll() // Allow public survey access
+                        .requestMatchers("/auth/logout").authenticated() 
                         .anyRequest().authenticated())
                 // Register JWT filter BEFORE UsernamePasswordAuthenticationFilter
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);

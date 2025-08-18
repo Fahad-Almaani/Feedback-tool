@@ -1,6 +1,8 @@
 // filepath: backend/src/main/java/com/training/feedbacktool/util/JwtUtil.java
 package com.training.feedbacktool.util;
 
+import java.security.MessageDigest;
+import java.nio.charset.StandardCharsets;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
@@ -74,4 +76,24 @@ public class JwtUtil {
         final String tokenEmail = extractEmail(token);
         return (tokenEmail.equals(email) && !isTokenExpired(token));
     }
+
+    public String hashToken(String token) {
+    try {
+        MessageDigest digest = MessageDigest.getInstance("SHA-256");
+        byte[] hash = digest.digest(token.getBytes(StandardCharsets.UTF_8));
+        StringBuilder hexString = new StringBuilder();
+        for (byte b : hash) {
+            String hex = Integer.toHexString(0xff & b);
+            if (hex.length() == 1) hexString.append('0');
+            hexString.append(hex);
+        }
+        return hexString.toString();
+    } catch (Exception e) {
+        throw new RuntimeException("Error hashing token", e);
+    }
+}
+public LocalDateTime getExpiryAsLocalDateTime(String token) {
+    Date expiry = extractExpiration(token);
+    return expiry.toInstant().atZone(java.time.ZoneId.systemDefault()).toLocalDateTime();
+}
 }
