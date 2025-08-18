@@ -11,6 +11,7 @@ import NotFound from './pages/NotFound';
 import AdminDashboard from './pages/AdminDashboard/AdminDashboard'
 import UserDashboard from './pages/UserDashboard/UserDashboard';
 import SurveyCreationPage from './pages/SurveyCreation/SurveyCreationPage';
+import SurveyFormPage from './pages/SurveyForm/SurveyFormPage';
 
 // Component that handles initial routing based on auth state
 const AppRoutes = () => {
@@ -36,6 +37,9 @@ const AppRoutes = () => {
       } />
       <Route path="/signup" element={<SignUp />} />
       <Route path="/forgot" element={<ForgotPassword />} />
+
+      {/* Survey Form Route - Public/Anonymous access */}
+      <Route path="/survey/:surveyId" element={<SurveyFormPage />} />
 
       {/* Admin Routes */}
       <Route path="/admin/dashboard" element={
