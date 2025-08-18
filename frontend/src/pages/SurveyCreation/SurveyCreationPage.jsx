@@ -330,8 +330,9 @@ export default function SurveyCreationPage() {
         setIsSubmitting(true);
         try {
             const surveyData = {
-                ...survey,
-                status,
+                title: survey.title,
+                description: survey.description,
+                active: status === "ACTIVE",
                 questions: questions.map(q => ({
                     type: q.type,
                     questionText: q.questionText,
