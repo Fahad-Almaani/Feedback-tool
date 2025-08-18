@@ -1,19 +1,36 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "../../context/AuthContext";
 import styles from "./Login.module.css";
 
 export default function Login() {
   const [email, setEmail] = useState("demo@example.com");
   const [password, setPassword] = useState("password");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
-  // Fake submit handler (design first). Stores a fake JWT in localStorage.
-  const handleSubmit = (e) => {
+  const { login } = useAuth();
+  const navigate = useNavigate();
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    setLoading(true);
+    setError("");
 
-    const fakeToken = "eyJhbGciOiFAKE.JWT.TOKEN";
-    localStorage.setItem("jwt_token", fakeToken);
+    const result = await login(email, password);
 
-    alert(" login succeeded — token saved to localStorage!");
-    window.location.href = "/dashboard";
+    if (result.success) {
+      // Redirect based on user role
+      if (result.user.role === 'ADMIN') {
+        navigate('/admin/dashboard');
+      } else {
+        navigate('/user/dashboard');
+      }
+    } else {
+      setError(result.error);
+    }
+
+    setLoading(false);
   };
 
   return (
@@ -25,6 +42,12 @@ export default function Login() {
         </div>
 
         <form onSubmit={handleSubmit} className={styles.form}>
+          {error && (
+            <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
+              {error}
+            </div>
+          )}
+
           <label className={styles.label}>Email</label>
           <input
             className={styles.input}
@@ -33,6 +56,7 @@ export default function Login() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
+            disabled={loading}
           />
 
           <label className={styles.label}>Password</label>
@@ -43,17 +67,22 @@ export default function Login() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
+            disabled={loading}
           />
 
           <div className={styles.row}>
             <label className={styles.checkboxLabel}>
-              <input type="checkbox" /> Remember me
+              <input type="checkbox" disabled={loading} /> Remember me
             </label>
             <a className={styles.forgot} href="/forgot">Forgot?</a>
           </div>
 
-          <button className={styles.button} type="submit">
-            Sign In
+          <button
+            className={styles.button}
+            type="submit"
+            disabled={loading}
+          >
+            {loading ? 'Signing In...' : 'Sign In'}
           </button>
         </form>
 
@@ -62,12 +91,12 @@ export default function Login() {
         </p>
       </div>
 
-      
-        
-      
-          
-        </div>
-     
-    
+
+
+
+
+    </div>
+
+
   );
 }

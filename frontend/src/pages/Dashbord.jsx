@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { useAuth } from "../context/AuthContext";
 import {
   LineChart,
   Line,
@@ -69,6 +70,7 @@ export default function AdminDashboard() {
   const [surveys, setSurveys] = useState([]);
   const [selectedSurveyId, setSelectedSurveyId] = useState("");
   const [summary, setSummary] = useState(null);
+  const { user, logout } = useAuth();
 
   useEffect(() => {
     api.listSurveys().then(setSurveys);
@@ -81,25 +83,38 @@ export default function AdminDashboard() {
 
   const pieColors = useMemo(() => ["#4B5563", "#6B7280", "#9CA3AF"], []);
 
+  const handleLogout = () => {
+    logout();
+  };
+
   return (
     <div className="p-4 space-y-6 bg-gray-50 min-h-screen">
       <header className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
         <div>
-          <h1 className="text-xl font-bold text-gray-900">Dashboard</h1>
+          <h1 className="text-xl font-bold text-gray-900">Admin Dashboard</h1>
           <p className="text-sm text-gray-500">Survey statistics overview</p>
+          <p className="text-sm text-gray-600">Welcome, {user?.name} ({user?.role})</p>
         </div>
-        <select
-          value={selectedSurveyId}
-          onChange={(e) => setSelectedSurveyId(Number(e.target.value))}
-          className="border rounded px-3 py-2 text-sm"
-        >
-          <option value="">Select survey</option>
-          {surveys.map((s) => (
-            <option key={s.id} value={s.id}>
-              {s.title}
-            </option>
-          ))}
-        </select>
+        <div className="flex items-center space-x-4">
+          <select
+            value={selectedSurveyId}
+            onChange={(e) => setSelectedSurveyId(Number(e.target.value))}
+            className="border rounded px-3 py-2 text-sm"
+          >
+            <option value="">Select survey</option>
+            {surveys.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.title}
+              </option>
+            ))}
+          </select>
+          <button
+            onClick={handleLogout}
+            className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors"
+          >
+            Logout
+          </button>
+        </div>
       </header>
 
       {summary && (
