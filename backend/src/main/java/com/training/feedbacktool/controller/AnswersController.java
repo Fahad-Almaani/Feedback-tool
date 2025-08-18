@@ -1,6 +1,6 @@
 package com.training.feedbacktool.controller;
 
-import com.training.feedbacktool.entity.Answers;
+import com.training.feedbacktool.entity.Answer;
 import com.training.feedbacktool.repository.AnswersRepository;
 import org.springframework.web.bind.annotation.*;
 
@@ -20,14 +20,13 @@ public class AnswersController {
 
     // GET /api/answers → Get all answers
     @GetMapping
-    public List<Answers> getAllAnswers() {
+    public List<Answer> getAllAnswers() {
         return repository.findAll();
     }
 
     // POST /api/answers → Create a new answer
     @PostMapping
-    public Answers createAnswer(@RequestBody Answers answer) {
+    public Answer createAnswer(@RequestBody Answer answer) {
         return repository.save(answer);
     }
 }
-

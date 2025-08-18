@@ -2,7 +2,7 @@ package com.training.feedbacktool.controller;
 
 import com.training.feedbacktool.service.UserService;
 import com.training.feedbacktool.dto.CreateUserRequest;
-import com.training.feedbacktool.dto.UserResponse;
+import com.training.feedbacktool.dto.CreateUserResponse;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -24,8 +24,8 @@ public class UserController {
 
     @PostMapping("/create")
     // Removed @PreAuthorize - now allows unauthenticated user creation
-    public ResponseEntity<UserResponse> create(@Valid @RequestBody CreateUserRequest req) {
-        UserResponse created = service.create(req);
-        return ResponseEntity.created(URI.create("/users/" + created.id())).body(created);
+    public ResponseEntity<CreateUserResponse> create(@Valid @RequestBody CreateUserRequest req) {
+        CreateUserResponse created = service.create(req);
+        return ResponseEntity.created(URI.create("/users/" + created.userId())).body(created);
     }
 }
