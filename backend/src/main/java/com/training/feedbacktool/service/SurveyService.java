@@ -1,9 +1,12 @@
 package com.training.feedbacktool.service;
 
 import com.training.feedbacktool.entity.Survey;
+import com.training.feedbacktool.entity.Question;
 import com.training.feedbacktool.repository.SurveyRepository;
 import com.training.feedbacktool.dto.CreateSurveyRequest;
 import com.training.feedbacktool.dto.SurveyResponse;
+import com.training.feedbacktool.dto.PublicSurveyResponse;
+import com.training.feedbacktool.dto.QuestionResponse;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -66,5 +69,29 @@ public class SurveyService {
 
                 .collect(Collectors.toList());
 
+    }
+
+    public PublicSurveyResponse findByIdWithQuestions(Long id) {
+        Survey survey = repo.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Survey not found with id: " + id));
+
+        // Convert questions to DTOs
+        List<QuestionResponse> questionResponses = survey.getQuestions().stream()
+                .map(question -> new QuestionResponse(
+                        question.getId(),
+                        question.getType(),
+                        question.getQuestionText(),
+                        question.getOptionsJson(),
+                        question.getOrderNumber()))
+                .collect(Collectors.toList());
+
+        return new PublicSurveyResponse(
+                survey.getId(),
+                survey.getTitle(),
+                survey.getDescription(),
+                survey.getStatus(),
+                survey.getCreatedAt(),
+                survey.getUpdatedAt(),
+                questionResponses);
     }
 }
