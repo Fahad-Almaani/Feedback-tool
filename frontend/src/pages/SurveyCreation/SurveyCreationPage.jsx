@@ -76,7 +76,6 @@ export default function SurveyCreationPage() {
     const [draggedIndex, setDraggedIndex] = useState(null);
     const [showTemplates, setShowTemplates] = useState(false);
     const [autoSaveStatus, setAutoSaveStatus] = useState("");
-    const [showQuickAdd, setShowQuickAdd] = useState(false);
     const [focusedQuestionIndex, setFocusedQuestionIndex] = useState(null);
     const [showKeyboardShortcuts, setShowKeyboardShortcuts] = useState(false);
     const [unsavedChanges, setUnsavedChanges] = useState(false);
@@ -165,24 +164,6 @@ export default function SurveyCreationPage() {
         setUnsavedChanges(true);
     }, []);
 
-    // Quick add question
-    const quickAddQuestion = useCallback((type, prompt = "") => {
-        const newQuestion = {
-            id: Date.now(),
-            type,
-            questionText: prompt,
-            optionsJson: type === "MULTIPLE_CHOICE"
-                ? JSON.stringify(["Option 1", "Option 2"])
-                : type === "RATING"
-                    ? JSON.stringify({ scale: 5, labels: { min: "Poor", max: "Excellent" } })
-                    : null,
-            orderNumber: questions.length + 1
-        };
-        setQuestions(prev => [...prev, newQuestion]);
-        setShowQuickAdd(false);
-        setFocusedQuestionIndex(questions.length);
-        setUnsavedChanges(true);
-    }, [questions.length]);
     // Add a new question
     const addQuestion = useCallback(() => {
         const newQuestion = {
@@ -418,12 +399,6 @@ export default function SurveyCreationPage() {
                                 🎯 Templates
                             </button>
                             <button
-                                onClick={() => setShowQuickAdd(!showQuickAdd)}
-                                className={`${styles.quickActionButton} ${showQuickAdd ? styles.active : ''}`}
-                            >
-                                ⚡ Quick Add
-                            </button>
-                            <button
                                 onClick={() => setShowKeyboardShortcuts(!showKeyboardShortcuts)}
                                 className={styles.quickActionButton}
                             >
@@ -506,42 +481,6 @@ export default function SurveyCreationPage() {
                                     </div>
                                 </div>
                             ))}
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* Quick Add Menu */}
-            {showQuickAdd && (
-                <div className={styles.quickAddMenu}>
-                    <div className={styles.quickAddContent}>
-                        <h4>Quick Add Question</h4>
-                        <div className={styles.quickTypeGrid}>
-                            {Object.entries(QUESTION_TYPES).map(([type, config]) => (
-                                <button
-                                    key={type}
-                                    onClick={() => quickAddQuestion(type)}
-                                    className={styles.quickTypeButton}
-                                >
-                                    <span className={styles.quickTypeIcon}>{config.icon}</span>
-                                    <span className={styles.quickTypeLabel}>{config.label}</span>
-                                    <span className={styles.quickTypeDesc}>{config.description}</span>
-                                </button>
-                            ))}
-                        </div>
-                        <div className={styles.quickPrompts}>
-                            <h5>Quick Prompts</h5>
-                            <div className={styles.promptButtons}>
-                                {QUICK_QUESTION_PROMPTS.map((prompt, index) => (
-                                    <button
-                                        key={index}
-                                        onClick={() => quickAddQuestion("TEXT", prompt)}
-                                        className={styles.promptButton}
-                                    >
-                                        {prompt}
-                                    </button>
-                                ))}
-                            </div>
                         </div>
                     </div>
                 </div>
@@ -657,12 +596,6 @@ export default function SurveyCreationPage() {
                                         </svg>
                                         Add Question
                                     </button>
-                                    <button
-                                        onClick={() => setShowQuickAdd(true)}
-                                        className={styles.quickAddHeaderButton}
-                                    >
-                                        ⚡ Quick Add
-                                    </button>
                                 </div>
                             </div>
                             <div className={styles.sectionContent}>
@@ -714,6 +647,20 @@ export default function SurveyCreationPage() {
                                         </div>
                                     )}
                                 </div>
+
+                                {questions.length > 0 && (
+                                    <div className={styles.addQuestionSection}>
+                                        <button
+                                            onClick={addQuestion}
+                                            className={styles.addQuestionButton}
+                                        >
+                                            <svg className={styles.addIcon} viewBox="0 0 24 24" fill="currentColor">
+                                                <path d="M12 4.5v15m7.5-7.5h-15" />
+                                            </svg>
+                                            Add Question
+                                        </button>
+                                    </div>
+                                )}
                             </div>
                         </div>
 
@@ -959,7 +906,7 @@ function QuestionEditor({
                         title="Remove question"
                     >
                         <svg className={styles.removeIcon} viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M6 18L18 6M6 6l12 12" />
+                            <path d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
                         </svg>
                     </button>
                 </div>
