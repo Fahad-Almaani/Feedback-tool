@@ -8,8 +8,8 @@ import Login from './pages/Login/Login';
 import SignUp from './pages/SignUp/SignUp';
 import ForgotPassword from './pages/ForgotPassword';
 import NotFound from './pages/NotFound';
-import AdminDashboard from './pages/Dashbord';
-import UserDashboard from './pages/UserDashboard';
+import AdminDashboard from './pages/AdminDashboard/AdminDashboard'
+import UserDashboard from './pages/UserDashboard/UserDashboard';
 
 // Component that handles initial routing based on auth state
 const AppRoutes = () => {
