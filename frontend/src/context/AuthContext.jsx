@@ -89,6 +89,59 @@ export const AuthProvider = ({ children }) => {
         }
     };
 
+    const register = async (name, email, password) => {
+        try {
+            const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8080';
+            const response = await fetch(`${backendUrl}/auth/register`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ name, email, password }),
+                credentials: 'include', // Include cookies if needed
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({ message: 'Network error or server unavailable' }));
+                throw new Error(errorData.message || 'Registration failed');
+            }
+
+            const data = await response.json();
+
+            // Store token and user data
+            localStorage.setItem('jwt_token', data.token);
+            localStorage.setItem('user_data', JSON.stringify({
+                userId: data.userId,
+                email: data.email,
+                name: data.name,
+                role: data.role
+            }));
+
+            // Update state
+            setUser({
+                userId: data.userId,
+                email: data.email,
+                name: data.name,
+                role: data.role,
+                token: data.token
+            });
+
+            return { success: true, user: data };
+        } catch (error) {
+            console.error('Registration error:', error);
+
+            // Handle specific CORS errors
+            if (error.name === 'TypeError' && error.message.includes('fetch')) {
+                return {
+                    success: false,
+                    error: 'Unable to connect to server. Please check if the backend is running and CORS is configured properly.'
+                };
+            }
+
+            return { success: false, error: error.message };
+        }
+    };
+
     const logout = () => {
         localStorage.removeItem('jwt_token');
         localStorage.removeItem('user_data');
@@ -114,6 +167,7 @@ export const AuthProvider = ({ children }) => {
     const value = {
         user,
         login,
+        register,
         logout,
         isAuthenticated,
         hasRole,

@@ -5,7 +5,7 @@ import ProtectedRoute from './components/ProtectedRoute';
 
 // Import components
 import Login from './pages/Login/Login';
-import SignUp from './pages/SignUp';
+import SignUp from './pages/SignUp/SignUp';
 import ForgotPassword from './pages/ForgotPassword';
 import NotFound from './pages/NotFound';
 import AdminDashboard from './pages/Dashbord';
