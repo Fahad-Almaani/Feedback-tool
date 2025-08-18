@@ -54,7 +54,6 @@ public class SurveyService {
                 saved.getUpdatedAt());
     }
 
-
     public List<SurveyResponse> listAll() {
         List<Survey> surveys = repo.findAll();
         return surveys.stream()

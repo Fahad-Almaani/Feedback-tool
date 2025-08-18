@@ -5,5 +5,5 @@ public record QuestionResponse(
         String type,
         String questionText,
         String optionsJson,
-        Integer orderNumber
-) {}
+        Integer orderNumber) {
+}

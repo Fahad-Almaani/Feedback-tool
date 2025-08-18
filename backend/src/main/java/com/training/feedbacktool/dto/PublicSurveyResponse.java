@@ -10,5 +10,5 @@ public record PublicSurveyResponse(
         String status,
         Instant createdAt,
         Instant updatedAt,
-        List<QuestionResponse> questions
-) {}
+        List<QuestionResponse> questions) {
+}

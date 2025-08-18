@@ -33,6 +33,7 @@ public class SurveyController {
         SurveyResponse created = service.create(req);
         return ResponseEntity.created(URI.create("/surveys/" + created.id())).body(created);
     }
+
     @GetMapping
     @PreAuthorize("hasRole('ADMIN')") // Admin only
     public List<SurveyResponse> listAll() {

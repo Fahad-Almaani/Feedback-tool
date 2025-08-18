@@ -27,7 +27,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
-        
+
         // Skip JWT processing for public endpoints
         String requestPath = request.getRequestURI();
         if (requestPath.matches(".*/surveys/.*/public.*")) {
@@ -62,8 +62,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
                     // Create authorities (Spring Security expects "ROLE_" prefix)
                     List<SimpleGrantedAuthority> authorities = List.of(
-                            new SimpleGrantedAuthority("ROLE_" + role)
-                    );
+                            new SimpleGrantedAuthority("ROLE_" + role));
 
                     // Create authentication token
                     UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
