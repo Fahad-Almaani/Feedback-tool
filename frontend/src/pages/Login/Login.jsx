@@ -4,8 +4,8 @@ import { useAuth } from "../../context/AuthContext";
 import styles from "./Login.module.css";
 
 export default function Login() {
-  const [email, setEmail] = useState("demo@example.com");
-  const [password, setPassword] = useState("password");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
