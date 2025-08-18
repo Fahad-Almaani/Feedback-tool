@@ -1,76 +1,89 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
-import Login from './pages/Login/Login'
-import Dashbord from './pages/Dashbord';
-// import './App.css'
+import React from 'react';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { AuthProvider, useAuth } from './context/AuthContext';
+import ProtectedRoute from './components/ProtectedRoute';
+
+// Import components
+import Login from './pages/Login/Login';
+import SignUp from './pages/SignUp';
+import ForgotPassword from './pages/ForgotPassword';
+import NotFound from './pages/NotFound';
+import AdminDashboard from './pages/Dashbord';
+import UserDashboard from './pages/UserDashboard';
+
+// Component that handles initial routing based on auth state
+const AppRoutes = () => {
+  const { isAuthenticated, user, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-lg">Loading...</div>
+      </div>
+    );
+  }
+
+  return (
+    <Routes>
+      {/* Public Routes */}
+      <Route path="/login" element={
+        isAuthenticated() ? (
+          user?.role === 'ADMIN' ? <Navigate to="/admin/dashboard" replace /> : <Navigate to="/user/dashboard" replace />
+        ) : (
+          <Login />
+        )
+      } />
+      <Route path="/signup" element={<SignUp />} />
+      <Route path="/forgot" element={<ForgotPassword />} />
+
+      {/* Admin Routes */}
+      <Route path="/admin/dashboard" element={
+        <ProtectedRoute requiredRole="ADMIN">
+          <AdminDashboard />
+        </ProtectedRoute>
+      } />
+
+      {/* User Routes */}
+      <Route path="/user/dashboard" element={
+        <ProtectedRoute requiredRole="USER">
+          <UserDashboard />
+        </ProtectedRoute>
+      } />
+
+      {/* Legacy dashboard route - redirect based on role */}
+      <Route path="/dashboard" element={
+        <ProtectedRoute>
+          {user?.role === 'ADMIN' ? (
+            <Navigate to="/admin/dashboard" replace />
+          ) : (
+            <Navigate to="/user/dashboard" replace />
+          )}
+        </ProtectedRoute>
+      } />
+
+      {/* Root redirect */}
+      <Route path="/" element={
+        isAuthenticated() ? (
+          user?.role === 'ADMIN' ? <Navigate to="/admin/dashboard" replace /> : <Navigate to="/user/dashboard" replace />
+        ) : (
+          <Navigate to="/login" replace />
+        )
+      } />
+
+      {/* 404 Route */}
+      <Route path="*" element={<NotFound />} />
+    </Routes>
+  );
+};
 
 function App() {
   return (
-    <BrowserRouter>
-      <Routes>
-        {/* Redirect root path to login */}
-        <Route path="/" element={<Navigate to="/login" replace />} />
-
-        {/* Login page route */}
-        <Route path="/login" element={<Login />} />
-
-        {/* Placeholder for future routes */}
-        <Route path="/dashboard" element={<Dashbord />} />
-        <Route path="/signup" element={<SignUp />} />
-        <Route path="/forgot" element={<ForgotPassword />} />
-
-        {/* Catch-all route for 404 */}
-        <Route path="*" element={<NotFound />} />
-      </Routes>
-    </BrowserRouter>
-  )
+    <AuthProvider>
+      <BrowserRouter>
+        <AppRoutes />
+      </BrowserRouter>
+    </AuthProvider>
+  );
 }
 
-// Placeholder components for routes referenced in Login.jsx
-function Dashboard() {
-  return (
-    <div style={{ padding: '2rem', textAlign: 'center' }}>
-      <h1>Dashboard</h1>
-      <p>Welcome to your dashboard!</p>
-      <button onClick={() => {
-        localStorage.removeItem('jwt_token');
-        window.location.href = '/login';
-      }}>
-        Logout
-      </button>
-    </div>
-  )
-}
-
-function SignUp() {
-  return (
-    <div style={{ padding: '2rem', textAlign: 'center' }}>
-      <h1>Sign Up</h1>
-      <p>Create a new account</p>
-      <a href="/login">Back to Login</a>
-    </div>
-  )
-}
-
-function ForgotPassword() {
-  return (
-    <div style={{ padding: '2rem', textAlign: 'center' }}>
-      <h1>Forgot Password</h1>
-      <p>Reset your password</p>
-      <a href="/login">Back to Login</a>
-    </div>
-  )
-}
-
-function NotFound() {
-  return (
-    <>
-    <div style={{ padding: '2rem', textAlign: 'center' }}>
-      <h1>404 - Page Not Found</h1>
-      <p>The page you're looking for doesn't exist.</p>
-      <a href="/login">Go to Login</a>
-    </div>
-</>
-  )
-}
-
-export default App
+export default App;

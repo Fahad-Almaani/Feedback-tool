@@ -7,6 +7,9 @@ import com.training.feedbacktool.dto.SurveyResponse;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+import java.util.stream.Collectors;
+
 @Service
 public class SurveyService {
 
@@ -48,8 +51,11 @@ public class SurveyService {
                 saved.getUpdatedAt());
     }
 
-    public java.util.List<SurveyResponse> listAll() {
-        return repo.findAll().stream()
+
+    public List<SurveyResponse> listAll() {
+        List<Survey> surveys = repo.findAll();
+        return surveys.stream()
+
                 .map(survey -> new SurveyResponse(
                         survey.getId(),
                         survey.getTitle(),
@@ -57,6 +63,8 @@ public class SurveyService {
                         survey.getStatus(),
                         survey.getCreatedAt(),
                         survey.getUpdatedAt()))
-                .collect(java.util.stream.Collectors.toList());
+
+                .collect(Collectors.toList());
+
     }
 }
