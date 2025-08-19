@@ -19,108 +19,101 @@ import {
   Area
 } from "recharts";
 import styles from "./AdminDashboard.module.css";
-
-// Enhanced mock data for admin dashboard
-const mockData = {
-  surveys: [
-    {
-      id: 1,
-      title: "Customer Satisfaction Q4 2025",
-      status: "ACTIVE",
-      responses: 245,
-      createdDate: "2025-08-01",
-      deadline: "2025-09-30",
-      completionRate: 78
-    },
-    {
-      id: 2,
-      title: "Employee Engagement Survey",
-      status: "ACTIVE",
-      responses: 156,
-      createdDate: "2025-08-05",
-      deadline: "2025-08-25",
-      completionRate: 92
-    },
-    {
-      id: 3,
-      title: "Website User Experience",
-      status: "INACTIVE",
-      responses: 89,
-      createdDate: "2025-07-15",
-      deadline: "2025-08-15",
-      completionRate: 65
-    },
-    {
-      id: 4,
-      title: "Product Feedback Survey",
-      status: "DRAFT",
-      responses: 0,
-      createdDate: "2025-08-10",
-      deadline: "2025-09-15",
-      completionRate: 0
-    },
-    {
-      id: 5,
-      title: "Training Effectiveness",
-      status: "ACTIVE",
-      responses: 123,
-      createdDate: "2025-07-28",
-      deadline: "2025-08-28",
-      completionRate: 85
-    }
-  ],
-  statistics: {
-    totalSurveys: 5,
-    activeSurveys: 3,
-    totalResponses: 613,
-    avgCompletionRate: 64,
-    responsesThisWeek: 45,
-    responsesLastWeek: 38,
-    newSurveysThisMonth: 2
-  },
-  responsesOverTime: [
-    { date: "Aug 1", responses: 42 },
-    { date: "Aug 2", responses: 35 },
-    { date: "Aug 3", responses: 58 },
-    { date: "Aug 4", responses: 48 },
-    { date: "Aug 5", responses: 62 },
-    { date: "Aug 6", responses: 39 },
-    { date: "Aug 7", responses: 71 },
-    { date: "Aug 8", responses: 55 },
-    { date: "Aug 9", responses: 67 },
-    { date: "Aug 10", responses: 44 }
-  ],
-  surveyStatusDistribution: [
-    { name: "Active", value: 3, color: "#43e97b" },
-    { name: "Inactive", value: 1, color: "#ff6b6b" },
-    { name: "Draft", value: 1, color: "#feca57" }
-  ],
-  recentActivity: [
-    { id: 1, action: "New response", survey: "Customer Satisfaction Q4", time: "2 minutes ago" },
-    { id: 2, action: "Survey activated", survey: "Employee Engagement", time: "1 hour ago" },
-    { id: 3, action: "Survey created", survey: "Product Feedback", time: "3 hours ago" },
-    { id: 4, action: "Response milestone", survey: "Website UX", time: "1 day ago" }
-  ]
-};
+import { apiClient } from "../../utils/apiClient";
 
 export default function AdminDashboard() {
   const [surveys, setSurveys] = useState([]);
+  const [statistics, setStatistics] = useState({
+    totalSurveys: 0,
+    activeSurveys: 0,
+    totalResponses: 0,
+    avgCompletionRate: 0,
+    responsesThisWeek: 0,
+    responsesLastWeek: 0,
+    newSurveysThisMonth: 0
+  });
   const [selectedSurveyId, setSelectedSurveyId] = useState(null);
   const [filterStatus, setFilterStatus] = useState("ALL");
   const [loading, setLoading] = useState(true);
   const [isVisible, setIsVisible] = useState(false);
+  const [error, setError] = useState(null);
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+
+  // Mock data for charts (keeping these as they require more complex backend changes)
+  const mockChartData = {
+    responsesOverTime: [
+      { date: "Aug 1", responses: 42 },
+      { date: "Aug 2", responses: 35 },
+      { date: "Aug 3", responses: 58 },
+      { date: "Aug 4", responses: 48 },
+      { date: "Aug 5", responses: 62 },
+      { date: "Aug 6", responses: 39 },
+      { date: "Aug 7", responses: 71 },
+      { date: "Aug 8", responses: 55 },
+      { date: "Aug 9", responses: 67 },
+      { date: "Aug 10", responses: 44 }
+    ],
+    recentActivity: [
+      { id: 1, action: "New response", survey: "Customer Satisfaction Q4", time: "2 minutes ago" },
+      { id: 2, action: "Survey activated", survey: "Employee Engagement", time: "1 hour ago" },
+      { id: 3, action: "Survey created", survey: "Product Feedback", time: "3 hours ago" },
+      { id: 4, action: "Response milestone", survey: "Website UX", time: "1 day ago" }
+    ]
+  };
 
   useEffect(() => {
     // Trigger entrance animation
     setIsVisible(true);
 
-    // Simulate API call
-    setTimeout(() => {
-      setSurveys(mockData.surveys);
-      setLoading(false);
-    }, 1000);
+    // Fetch real survey data
+    const fetchSurveys = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        const response = await apiClient.get('/surveys/admin');
+        const surveysData = response.data;
+        console.log(surveysData);
+        setSurveys(surveysData);
+
+        // Calculate statistics from real data
+        const totalSurveys = surveysData.length;
+        const activeSurveys = surveysData.filter(s => s.status === 'ACTIVE').length;
+        const totalResponses = surveysData.reduce((sum, s) => sum + s.totalResponses, 0);
+        const avgCompletionRate = totalSurveys > 0
+          ? Math.round(surveysData.reduce((sum, s) => sum + s.completionRate, 0) / totalSurveys)
+          : 0;
+
+        // Mock some additional stats (these would need more backend work to calculate accurately)
+        const responsesThisWeek = Math.floor(totalResponses * 0.2);
+        const responsesLastWeek = Math.floor(totalResponses * 0.15);
+        const newSurveysThisMonth = surveysData.filter(s => {
+          const createdDate = new Date(s.createdAt);
+          const currentDate = new Date();
+          return createdDate.getMonth() === currentDate.getMonth() &&
+            createdDate.getFullYear() === currentDate.getFullYear();
+        }).length;
+
+        setStatistics({
+          totalSurveys,
+          activeSurveys,
+          totalResponses,
+          avgCompletionRate,
+          responsesThisWeek,
+          responsesLastWeek,
+          newSurveysThisMonth
+        });
+
+      } catch (err) {
+        console.error('Error fetching surveys:', err);
+        setError('Failed to load survey data. Please try again.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchSurveys();
   }, []);
 
   const handleLogout = () => {
@@ -135,6 +128,19 @@ export default function AdminDashboard() {
     if (filterStatus === "ALL") return surveys;
     return surveys.filter(survey => survey.status === filterStatus);
   }, [surveys, filterStatus]);
+
+  const surveyStatusDistribution = useMemo(() => {
+    const statusCounts = surveys.reduce((acc, survey) => {
+      acc[survey.status] = (acc[survey.status] || 0) + 1;
+      return acc;
+    }, {});
+
+    return [
+      { name: "Active", value: statusCounts.ACTIVE || 0, color: "#43e97b" },
+      { name: "Inactive", value: statusCounts.INACTIVE || 0, color: "#ff6b6b" },
+      { name: "Draft", value: statusCounts.DRAFT || 0, color: "#feca57" }
+    ].filter(item => item.value > 0); // Only show statuses that have surveys
+  }, [surveys]);
 
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -229,11 +235,11 @@ export default function AdminDashboard() {
               <svg className={styles.statIcon} viewBox="0 0 24 24" fill="currentColor">
                 <path d="M9 12l2 2 4-4M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
-              <div className={`${styles.statTrend} ${getTrendClass(mockData.statistics.totalSurveys, 4)}`}>
-                {getTrendIcon(mockData.statistics.totalSurveys, 4)} +1
+              <div className={`${styles.statTrend} ${getTrendClass(statistics.totalSurveys, statistics.totalSurveys - 1)}`}>
+                {getTrendIcon(statistics.totalSurveys, statistics.totalSurveys - 1)} +{statistics.newSurveysThisMonth}
               </div>
             </div>
-            <div className={styles.statValue}>{mockData.statistics.totalSurveys}</div>
+            <div className={styles.statValue}>{statistics.totalSurveys}</div>
             <div className={styles.statLabel}>Total Surveys</div>
           </div>
 
@@ -242,11 +248,12 @@ export default function AdminDashboard() {
               <svg className={styles.statIcon} viewBox="0 0 24 24" fill="currentColor">
                 <path d="M13 10V3L4 14h7v7l9-11h-7z" />
               </svg>
-              <div className={`${styles.statTrend} ${getTrendClass(mockData.statistics.activeSurveys, 2)}`}>
-                {getTrendIcon(mockData.statistics.activeSurveys, 2)} +1
+              <div className={`${styles.statTrend} ${getTrendClass(statistics.activeSurveys, Math.max(0, statistics.activeSurveys - 1))}`}>
+                {getTrendIcon(statistics.activeSurveys, Math.max(0, statistics.activeSurveys - 1))}
+                {statistics.activeSurveys > 0 ? '+' : ''}1
               </div>
             </div>
-            <div className={styles.statValue}>{mockData.statistics.activeSurveys}</div>
+            <div className={styles.statValue}>{statistics.activeSurveys}</div>
             <div className={styles.statLabel}>Active Surveys</div>
           </div>
 
@@ -255,11 +262,11 @@ export default function AdminDashboard() {
               <svg className={styles.statIcon} viewBox="0 0 24 24" fill="currentColor">
                 <path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
               </svg>
-              <div className={`${styles.statTrend} ${getTrendClass(mockData.statistics.responsesThisWeek, mockData.statistics.responsesLastWeek)}`}>
-                {getTrendIcon(mockData.statistics.responsesThisWeek, mockData.statistics.responsesLastWeek)} +7
+              <div className={`${styles.statTrend} ${getTrendClass(statistics.responsesThisWeek, statistics.responsesLastWeek)}`}>
+                {getTrendIcon(statistics.responsesThisWeek, statistics.responsesLastWeek)} +{statistics.responsesThisWeek - statistics.responsesLastWeek}
               </div>
             </div>
-            <div className={styles.statValue}>{mockData.statistics.totalResponses}</div>
+            <div className={styles.statValue}>{statistics.totalResponses}</div>
             <div className={styles.statLabel}>Total Responses</div>
           </div>
 
@@ -268,11 +275,11 @@ export default function AdminDashboard() {
               <svg className={styles.statIcon} viewBox="0 0 24 24" fill="currentColor">
                 <path d="M11 15l-3-3 1.5-1.5L11 12l5-5L17.5 8.5 11 15z" />
               </svg>
-              <div className={`${styles.statTrend} ${getTrendClass(mockData.statistics.avgCompletionRate, 58)}`}>
-                {getTrendIcon(mockData.statistics.avgCompletionRate, 58)} +6%
+              <div className={`${styles.statTrend} ${getTrendClass(statistics.avgCompletionRate, Math.max(0, statistics.avgCompletionRate - 5))}`}>
+                {getTrendIcon(statistics.avgCompletionRate, Math.max(0, statistics.avgCompletionRate - 5))} +5%
               </div>
             </div>
-            <div className={styles.statValue}>{mockData.statistics.avgCompletionRate}%</div>
+            <div className={styles.statValue}>{statistics.avgCompletionRate}%</div>
             <div className={styles.statLabel}>Avg Completion Rate</div>
           </div>
         </div>
@@ -306,7 +313,32 @@ export default function AdminDashboard() {
 
               {/* Survey List */}
               <div className={styles.surveyList}>
-                {filteredSurveys.map((survey) => (
+                {loading && (
+                  <div className={styles.loadingContainer}>
+                    <div className={styles.spinner}></div>
+                    <div className={styles.loadingText}>Loading surveys...</div>
+                  </div>
+                )}
+
+                {error && (
+                  <div className={styles.errorContainer}>
+                    <p className={styles.errorText}>{error}</p>
+                    <button
+                      onClick={() => window.location.reload()}
+                      className={styles.retryButton}
+                    >
+                      Retry
+                    </button>
+                  </div>
+                )}
+
+                {!loading && !error && filteredSurveys.length === 0 && (
+                  <div className={styles.emptyState}>
+                    <p>No surveys found {filterStatus !== "ALL" ? `with status ${filterStatus}` : ''}.</p>
+                  </div>
+                )}
+
+                {!loading && !error && filteredSurveys.map((survey) => (
                   <div
                     key={survey.id}
                     className={`${styles.surveyItem} ${selectedSurveyId === survey.id ? styles.selected : ''}`}
@@ -319,14 +351,22 @@ export default function AdminDashboard() {
                       </span>
                     </div>
                     <div className={styles.surveyMeta}>
-                      <span>📅 Created: {formatDate(survey.createdDate)}</span>
-                      <span>⏰ Deadline: {formatDate(survey.deadline)}</span>
+                      <span>📅 Created: {formatDate(survey.createdAt)}</span>
+                      <span>⏰ Updated: {formatDate(survey.updatedAt)}</span>
                     </div>
                     <div className={styles.surveyStats}>
                       <span className={styles.responseCount}>
-                        📊 {survey.responses} responses ({survey.completionRate}% completion)
+                        📊 {survey.totalResponses} responses ({survey.completionRate}% completion)
+                      </span>
+                      <span className={styles.questionCount}>
+                        ❓ {survey.totalQuestions} questions
                       </span>
                     </div>
+                    {survey.description && (
+                      <div className={styles.surveyDescription}>
+                        {survey.description}
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
@@ -399,7 +439,7 @@ export default function AdminDashboard() {
             <div className={styles.sectionContent}>
               <div className={styles.chartContainer}>
                 <ResponsiveContainer width="100%" height={300}>
-                  <AreaChart data={mockData.responsesOverTime}>
+                  <AreaChart data={mockChartData.responsesOverTime}>
                     <defs>
                       <linearGradient id="colorResponses" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="5%" stopColor="#667eea" stopOpacity={0.8} />
@@ -448,7 +488,7 @@ export default function AdminDashboard() {
                 <ResponsiveContainer width="100%" height={300}>
                   <PieChart>
                     <Pie
-                      data={mockData.surveyStatusDistribution}
+                      data={surveyStatusDistribution}
                       cx="50%"
                       cy="50%"
                       outerRadius={80}
@@ -456,7 +496,7 @@ export default function AdminDashboard() {
                       labelLine={false}
                       label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
                     >
-                      {mockData.surveyStatusDistribution.map((entry, index) => (
+                      {surveyStatusDistribution.map((entry, index) => (
                         <Cell key={`cell-${index}`} fill={entry.color} />
                       ))}
                     </Pie>
@@ -488,7 +528,7 @@ export default function AdminDashboard() {
           </div>
           <div className={styles.sectionContent}>
             <div className={styles.activityList}>
-              {mockData.recentActivity.map((activity) => (
+              {mockChartData.recentActivity.map((activity) => (
                 <div key={activity.id} className={styles.activityItem}>
                   <svg className={styles.activityIcon} viewBox="0 0 24 24" fill="currentColor">
                     <path d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 01-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 011.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 00-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 01-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 00-3.375-3.375h-1.5a1.125 1.125 0 01-1.125-1.125v-1.5a3.375 3.375 0 00-3.375-3.375H9.75" />

@@ -5,6 +5,7 @@ import com.training.feedbacktool.dto.CreateUserRequest;
 import com.training.feedbacktool.dto.CreateUserResponse;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -13,7 +14,8 @@ import org.springframework.web.bind.annotation.RestController;
 import java.net.URI;
 
 @RestController
-@RequestMapping("/users")
+@RequestMapping("/api/users")
+@CrossOrigin(origins = "*")
 public class UserController {
 
     private final UserService service;

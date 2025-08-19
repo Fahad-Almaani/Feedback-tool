@@ -19,7 +19,8 @@ import java.util.ArrayList;
 import java.util.stream.Collectors;
 
 @RestController
-@RequestMapping("/responses")
+@RequestMapping("/api/responses")
+@CrossOrigin(origins = "*")
 public class ResponsesController {
 
     private final ResponsesRepository responsesRepository;

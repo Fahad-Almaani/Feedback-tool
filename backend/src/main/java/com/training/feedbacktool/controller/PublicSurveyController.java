@@ -10,7 +10,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/public/surveys")
+@RequestMapping("/api/public/surveys")
+@CrossOrigin(origins = "*")
 public class PublicSurveyController {
 
     private final SurveyService surveyService;

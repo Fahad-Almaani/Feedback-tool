@@ -780,3 +780,60 @@
     max-height: 300px;
   }
 }
+
+/* Error and Loading States */
+.errorContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: var(--space-lg);
+  gap: var(--space-md);
+}
+
+.errorText {
+  color: #ff6b6b;
+  font-size: 1rem;
+  text-align: center;
+  margin: 0;
+}
+
+.retryButton {
+  padding: var(--space-xs) var(--space-md);
+  background: var(--accent-gradient);
+  color: white;
+  border: none;
+  border-radius: var(--border-radius);
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.3s ease;
+}
+
+.retryButton:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.emptyState {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: var(--space-xl);
+  color: #a0aec0;
+  font-style: italic;
+}
+
+.questionCount {
+  margin-left: var(--space-md);
+  color: #6b7280;
+  font-size: 0.9rem;
+}
+
+.surveyDescription {
+  margin-top: var(--space-sm);
+  color: #6b7280;
+  font-size: 0.9rem;
+  line-height: 1.4;
+  padding: var(--space-sm);
+  background: rgba(255, 255, 255, 0.5);
+  border-radius: var(--border-radius-sm);
+}

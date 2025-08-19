@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { apiClient } from '../utils/apiClient';
 
 const AuthContext = createContext();
 
@@ -38,25 +39,11 @@ export const AuthProvider = ({ children }) => {
 
     const login = async (email, password) => {
         try {
-            const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8080';
-            const response = await fetch(`${backendUrl}/auth/login`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ email, password }),
-                credentials: 'include', // Include cookies if needed
-            });
-
-            if (!response.ok) {
-                const errorData = await response.json().catch(() => ({ message: 'Network error or server unavailable' }));
-                throw new Error(errorData.message || 'Login failed');
-            }
-
-            const data = await response.json();
+            // Use the new apiClient for login
+            const data = await apiClient.post('/auth/login', { email, password });
 
             // Store token and user data
-            localStorage.setItem('jwt_token', data.token);
+            apiClient.auth.setToken(data.token);
             localStorage.setItem('user_data', JSON.stringify({
                 userId: data.userId,
                 email: data.email,
@@ -76,40 +63,17 @@ export const AuthProvider = ({ children }) => {
             return { success: true, user: data };
         } catch (error) {
             console.error('Login error:', error);
-
-            // Handle specific CORS errors
-            if (error.name === 'TypeError' && error.message.includes('fetch')) {
-                return {
-                    success: false,
-                    error: 'Unable to connect to server. Please check if the backend is running and CORS is configured properly.'
-                };
-            }
-
             return { success: false, error: error.message };
         }
     };
 
     const register = async (name, email, password) => {
         try {
-            const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8080';
-            const response = await fetch(`${backendUrl}/users/create`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ name, email, password }),
-                credentials: 'include', // Include cookies if needed
-            });
-
-            if (!response.ok) {
-                const errorData = await response.json().catch(() => ({ message: 'Network error or server unavailable' }));
-                throw new Error(errorData.message || 'Registration failed');
-            }
-
-            const data = await response.json();
+            // Use the new apiClient for registration
+            const data = await apiClient.post('/users/create', { name, email, password });
 
             // Store token and user data
-            localStorage.setItem('jwt_token', data.token);
+            apiClient.auth.setToken(data.token);
             localStorage.setItem('user_data', JSON.stringify({
                 userId: data.userId,
                 email: data.email,
@@ -129,22 +93,12 @@ export const AuthProvider = ({ children }) => {
             return { success: true, user: data };
         } catch (error) {
             console.error('Registration error:', error);
-
-            // Handle specific CORS errors
-            if (error.name === 'TypeError' && error.message.includes('fetch')) {
-                return {
-                    success: false,
-                    error: 'Unable to connect to server. Please check if the backend is running and CORS is configured properly.'
-                };
-            }
-
             return { success: false, error: error.message };
         }
     };
 
     const logout = () => {
-        localStorage.removeItem('jwt_token');
-        localStorage.removeItem('user_data');
+        apiClient.auth.removeToken();
         setUser(null);
     };
 
