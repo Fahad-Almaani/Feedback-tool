@@ -3,6 +3,7 @@ package com.training.feedbacktool.config;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
@@ -29,28 +30,35 @@ public class SecurityConfig {
     @Bean
     SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                // Use the CORS bean defined in CorsConfig (do NOT redeclare it here)
-                .cors(cors -> {
-                })
+                // Use the CORS bean from CorsConfig (do NOT redeclare a bean here)
+                .cors(cors -> {})
                 .csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/actuator/**", "/users/create", "/auth/login").permitAll()
-                        .requestMatchers("/surveys/*/public").permitAll() // Allow public survey access
-                        .anyRequest().authenticated())
+                        // Allow CORS preflight
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+
+                        // Public endpoints
+                        .requestMatchers("/actuator/**").permitAll()
+                        .requestMatchers("/users/create").permitAll()
+                        .requestMatchers("/auth/login").permitAll()
+                        .requestMatchers("/public/**").permitAll()   // <-- important for your two public APIs
+
+                        // Everything else requires JWT
+                        .anyRequest().authenticated()
+                )
                 // Register JWT filter BEFORE UsernamePasswordAuthenticationFilter
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
 
-    // Password encoder used by AuthService/User registration
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
 
-    // Optional dev-only in-memory user (not used by JWT login, but handy)
+    // Optional dev-only in-memory user
     @Bean
     @Profile("dev")
     UserDetailsService users() {
