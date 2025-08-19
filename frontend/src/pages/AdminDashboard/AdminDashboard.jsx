@@ -462,32 +462,34 @@ export default function AdminDashboard() {
                             </div>
                           </div>
 
-                          {survey.description && (
-                            <div className={styles.surveyDescription}>
-                              {survey.description}
-                            </div>
-                          )}
+                          <div className={styles.surveyCardContent}>
+                            {survey.description && (
+                              <div className={styles.surveyDescription}>
+                                {survey.description}
+                              </div>
+                            )}
 
-                          <div className={styles.surveyMetaGrid}>
-                            <div className={styles.metaItem}>
-                              <Calendar className={styles.metaIcon} size={16} />
-                              <span className={styles.metaLabel}>Created:</span>
-                              <span className={styles.metaValue}>{formatDate(survey.createdAt)}</span>
-                            </div>
-                            <div className={styles.metaItem}>
-                              <Clock className={styles.metaIcon} size={16} />
-                              <span className={styles.metaLabel}>Updated:</span>
-                              <span className={styles.metaValue}>{formatDate(survey.updatedAt)}</span>
-                            </div>
-                            <div className={styles.metaItem}>
-                              <BarChart3 className={styles.metaIcon} size={16} />
-                              <span className={styles.metaLabel}>Responses:</span>
-                              <span className={styles.metaValue}>{survey.totalResponses}</span>
-                            </div>
-                            <div className={styles.metaItem}>
-                              <HelpCircle className={styles.metaIcon} size={16} />
-                              <span className={styles.metaLabel}>Questions:</span>
-                              <span className={styles.metaValue}>{survey.totalQuestions}</span>
+                            <div className={styles.surveyMetaGrid}>
+                              <div className={styles.metaItem}>
+                                <Calendar className={styles.metaIcon} size={16} />
+                                <span className={styles.metaLabel}>Created:</span>
+                                <span className={styles.metaValue}>{formatDate(survey.createdAt)}</span>
+                              </div>
+                              <div className={styles.metaItem}>
+                                <Clock className={styles.metaIcon} size={16} />
+                                <span className={styles.metaLabel}>Updated:</span>
+                                <span className={styles.metaValue}>{formatDate(survey.updatedAt)}</span>
+                              </div>
+                              <div className={styles.metaItem}>
+                                <BarChart3 className={styles.metaIcon} size={16} />
+                                <span className={styles.metaLabel}>Responses:</span>
+                                <span className={styles.metaValue}>{survey.totalResponses}</span>
+                              </div>
+                              <div className={styles.metaItem}>
+                                <HelpCircle className={styles.metaIcon} size={16} />
+                                <span className={styles.metaLabel}>Questions:</span>
+                                <span className={styles.metaValue}>{survey.totalQuestions}</span>
+                              </div>
                             </div>
                           </div>
 

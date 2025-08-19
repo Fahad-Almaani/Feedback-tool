@@ -439,6 +439,7 @@
   grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
   gap: var(--space-lg);
   margin-bottom: var(--space-xl);
+  align-items: stretch; /* Ensure all cards stretch to the same height */
 }
 
 .enhancedSurveyCard {
@@ -451,6 +452,10 @@
   position: relative;
   overflow: hidden;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 320px;
 }
 
 .enhancedSurveyCard::before {
@@ -504,24 +509,62 @@
   justify-content: space-between;
   align-items: flex-start;
   margin-bottom: var(--space-md);
+  gap: var(--space-sm);
 }
 
 .surveyTitleSection {
   flex: 1;
-  margin-right: var(--space-md);
+  min-width: 0; /* Allow text to truncate */
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
 }
 
 .surveyCardTitle {
   font-size: var(--font-size-lg);
   font-weight: 700;
   color: var(--text-primary);
-  margin-bottom: var(--space-xs);
   line-height: 1.3;
+  margin: 0;
+  /* Limit title to 2 lines max */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .surveyActions {
   display: flex;
   gap: var(--space-xs);
+  flex-shrink: 0; /* Prevent actions from shrinking */
+}
+
+/* Survey Card Content - flexible middle section */
+.surveyCardContent {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Survey Description with fixed height */
+.surveyDescription {
+  margin-bottom: var(--space-md);
+  color: #6b7280;
+  font-size: 0.9rem;
+  line-height: 1.4;
+  padding: var(--space-sm);
+  background: rgba(255, 255, 255, 0.5);
+  border-radius: var(--radius-sm);
+  /* Limit description to 3 lines max */
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-height: 4.2em; /* 3 lines * 1.4 line-height */
 }
 
 .actionBtn {
@@ -555,7 +598,8 @@
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: var(--space-sm);
-  margin-bottom: var(--space-md);
+  margin: var(--space-md) 0;
+  flex: 1; /* Take up remaining space */
 }
 
 .metaItem {
@@ -587,7 +631,8 @@
 }
 
 .surveyProgress {
-  margin-top: var(--space-md);
+  margin-top: auto; /* Push to bottom */
+  padding-top: var(--space-md);
 }
 
 .progressInfo {
@@ -1295,12 +1340,4 @@
   font-size: 0.9rem;
 }
 
-.surveyDescription {
-  margin-top: var(--space-sm);
-  color: #6b7280;
-  font-size: 0.9rem;
-  line-height: 1.4;
-  padding: var(--space-sm);
-  background: rgba(255, 255, 255, 0.5);
-  border-radius: var(--border-radius-sm);
-}
+/* Survey Description with fixed height - moved to surveyCardContent section */
