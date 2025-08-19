@@ -570,7 +570,8 @@
 }
 
 .metaIcon {
-  font-size: var(--font-size-base);
+  color: var(--text-secondary);
+  flex-shrink: 0;
 }
 
 .metaLabel {
