@@ -12,6 +12,7 @@ import AdminDashboard from './pages/AdminDashboard/AdminDashboard'
 import UserDashboard from './pages/UserDashboard/UserDashboard';
 import SurveyCreationPage from './pages/SurveyCreation/SurveyCreationPage';
 import SurveyFormPage from './pages/SurveyForm/SurveyFormPage';
+import SurveyViewPage from './pages/SurveyView/SurveyViewPage';
 
 // Component to handle login route with return URL logic
 const LoginRoute = () => {
@@ -96,6 +97,11 @@ const AppRoutes = () => {
       <Route path="/admin/surveys/create" element={
         <ProtectedRoute requiredRole="ADMIN">
           <SurveyCreationPage />
+        </ProtectedRoute>
+      } />
+      <Route path="/admin/surveys/:surveyId" element={
+        <ProtectedRoute requiredRole="ADMIN">
+          <SurveyViewPage />
         </ProtectedRoute>
       } />
 

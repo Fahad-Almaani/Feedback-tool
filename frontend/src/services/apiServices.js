@@ -399,7 +399,3 @@ export class UserService {
     };
   }
 }
-
-// Export all services
-export { SurveyService as default };
-export { ResponseService, UserService };
