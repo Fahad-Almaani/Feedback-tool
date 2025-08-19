@@ -11,8 +11,7 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/auth")
-@CrossOrigin(origins = { "http://localhost:3000", "http://localhost:5173", "http://localhost:4173",
-        "http://127.0.0.1:3000", "http://127.0.0.1:5173", "http://127.0.0.1:4173" }, allowCredentials = "true")
+// CORS is now handled globally by CorsConfig
 public class AuthController {
 
     private final AuthService authService;
