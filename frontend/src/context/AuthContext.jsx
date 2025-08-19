@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { apiClient } from '../utils/apiClient';
+import { apiClient, errorHandler } from '../utils/apiClient';
 
 const AuthContext = createContext();
 
@@ -39,8 +39,17 @@ export const AuthProvider = ({ children }) => {
 
     const login = async (email, password) => {
         try {
-            // Use the new apiClient for login
-            const data = await apiClient.post('/auth/login', { email, password });
+            // Use the enhanced apiClient for login
+            const response = await apiClient.post('/auth/login', { email, password });
+
+            // The apiClient now automatically extracts data from the new API response structure
+            const data = apiClient.extractData(response);
+            const metadata = apiClient.getResponseMetadata(response);
+
+            // Log success message if available
+            if (metadata?.message) {
+                console.log('Login response:', metadata.message);
+            }
 
             // Store token and user data
             apiClient.auth.setToken(data.token);
@@ -60,17 +69,38 @@ export const AuthProvider = ({ children }) => {
                 token: data.token
             });
 
-            return { success: true, user: data };
+            return {
+                success: true,
+                user: data,
+                message: metadata?.message || 'Login successful'
+            };
         } catch (error) {
             console.error('Login error:', error);
-            return { success: false, error: error.message };
+
+            // Use enhanced error handling
+            const errorDetails = apiClient.getErrorDetails(error);
+
+            return {
+                success: false,
+                error: errorDetails.message,
+                errors: errorDetails.errors
+            };
         }
     };
 
     const register = async (name, email, password) => {
         try {
-            // Use the new apiClient for registration
-            const data = await apiClient.post('/users/create', { name, email, password });
+            // Use the enhanced apiClient for registration
+            const response = await apiClient.post('/users/create', { name, email, password });
+
+            // Extract data using the new API response structure
+            const data = apiClient.extractData(response);
+            const metadata = apiClient.getResponseMetadata(response);
+
+            // Log success message if available
+            if (metadata?.message) {
+                console.log('Registration response:', metadata.message);
+            }
 
             // Store token and user data
             apiClient.auth.setToken(data.token);
@@ -90,10 +120,22 @@ export const AuthProvider = ({ children }) => {
                 token: data.token
             });
 
-            return { success: true, user: data };
+            return {
+                success: true,
+                user: data,
+                message: metadata?.message || 'Registration successful'
+            };
         } catch (error) {
             console.error('Registration error:', error);
-            return { success: false, error: error.message };
+
+            // Use enhanced error handling
+            const errorDetails = apiClient.getErrorDetails(error);
+
+            return {
+                success: false,
+                error: errorDetails.message,
+                errors: errorDetails.errors
+            };
         }
     };
 

@@ -342,15 +342,13 @@ export default function SurveyCreationPage() {
             };
 
             const response = await apiClient.post("/surveys", surveyData);
+            const data = apiClient.extractData(response);
 
-            if (response.ok) {
-                navigate("/admin");
-            } else {
-                const errorData = await response.json();
-                setErrors({ submit: errorData.message || "Failed to create survey" });
-            }
+            // Survey created successfully, navigate to admin dashboard
+            navigate("/admin");
         } catch (error) {
-            setErrors({ submit: "Network error. Please try again." });
+            const errorDetails = apiClient.getErrorDetails(error);
+            setErrors({ submit: errorDetails.message || "Failed to create survey" });
         } finally {
             setIsSubmitting(false);
         }

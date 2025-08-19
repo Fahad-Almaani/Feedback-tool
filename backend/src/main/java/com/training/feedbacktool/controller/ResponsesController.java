@@ -1,5 +1,6 @@
 package com.training.feedbacktool.controller;
 
+import com.training.feedbacktool.common.ApiResponse;
 import com.training.feedbacktool.dto.SimpleAnswerDTO;
 import com.training.feedbacktool.entity.Response;
 import com.training.feedbacktool.entity.Answer;
@@ -10,6 +11,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.HttpStatus;
 
 import java.util.List;
 import java.util.Optional;
@@ -32,31 +34,39 @@ public class ResponsesController {
     }
 
     @GetMapping("/debug")
-    public String debugAuth() {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth == null) {
-            return "No authentication found";
+    public ResponseEntity<ApiResponse<String>> debugAuth() {
+        try {
+            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+            String debugInfo = auth == null ? "No authentication found"
+                    : "Authenticated as: " + auth.getName() + " with authorities: " + auth.getAuthorities();
+            ApiResponse<String> response = ApiResponse.success(debugInfo, "Authentication debug information");
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            ApiResponse<String> response = ApiResponse.error("Failed to get authentication info: " + e.getMessage(),
+                    HttpStatus.INTERNAL_SERVER_ERROR);
+            return ResponseEntity.internalServerError().body(response);
         }
-        return "Authenticated as: " + auth.getName() + " with authorities: " + auth.getAuthorities();
     }
 
     @GetMapping("/count")
-    public Map<String, Object> getResponseCount() {
+    public ResponseEntity<ApiResponse<Map<String, Object>>> getResponseCount() {
         try {
             long count = responsesRepository.count();
             Map<String, Object> result = new HashMap<>();
             result.put("count", count);
             result.put("message", "Total responses in database");
-            return result;
+            ApiResponse<Map<String, Object>> response = ApiResponse.success(result,
+                    "Response count retrieved successfully");
+            return ResponseEntity.ok(response);
         } catch (Exception e) {
-            Map<String, Object> error = new HashMap<>();
-            error.put("error", e.getMessage());
-            return error;
+            ApiResponse<Map<String, Object>> response = ApiResponse
+                    .error("Failed to get response count: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+            return ResponseEntity.internalServerError().body(response);
         }
     }
 
     @GetMapping("/survey/{surveyId}")
-    public ResponseEntity<?> getResponsesBySurveyId(@PathVariable Long surveyId) {
+    public ResponseEntity<ApiResponse<Map<String, Object>>> getResponsesBySurveyId(@PathVariable Long surveyId) {
         try {
             System.out.println("Getting responses for survey ID: " + surveyId);
             List<Answer> answers = answersRepository.findBySurveyId(surveyId);
@@ -76,7 +86,10 @@ public class ResponsesController {
                     respondentKey = "anonymous_" + answer.getCreatedAt().toString().substring(0, 19); // Group by minute
                 }
 
-                answersByRespondent.computeIfAbsent(respondentKey, k -> new ArrayList<>()).add(answer);
+                if (!answersByRespondent.containsKey(respondentKey)) {
+                    answersByRespondent.put(respondentKey, new ArrayList<>());
+                }
+                answersByRespondent.get(respondentKey).add(answer);
             }
 
             // Convert to response structure
@@ -146,46 +159,92 @@ public class ResponsesController {
             result.put("totalAnswers", answers.size());
             result.put("responses", responses);
 
-            return ResponseEntity.ok(result);
+            String message = responses.isEmpty() ? "No responses found for survey ID: " + surveyId
+                    : "Successfully retrieved " + responses.size() + " responses for survey ID: " + surveyId;
+
+            ApiResponse<Map<String, Object>> apiResponse = ApiResponse.success(result, message);
+            return ResponseEntity.ok(apiResponse);
+
         } catch (Exception e) {
             System.err.println("Error getting responses for survey " + surveyId + ": " + e.getMessage());
             e.printStackTrace();
-            Map<String, String> error = new HashMap<>();
-            error.put("error", e.getMessage());
-            error.put("type", e.getClass().getSimpleName());
-            return ResponseEntity.internalServerError().body(error);
+            ApiResponse<Map<String, Object>> response = ApiResponse.error(
+                    "Failed to retrieve responses for survey ID: " + surveyId + ". " + e.getMessage(),
+                    HttpStatus.INTERNAL_SERVER_ERROR);
+            return ResponseEntity.internalServerError().body(response);
         }
     }
 
     @GetMapping("/list")
-    public ResponseEntity<?> getAllResponses() {
+    public ResponseEntity<ApiResponse<List<Response>>> getAllResponses() {
         try {
             System.out.println("Getting all responses...");
             List<Response> responses = responsesRepository.findAll();
             System.out.println("Found " + responses.size() + " responses");
-            return ResponseEntity.ok(responses);
+
+            String message = responses.isEmpty() ? "No responses found"
+                    : "Successfully retrieved " + responses.size() + " responses";
+
+            ApiResponse<List<Response>> response = ApiResponse.success(responses, message);
+            return ResponseEntity.ok(response);
         } catch (Exception e) {
             System.err.println("Error getting responses: " + e.getMessage());
             e.printStackTrace();
-            Map<String, String> error = new HashMap<>();
-            error.put("error", e.getMessage());
-            error.put("type", e.getClass().getSimpleName());
-            return ResponseEntity.internalServerError().body(error);
+            ApiResponse<List<Response>> response = ApiResponse.error("Failed to retrieve responses: " + e.getMessage(),
+                    HttpStatus.INTERNAL_SERVER_ERROR);
+            return ResponseEntity.internalServerError().body(response);
         }
     }
 
     @GetMapping("/{id}")
-    public Optional<Response> getResponseById(@PathVariable Long id) {
-        return responsesRepository.findById(id);
+    public ResponseEntity<ApiResponse<Response>> getResponseById(@PathVariable Long id) {
+        try {
+            Optional<Response> response = responsesRepository.findById(id);
+            if (response.isPresent()) {
+                ApiResponse<Response> apiResponse = ApiResponse.success(response.get(),
+                        "Response retrieved successfully");
+                return ResponseEntity.ok(apiResponse);
+            } else {
+                ApiResponse<Response> apiResponse = ApiResponse.error("Response not found with ID: " + id,
+                        HttpStatus.NOT_FOUND);
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(apiResponse);
+            }
+        } catch (Exception e) {
+            ApiResponse<Response> response = ApiResponse.error("Failed to retrieve response: " + e.getMessage(),
+                    HttpStatus.INTERNAL_SERVER_ERROR);
+            return ResponseEntity.internalServerError().body(response);
+        }
     }
 
     @PostMapping
-    public Response createResponse(@RequestBody Response response) {
-        return responsesRepository.save(response);
+    public ResponseEntity<ApiResponse<Response>> createResponse(@RequestBody Response response) {
+        try {
+            Response savedResponse = responsesRepository.save(response);
+            ApiResponse<Response> apiResponse = ApiResponse.success(savedResponse, "Response created successfully",
+                    HttpStatus.CREATED);
+            return ResponseEntity.status(HttpStatus.CREATED).body(apiResponse);
+        } catch (Exception e) {
+            ApiResponse<Response> apiResponse = ApiResponse.error("Failed to create response: " + e.getMessage(),
+                    HttpStatus.BAD_REQUEST);
+            return ResponseEntity.badRequest().body(apiResponse);
+        }
     }
 
     @DeleteMapping("/{id}")
-    public void deleteResponse(@PathVariable Long id) {
-        responsesRepository.deleteById(id);
+    public ResponseEntity<ApiResponse<Void>> deleteResponse(@PathVariable Long id) {
+        try {
+            if (!responsesRepository.existsById(id)) {
+                ApiResponse<Void> response = ApiResponse.error("Response not found with ID: " + id,
+                        HttpStatus.NOT_FOUND);
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+            }
+            responsesRepository.deleteById(id);
+            ApiResponse<Void> response = ApiResponse.success("Response deleted successfully");
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            ApiResponse<Void> response = ApiResponse.error("Failed to delete response: " + e.getMessage(),
+                    HttpStatus.INTERNAL_SERVER_ERROR);
+            return ResponseEntity.internalServerError().body(response);
+        }
     }
 }

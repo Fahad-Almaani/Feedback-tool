@@ -1,5 +1,6 @@
 package com.training.feedbacktool.controller;
 
+import com.training.feedbacktool.common.ApiResponse;
 import com.training.feedbacktool.service.SurveyService;
 import com.training.feedbacktool.dto.AdminSurveyResponse;
 import com.training.feedbacktool.dto.CreateSurveyRequest;
@@ -7,6 +8,7 @@ import com.training.feedbacktool.dto.SurveyResponse;
 import com.training.feedbacktool.dto.PublicSurveyResponse;
 import com.training.feedbacktool.dto.SurveyResultsResponse;
 import jakarta.validation.Valid;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.CrossOrigin;
@@ -33,45 +35,99 @@ public class SurveyController {
 
     @PostMapping("/create")
     @PreAuthorize("hasRole('ADMIN')") // Admin only
-    public ResponseEntity<SurveyResponse> create(@Valid @RequestBody CreateSurveyRequest req) {
-        SurveyResponse created = service.create(req);
-        return ResponseEntity.created(URI.create("/surveys/" + created.id())).body(created);
+    public ResponseEntity<ApiResponse<SurveyResponse>> create(@Valid @RequestBody CreateSurveyRequest req) {
+        try {
+            SurveyResponse created = service.create(req);
+            ApiResponse<SurveyResponse> response = ApiResponse.success(created, "Survey created successfully",
+                    HttpStatus.CREATED);
+            return ResponseEntity.created(URI.create("/surveys/" + created.id())).body(response);
+        } catch (Exception e) {
+            ApiResponse<SurveyResponse> response = ApiResponse.error("Failed to create survey: " + e.getMessage(),
+                    HttpStatus.BAD_REQUEST);
+            return ResponseEntity.badRequest().body(response);
+        }
     }
 
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')") // Admin only
-    public ResponseEntity<SurveyResponse> createSurvey(@Valid @RequestBody CreateSurveyRequest req) {
-        SurveyResponse created = service.create(req);
-        return ResponseEntity.created(URI.create("/surveys/" + created.id())).body(created);
+    public ResponseEntity<ApiResponse<SurveyResponse>> createSurvey(@Valid @RequestBody CreateSurveyRequest req) {
+        try {
+            SurveyResponse created = service.create(req);
+            ApiResponse<SurveyResponse> response = ApiResponse.success(created, "Survey created successfully",
+                    HttpStatus.CREATED);
+            return ResponseEntity.created(URI.create("/surveys/" + created.id())).body(response);
+        } catch (Exception e) {
+            ApiResponse<SurveyResponse> response = ApiResponse.error("Failed to create survey: " + e.getMessage(),
+                    HttpStatus.BAD_REQUEST);
+            return ResponseEntity.badRequest().body(response);
+        }
     }
 
     @GetMapping
     @PreAuthorize("hasRole('ADMIN')") // Admin only
-    public List<SurveyResponse> listAll() {
-        return service.listAll();
+    public ResponseEntity<ApiResponse<List<SurveyResponse>>> listAll() {
+        try {
+            List<SurveyResponse> surveys = service.listAll();
+            ApiResponse<List<SurveyResponse>> response = ApiResponse.success(surveys,
+                    surveys.isEmpty() ? "No surveys found" : "Successfully retrieved " + surveys.size() + " surveys");
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            ApiResponse<List<SurveyResponse>> response = ApiResponse
+                    .error("Failed to retrieve surveys: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+            return ResponseEntity.internalServerError().body(response);
+        }
     }
 
     @GetMapping("/admin")
     @PreAuthorize("hasRole('ADMIN')") // Admin only
-    public List<AdminSurveyResponse> listAllWithStats() {
-        return service.listAllWithStats();
+    public ResponseEntity<ApiResponse<List<AdminSurveyResponse>>> listAllWithStats() {
+        try {
+            List<AdminSurveyResponse> surveys = service.listAllWithStats();
+            ApiResponse<List<AdminSurveyResponse>> response = ApiResponse.success(surveys,
+                    surveys.isEmpty() ? "No surveys found"
+                            : "Successfully retrieved " + surveys.size() + " surveys with statistics");
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            ApiResponse<List<AdminSurveyResponse>> response = ApiResponse
+                    .error("Failed to retrieve survey statistics: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+            return ResponseEntity.internalServerError().body(response);
+        }
     }
 
     @GetMapping("/{id}/public")
     // No authentication required for public survey access
-    public ResponseEntity<PublicSurveyResponse> getPublicSurvey(@PathVariable Long id) {
-        PublicSurveyResponse survey = service.findByIdWithQuestions(id);
-        return ResponseEntity.ok(survey);
+    public ResponseEntity<ApiResponse<PublicSurveyResponse>> getPublicSurvey(@PathVariable Long id) {
+        try {
+            PublicSurveyResponse survey = service.findByIdWithQuestions(id);
+            ApiResponse<PublicSurveyResponse> response = ApiResponse.success(survey, "Survey retrieved successfully");
+            return ResponseEntity.ok(response);
+        } catch (IllegalArgumentException e) {
+            ApiResponse<PublicSurveyResponse> response = ApiResponse.error("Survey not found with ID: " + id,
+                    HttpStatus.NOT_FOUND);
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+        } catch (Exception e) {
+            ApiResponse<PublicSurveyResponse> response = ApiResponse
+                    .error("Failed to retrieve survey: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+            return ResponseEntity.internalServerError().body(response);
+        }
     }
 
     @GetMapping("/{id}/results")
     @PreAuthorize("hasRole('ADMIN')") // Admin only - survey results are sensitive
-    public ResponseEntity<SurveyResultsResponse> getSurveyResults(@PathVariable Long id) {
+    public ResponseEntity<ApiResponse<SurveyResultsResponse>> getSurveyResults(@PathVariable Long id) {
         try {
             SurveyResultsResponse results = service.getSurveyResults(id);
-            return ResponseEntity.ok(results);
+            ApiResponse<SurveyResultsResponse> response = ApiResponse.success(results,
+                    "Survey results retrieved successfully");
+            return ResponseEntity.ok(response);
         } catch (IllegalArgumentException e) {
-            return ResponseEntity.notFound().build();
+            ApiResponse<SurveyResultsResponse> response = ApiResponse.error("Survey not found with ID: " + id,
+                    HttpStatus.NOT_FOUND);
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+        } catch (Exception e) {
+            ApiResponse<SurveyResultsResponse> response = ApiResponse
+                    .error("Failed to retrieve survey results: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+            return ResponseEntity.internalServerError().body(response);
         }
     }
 }

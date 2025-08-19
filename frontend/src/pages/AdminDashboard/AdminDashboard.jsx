@@ -73,8 +73,11 @@ export default function AdminDashboard() {
         setError(null);
 
         const response = await apiClient.get('/surveys/admin');
-        const surveysData = response.data;
-        console.log(surveysData);
+        const surveysData = apiClient.extractData(response);
+        const metadata = apiClient.getResponseMetadata(response);
+
+        console.log('API Response metadata:', metadata);
+        console.log('Surveys data:', surveysData);
         setSurveys(surveysData);
 
         // Calculate statistics from real data
@@ -107,7 +110,8 @@ export default function AdminDashboard() {
 
       } catch (err) {
         console.error('Error fetching surveys:', err);
-        setError('Failed to load survey data. Please try again.');
+        const errorDetails = apiClient.getErrorDetails(err);
+        setError(errorDetails.message || 'Failed to load survey data. Please try again.');
       } finally {
         setLoading(false);
       }
