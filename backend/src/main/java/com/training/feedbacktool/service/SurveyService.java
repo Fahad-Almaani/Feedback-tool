@@ -354,13 +354,22 @@ public class SurveyService {
         // Sort respondents by first submission time
         respondents.sort((r1, r2) -> r1.firstSubmissionAt().compareTo(r2.firstSubmissionAt()));
 
-        // Create question results
+        // Create question results with advanced analytics
         List<SurveyResultsResponse.QuestionResultDTO> questionResults = new ArrayList<>();
+        int totalRespondents = respondents.size();
 
         for (Question question : survey.getQuestions()) {
             List<Answer> questionAnswers = allAnswers.stream()
                     .filter(answer -> answer.getQuestion().getId().equals(question.getId()))
                     .collect(Collectors.toList());
+
+            // Calculate completion rate
+            double completionRate = totalRespondents > 0 ? (double) questionAnswers.size() / totalRespondents * 100
+                    : 0.0;
+
+            // Generate analytics based on question type
+            SurveyResultsResponse.QuestionAnalyticsDTO analytics = generateQuestionAnalytics(
+                    question, questionAnswers);
 
             List<SurveyResultsResponse.AnswerSummaryDTO> answerSummaries = questionAnswers.stream()
                     .map(answer -> {
@@ -389,7 +398,9 @@ public class SurveyService {
                     question.getOrderNumber(),
                     question.getRequired(),
                     questionAnswers.size(),
-                    answerSummaries));
+                    completionRate,
+                    answerSummaries,
+                    analytics));
         }
 
         // Sort questions by order number
@@ -408,5 +419,232 @@ public class SurveyService {
                 survey.getQuestions().size(),
                 questionResults,
                 respondents);
+    }
+
+    /**
+     * Generate advanced analytics for a specific question based on its type
+     */
+    private SurveyResultsResponse.QuestionAnalyticsDTO generateQuestionAnalytics(
+            Question question, List<Answer> answers) {
+
+        String questionType = question.getType().toUpperCase();
+
+        // Initialize all fields
+        Double averageRating = null;
+        Double medianRating = null;
+        Integer minRating = null;
+        Integer maxRating = null;
+        Map<String, Integer> ratingDistribution = new HashMap<>();
+        Map<String, Integer> optionCounts = new HashMap<>();
+        Map<String, Double> optionPercentages = new HashMap<>();
+        String mostPopularOption = null;
+        String leastPopularOption = null;
+        Integer averageTextLength = null;
+        Integer minTextLength = null;
+        Integer maxTextLength = null;
+        List<String> commonKeywords = new ArrayList<>();
+        Map<String, Object> customMetrics = new HashMap<>();
+
+        if (answers.isEmpty()) {
+            return new SurveyResultsResponse.QuestionAnalyticsDTO(
+                    averageRating, medianRating, minRating, maxRating, ratingDistribution,
+                    optionCounts, optionPercentages, mostPopularOption, leastPopularOption,
+                    averageTextLength, minTextLength, maxTextLength, commonKeywords, customMetrics);
+        }
+
+        switch (questionType) {
+            case "RATING":
+                calculateRatingAnalytics(answers, ratingDistribution, customMetrics);
+
+                // Calculate rating statistics
+                List<Integer> ratings = answers.stream()
+                        .map(Answer::getAnswerText)
+                        .filter(text -> text != null && !text.trim().isEmpty())
+                        .map(text -> {
+                            try {
+                                return Integer.parseInt(text.trim());
+                            } catch (NumberFormatException e) {
+                                return null;
+                            }
+                        })
+                        .filter(Objects::nonNull)
+                        .collect(Collectors.toList());
+
+                if (!ratings.isEmpty()) {
+                    averageRating = ratings.stream().mapToInt(Integer::intValue).average().orElse(0.0);
+                    Collections.sort(ratings);
+                    medianRating = ratings.size() % 2 == 0
+                            ? (ratings.get(ratings.size() / 2 - 1) + ratings.get(ratings.size() / 2)) / 2.0
+                            : ratings.get(ratings.size() / 2).doubleValue();
+                    minRating = ratings.get(0);
+                    maxRating = ratings.get(ratings.size() - 1);
+                }
+                break;
+
+            case "MULTIPLE_CHOICE":
+            case "RADIO":
+            case "DROPDOWN":
+                calculateOptionAnalytics(question, answers, optionCounts, optionPercentages, customMetrics);
+
+                // Find most and least popular options
+                if (!optionCounts.isEmpty()) {
+                    mostPopularOption = optionCounts.entrySet().stream()
+                            .max(Map.Entry.comparingByValue())
+                            .map(Map.Entry::getKey)
+                            .orElse(null);
+
+                    leastPopularOption = optionCounts.entrySet().stream()
+                            .min(Map.Entry.comparingByValue())
+                            .map(Map.Entry::getKey)
+                            .orElse(null);
+                }
+                break;
+
+            case "TEXT":
+            case "LONG_TEXT":
+                calculateTextAnalytics(answers, customMetrics);
+
+                // Calculate text length statistics
+                List<Integer> textLengths = answers.stream()
+                        .map(Answer::getAnswerText)
+                        .filter(text -> text != null)
+                        .map(String::length)
+                        .collect(Collectors.toList());
+
+                if (!textLengths.isEmpty()) {
+                    averageTextLength = (int) textLengths.stream().mapToInt(Integer::intValue).average().orElse(0.0);
+                    minTextLength = textLengths.stream().min(Integer::compareTo).orElse(0);
+                    maxTextLength = textLengths.stream().max(Integer::compareTo).orElse(0);
+
+                    // Extract common keywords (simple implementation)
+                    commonKeywords = extractCommonKeywords(answers);
+                }
+                break;
+
+            default:
+                // For unknown question types, just provide basic metrics
+                customMetrics.put("totalAnswers", answers.size());
+                customMetrics.put("questionType", questionType);
+        }
+
+        return new SurveyResultsResponse.QuestionAnalyticsDTO(
+                averageRating, medianRating, minRating, maxRating, ratingDistribution,
+                optionCounts, optionPercentages, mostPopularOption, leastPopularOption,
+                averageTextLength, minTextLength, maxTextLength, commonKeywords, customMetrics);
+    }
+
+    private void calculateRatingAnalytics(List<Answer> answers, Map<String, Integer> ratingDistribution,
+            Map<String, Object> customMetrics) {
+        for (Answer answer : answers) {
+            String ratingText = answer.getAnswerText();
+            if (ratingText != null && !ratingText.trim().isEmpty()) {
+                try {
+                    Integer.parseInt(ratingText.trim()); // Validate it's a number
+                    ratingDistribution.merge(ratingText.trim(), 1, Integer::sum);
+                } catch (NumberFormatException e) {
+                    // Invalid rating, skip
+                }
+            }
+        }
+
+        customMetrics.put("totalRatings", ratingDistribution.values().stream().mapToInt(Integer::intValue).sum());
+        customMetrics.put("uniqueRatings", ratingDistribution.size());
+    }
+
+    private void calculateOptionAnalytics(Question question, List<Answer> answers,
+            Map<String, Integer> optionCounts,
+            Map<String, Double> optionPercentages,
+            Map<String, Object> customMetrics) {
+
+        // Parse question options
+        List<String> availableOptions = new ArrayList<>();
+        if (question.getOptionsJson() != null && !question.getOptionsJson().trim().isEmpty()) {
+            try {
+                // Simple JSON array parsing (assuming ["option1", "option2", ...])
+                String optionsJson = question.getOptionsJson().trim();
+                if (optionsJson.startsWith("[") && optionsJson.endsWith("]")) {
+                    String[] options = optionsJson.substring(1, optionsJson.length() - 1)
+                            .split(",");
+                    for (String option : options) {
+                        String cleanOption = option.trim().replaceAll("\"", "");
+                        if (!cleanOption.isEmpty()) {
+                            availableOptions.add(cleanOption);
+                            optionCounts.put(cleanOption, 0); // Initialize with 0
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                // If JSON parsing fails, treat answers as free-form options
+            }
+        }
+
+        // Count actual answers
+        for (Answer answer : answers) {
+            String answerText = answer.getAnswerText();
+            if (answerText != null && !answerText.trim().isEmpty()) {
+                optionCounts.merge(answerText.trim(), 1, Integer::sum);
+            }
+        }
+
+        // Calculate percentages
+        int totalAnswers = answers.size();
+        if (totalAnswers > 0) {
+            for (Map.Entry<String, Integer> entry : optionCounts.entrySet()) {
+                double percentage = (double) entry.getValue() / totalAnswers * 100;
+                optionPercentages.put(entry.getKey(), percentage);
+            }
+        }
+
+        customMetrics.put("totalAnswers", totalAnswers);
+        customMetrics.put("uniqueOptions", optionCounts.size());
+        customMetrics.put("predefinedOptions", availableOptions.size());
+    }
+
+    private void calculateTextAnalytics(List<Answer> answers, Map<String, Object> customMetrics) {
+        List<String> allTexts = answers.stream()
+                .map(Answer::getAnswerText)
+                .filter(text -> text != null && !text.trim().isEmpty())
+                .collect(Collectors.toList());
+
+        customMetrics.put("totalTextAnswers", allTexts.size());
+        customMetrics.put("emptyAnswers", answers.size() - allTexts.size());
+
+        if (!allTexts.isEmpty()) {
+            double avgLength = allTexts.stream().mapToInt(String::length).average().orElse(0.0);
+            customMetrics.put("averageLength", avgLength);
+
+            int totalWords = allTexts.stream()
+                    .mapToInt(text -> text.split("\\s+").length)
+                    .sum();
+            customMetrics.put("totalWords", totalWords);
+            customMetrics.put("averageWords", (double) totalWords / allTexts.size());
+        }
+    }
+
+    private List<String> extractCommonKeywords(List<Answer> answers) {
+        Map<String, Integer> wordFrequency = new HashMap<>();
+
+        for (Answer answer : answers) {
+            String text = answer.getAnswerText();
+            if (text != null && !text.trim().isEmpty()) {
+                // Simple word extraction (split by whitespace and punctuation)
+                String[] words = text.toLowerCase()
+                        .replaceAll("[^a-zA-Z0-9\\s]", "")
+                        .split("\\s+");
+
+                for (String word : words) {
+                    if (word.length() > 2) { // Ignore very short words
+                        wordFrequency.merge(word, 1, Integer::sum);
+                    }
+                }
+            }
+        }
+
+        // Return top 5 most frequent words
+        return wordFrequency.entrySet().stream()
+                .sorted(Map.Entry.<String, Integer>comparingByValue().reversed())
+                .limit(5)
+                .map(Map.Entry::getKey)
+                .collect(Collectors.toList());
     }
 }

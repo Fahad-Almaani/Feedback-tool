@@ -2,55 +2,83 @@ package com.training.feedbacktool.dto;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 
 public record SurveyResultsResponse(
-        Long surveyId,
-        String surveyTitle,
-        String surveyDescription,
-        Instant surveyCreatedAt,
-        int totalResponses,
-        int totalQuestions,
-        List<QuestionResultDTO> questionResults,
-        List<RespondentDTO> respondents) {
+                Long surveyId,
+                String surveyTitle,
+                String surveyDescription,
+                Instant surveyCreatedAt,
+                int totalResponses,
+                int totalQuestions,
+                List<QuestionResultDTO> questionResults,
+                List<RespondentDTO> respondents) {
 
-    public record QuestionResultDTO(
-            Long questionId,
-            String questionText,
-            String questionType,
-            Integer orderNumber,
-            Boolean required,
-            int totalAnswers,
-            List<AnswerSummaryDTO> answers) {
-    }
+        public record QuestionResultDTO(
+                        Long questionId,
+                        String questionText,
+                        String questionType,
+                        Integer orderNumber,
+                        Boolean required,
+                        int totalAnswers,
+                        double completionRate, // percentage of respondents who answered this question
+                        List<AnswerSummaryDTO> answers,
+                        QuestionAnalyticsDTO analytics) {
+        }
 
-    public record AnswerSummaryDTO(
-            Long answerId,
-            String answerText,
-            Instant submittedAt,
-            RespondentInfoDTO respondent) {
-    }
+        public record QuestionAnalyticsDTO(
+                        // For RATING questions
+                        Double averageRating,
+                        Double medianRating,
+                        Integer minRating,
+                        Integer maxRating,
+                        Map<String, Integer> ratingDistribution, // "1" -> 5, "2" -> 10, etc.
 
-    public record RespondentDTO(
-            String respondentId, // "user_123" or "anonymous_1", "anonymous_2" etc.
-            String name,
-            String email,
-            boolean isAnonymous,
-            int totalAnswersSubmitted,
-            Instant firstSubmissionAt,
-            List<ResponseDetailDTO> responses) {
-    }
+                        // For MULTIPLE_CHOICE, RADIO, DROPDOWN questions
+                        Map<String, Integer> optionCounts, // option -> count
+                        Map<String, Double> optionPercentages, // option -> percentage
+                        String mostPopularOption,
+                        String leastPopularOption,
 
-    public record ResponseDetailDTO(
-            Long questionId,
-            String questionText,
-            String answerText,
-            Instant submittedAt) {
-    }
+                        // For TEXT, LONG_TEXT questions
+                        Integer averageTextLength,
+                        Integer minTextLength,
+                        Integer maxTextLength,
+                        List<String> commonKeywords, // most frequent words (optional)
 
-    public record RespondentInfoDTO(
-            String respondentId,
-            String name,
-            String email,
-            boolean isAnonymous) {
-    }
+                        // For all question types
+                        Map<String, Object> customMetrics // extensible for future analytics
+        ) {
+        }
+
+        public record AnswerSummaryDTO(
+                        Long answerId,
+                        String answerText,
+                        Instant submittedAt,
+                        RespondentInfoDTO respondent) {
+        }
+
+        public record RespondentDTO(
+                        String respondentId, // "user_123" or "anonymous_1", "anonymous_2" etc.
+                        String name,
+                        String email,
+                        boolean isAnonymous,
+                        int totalAnswersSubmitted,
+                        Instant firstSubmissionAt,
+                        List<ResponseDetailDTO> responses) {
+        }
+
+        public record ResponseDetailDTO(
+                        Long questionId,
+                        String questionText,
+                        String answerText,
+                        Instant submittedAt) {
+        }
+
+        public record RespondentInfoDTO(
+                        String respondentId,
+                        String name,
+                        String email,
+                        boolean isAnonymous) {
+        }
 }

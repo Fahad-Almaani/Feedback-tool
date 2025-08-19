@@ -838,51 +838,209 @@ export default function SurveyViewPage() {
                     <div className={styles.tabContent}>
                         {/* Questions List */}
                         <div className={styles.questionsList}>
-                            {surveyDetails?.questions?.map((question, index) => (
-                                <div key={question.id} className={styles.questionCard}>
-                                    <div className={styles.questionHeader}>
-                                        <div className={styles.questionNumber}>
-                                            <Hash size={16} />
-                                            {question.orderNumber || index + 1}
+                            {surveyDetails?.questions?.map((question, index) => {
+                                const questionResult = surveyResults?.questionResults?.find(qr => qr.questionId === question.id);
+                                const analytics = questionResult?.analytics;
+
+                                return (
+                                    <div key={question.id} className={styles.questionCard}>
+                                        <div className={styles.questionHeader}>
+                                            <div className={styles.questionNumber}>
+                                                <Hash size={16} />
+                                                {question.orderNumber || index + 1}
+                                            </div>
+                                            <div className={styles.questionType}>
+                                                {formatQuestionType(question.type)}
+                                            </div>
+                                            {question.required && (
+                                                <div className={styles.requiredBadge}>Required</div>
+                                            )}
                                         </div>
-                                        <div className={styles.questionType}>
-                                            {formatQuestionType(question.type)}
+                                        <div className={styles.questionContent}>
+                                            <h4 className={styles.questionText}>{question.questionText}</h4>
+                                            {question.optionsJson && (
+                                                <div className={styles.questionOptions}>
+                                                    <strong>Options:</strong>
+                                                    <ul>
+                                                        {JSON.parse(question.optionsJson).map((option, optIndex) => (
+                                                            <li key={optIndex}>{option}</li>
+                                                        ))}
+                                                    </ul>
+                                                </div>
+                                            )}
                                         </div>
-                                        {question.required && (
-                                            <div className={styles.requiredBadge}>Required</div>
-                                        )}
-                                    </div>
-                                    <div className={styles.questionContent}>
-                                        <h4 className={styles.questionText}>{question.questionText}</h4>
-                                        {question.optionsJson && (
-                                            <div className={styles.questionOptions}>
-                                                <strong>Options:</strong>
-                                                <ul>
-                                                    {JSON.parse(question.optionsJson).map((option, optIndex) => (
-                                                        <li key={optIndex}>{option}</li>
-                                                    ))}
-                                                </ul>
+
+                                        {/* Question Analytics Section */}
+                                        {analytics && (
+                                            <div className={styles.questionAnalytics}>
+                                                <h5 className={styles.analyticsTitle}>📊 Question Analytics</h5>
+
+                                                {/* Rating Analytics */}
+                                                {question.type === 'RATING' && analytics.averageRating !== null && (
+                                                    <div className={styles.ratingAnalytics}>
+                                                        <div className={styles.analyticsGrid}>
+                                                            <div className={styles.analyticsCard}>
+                                                                <div className={styles.analyticsLabel}>Average Rating</div>
+                                                                <div className={styles.analyticsValue}>
+                                                                    ⭐ {analytics.averageRating?.toFixed(1) || 'N/A'}
+                                                                </div>
+                                                            </div>
+                                                            <div className={styles.analyticsCard}>
+                                                                <div className={styles.analyticsLabel}>Median Rating</div>
+                                                                <div className={styles.analyticsValue}>
+                                                                    📊 {analytics.medianRating?.toFixed(1) || 'N/A'}
+                                                                </div>
+                                                            </div>
+                                                            <div className={styles.analyticsCard}>
+                                                                <div className={styles.analyticsLabel}>Range</div>
+                                                                <div className={styles.analyticsValue}>
+                                                                    📈 {analytics.minRating} - {analytics.maxRating}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+
+                                                        {/* Rating Distribution Chart */}
+                                                        {analytics.ratingDistribution && Object.keys(analytics.ratingDistribution).length > 0 && (
+                                                            <div className={styles.chartContainer}>
+                                                                <h6 className={styles.chartTitle}>Rating Distribution</h6>
+                                                                <ResponsiveContainer width="100%" height={200}>
+                                                                    <BarChart data={Object.entries(analytics.ratingDistribution).map(([rating, count]) => ({
+                                                                        rating: `${rating} ⭐`,
+                                                                        count
+                                                                    }))}>
+                                                                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.2)" />
+                                                                        <XAxis dataKey="rating" stroke="#718096" fontSize={12} />
+                                                                        <YAxis stroke="#718096" fontSize={12} />
+                                                                        <Tooltip
+                                                                            contentStyle={{
+                                                                                backgroundColor: 'rgba(255,255,255,0.95)',
+                                                                                border: 'none',
+                                                                                borderRadius: '12px',
+                                                                                boxShadow: '0 10px 25px rgba(0,0,0,0.1)'
+                                                                            }}
+                                                                        />
+                                                                        <Bar dataKey="count" fill={COLORS.warning} radius={[4, 4, 0, 0]} />
+                                                                    </BarChart>
+                                                                </ResponsiveContainer>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                )}
+
+                                                {/* Multiple Choice Analytics */}
+                                                {['MULTIPLE_CHOICE', 'RADIO', 'DROPDOWN'].includes(question.type) && analytics.optionCounts && (
+                                                    <div className={styles.optionAnalytics}>
+                                                        <div className={styles.analyticsGrid}>
+                                                            {analytics.mostPopularOption && (
+                                                                <div className={styles.analyticsCard}>
+                                                                    <div className={styles.analyticsLabel}>Most Popular</div>
+                                                                    <div className={styles.analyticsValue}>
+                                                                        🏆 {analytics.mostPopularOption}
+                                                                    </div>
+                                                                </div>
+                                                            )}
+                                                            {analytics.leastPopularOption && (
+                                                                <div className={styles.analyticsCard}>
+                                                                    <div className={styles.analyticsLabel}>Least Popular</div>
+                                                                    <div className={styles.analyticsValue}>
+                                                                        📉 {analytics.leastPopularOption}
+                                                                    </div>
+                                                                </div>
+                                                            )}
+                                                        </div>
+
+                                                        {/* Option Distribution Chart */}
+                                                        {Object.keys(analytics.optionCounts).length > 0 && (
+                                                            <div className={styles.chartContainer}>
+                                                                <h6 className={styles.chartTitle}>Option Distribution</h6>
+                                                                <ResponsiveContainer width="100%" height={200}>
+                                                                    <PieChart>
+                                                                        <Pie
+                                                                            data={Object.entries(analytics.optionCounts).map(([option, count]) => ({
+                                                                                name: option.length > 15 ? option.substring(0, 15) + '...' : option,
+                                                                                value: count,
+                                                                                fullName: option
+                                                                            }))}
+                                                                            cx="50%"
+                                                                            cy="50%"
+                                                                            outerRadius={60}
+                                                                            dataKey="value"
+                                                                            labelLine={false}
+                                                                            label={({ name, value }) => `${name}: ${value}`}
+                                                                        >
+                                                                            {Object.entries(analytics.optionCounts).map((entry, index) => (
+                                                                                <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
+                                                                            ))}
+                                                                        </Pie>
+                                                                        <Tooltip
+                                                                            contentStyle={{
+                                                                                backgroundColor: 'rgba(255,255,255,0.95)',
+                                                                                border: 'none',
+                                                                                borderRadius: '12px',
+                                                                                boxShadow: '0 10px 25px rgba(0,0,0,0.1)'
+                                                                            }}
+                                                                            formatter={(value, name, props) => [value, props.payload.fullName]}
+                                                                        />
+                                                                    </PieChart>
+                                                                </ResponsiveContainer>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                )}
+
+                                                {/* Text Analytics */}
+                                                {['TEXT', 'LONG_TEXT'].includes(question.type) && analytics.averageTextLength !== null && (
+                                                    <div className={styles.textAnalytics}>
+                                                        <div className={styles.analyticsGrid}>
+                                                            <div className={styles.analyticsCard}>
+                                                                <div className={styles.analyticsLabel}>Avg Length</div>
+                                                                <div className={styles.analyticsValue}>
+                                                                    📝 {analytics.averageTextLength} chars
+                                                                </div>
+                                                            </div>
+                                                            <div className={styles.analyticsCard}>
+                                                                <div className={styles.analyticsLabel}>Range</div>
+                                                                <div className={styles.analyticsValue}>
+                                                                    📏 {analytics.minTextLength} - {analytics.maxTextLength}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+
+                                                        {/* Common Keywords */}
+                                                        {analytics.commonKeywords && analytics.commonKeywords.length > 0 && (
+                                                            <div className={styles.keywordsSection}>
+                                                                <h6 className={styles.keywordsTitle}>Common Keywords</h6>
+                                                                <div className={styles.keywordsList}>
+                                                                    {analytics.commonKeywords.map((keyword, idx) => (
+                                                                        <span key={idx} className={styles.keywordTag}>
+                                                                            {keyword}
+                                                                        </span>
+                                                                    ))}
+                                                                </div>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                )}
                                             </div>
                                         )}
-                                    </div>
-                                    <div className={styles.questionStats}>
-                                        <div className={styles.statItem}>
-                                            <span className={styles.statLabel}>Responses:</span>
-                                            <span className={styles.statValue}>
-                                                {surveyResults?.questionResults?.find(qr => qr.questionId === question.id)?.totalAnswers || 0}
-                                            </span>
+
+                                        <div className={styles.questionStats}>
+                                            <div className={styles.statItem}>
+                                                <span className={styles.statLabel}>Responses:</span>
+                                                <span className={styles.statValue}>
+                                                    {questionResult?.totalAnswers || 0}
+                                                </span>
+                                            </div>
+                                            <div className={styles.statItem}>
+                                                <span className={styles.statLabel}>Completion:</span>
+                                                <span className={styles.statValue}>
+                                                    {questionResult?.completionRate?.toFixed(1) || 0}%
+                                                </span>
+                                            </div>
                                         </div>
-                                        <div className={styles.statItem}>
-                                            <span className={styles.statLabel}>Completion:</span>
-                                            <span className={styles.statValue}>
-                                                {surveyResults?.questionResults?.find(qr => qr.questionId === question.id)?.totalAnswers && surveyResults?.totalResponses
-                                                    ? Math.round((surveyResults.questionResults.find(qr => qr.questionId === question.id).totalAnswers / surveyResults.totalResponses) * 100)
-                                                    : 0}%
-                                            </span>
-                                        </div>
                                     </div>
-                                </div>
-                            )) || (
+                                );
+                            }) || (
                                     <div className={styles.emptyQuestions}>
                                         <FileText className={styles.emptyIcon} size={64} />
                                         <h3 className={styles.emptyTitle}>No questions found</h3>
