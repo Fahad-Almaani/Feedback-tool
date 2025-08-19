@@ -73,25 +73,43 @@ export default function AdminDashboard() {
         setError(null);
 
         const response = await apiClient.get('/surveys/admin');
-        const surveysData = apiClient.extractData(response);
-        const metadata = apiClient.getResponseMetadata(response);
 
-        console.log('API Response metadata:', metadata);
-        console.log('Surveys data:', surveysData);
-        setSurveys(surveysData);
+        console.log('Full API Response:', response);
+        console.log('Response type:', typeof response);
+        console.log('Is response an array?', Array.isArray(response));
+
+        // Handle different response formats
+        let surveysArray = [];
+        if (Array.isArray(response)) {
+          // Direct array response
+          surveysArray = response;
+        } else if (response && Array.isArray(response.data)) {
+          // Wrapped in data property
+          surveysArray = response.data;
+        } else if (response && response._apiResponse && Array.isArray(response)) {
+          // Already processed by interceptor
+          const { _apiResponse, ...actualData } = response;
+          surveysArray = Array.isArray(actualData) ? actualData : [];
+        } else {
+          console.warn('Unexpected response format:', response);
+          surveysArray = [];
+        }
+
+        console.log('Final surveys array:', surveysArray);
+        setSurveys(surveysArray);
 
         // Calculate statistics from real data
-        const totalSurveys = surveysData.length;
-        const activeSurveys = surveysData.filter(s => s.status === 'ACTIVE').length;
-        const totalResponses = surveysData.reduce((sum, s) => sum + s.totalResponses, 0);
+        const totalSurveys = surveysArray.length;
+        const activeSurveys = surveysArray.filter(s => s.status === 'ACTIVE').length;
+        const totalResponses = surveysArray.reduce((sum, s) => sum + s.totalResponses, 0);
         const avgCompletionRate = totalSurveys > 0
-          ? Math.round(surveysData.reduce((sum, s) => sum + s.completionRate, 0) / totalSurveys)
+          ? Math.round(surveysArray.reduce((sum, s) => sum + s.completionRate, 0) / totalSurveys)
           : 0;
 
         // Mock some additional stats (these would need more backend work to calculate accurately)
         const responsesThisWeek = Math.floor(totalResponses * 0.2);
         const responsesLastWeek = Math.floor(totalResponses * 0.15);
-        const newSurveysThisMonth = surveysData.filter(s => {
+        const newSurveysThisMonth = surveysArray.filter(s => {
           const createdDate = new Date(s.createdAt);
           const currentDate = new Date();
           return createdDate.getMonth() === currentDate.getMonth() &&
