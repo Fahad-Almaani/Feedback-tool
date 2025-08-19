@@ -35,6 +35,12 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
+
+                        .requestMatchers("/actuator/**", "/users/create", "/auth/login").permitAll()
+                        .requestMatchers("/surveys/*/public").permitAll() // Allow public survey access
+                        .requestMatchers("/auth/logout").authenticated() 
+                        .anyRequest().authenticated())
+
                         // Allow CORS preflight
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
@@ -47,6 +53,7 @@ public class SecurityConfig {
                         // Everything else requires JWT
                         .anyRequest().authenticated()
                 )
+
                 // Register JWT filter BEFORE UsernamePasswordAuthenticationFilter
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
