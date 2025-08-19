@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { apiClient, errorHandler } from '../utils/apiClient';
 
 const AuthContext = createContext();
 
@@ -38,25 +39,20 @@ export const AuthProvider = ({ children }) => {
 
     const login = async (email, password) => {
         try {
-            const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8080';
-            const response = await fetch(`${backendUrl}/auth/login`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ email, password }),
-                credentials: 'include', // Include cookies if needed
-            });
+            // Use the enhanced apiClient for login
+            const response = await apiClient.post('/auth/login', { email, password });
 
-            if (!response.ok) {
-                const errorData = await response.json().catch(() => ({ message: 'Network error or server unavailable' }));
-                throw new Error(errorData.message || 'Login failed');
+            // The apiClient now automatically extracts data from the new API response structure
+            const data = apiClient.extractData(response);
+            const metadata = apiClient.getResponseMetadata(response);
+
+            // Log success message if available
+            if (metadata?.message) {
+                console.log('Login response:', metadata.message);
             }
 
-            const data = await response.json();
-
             // Store token and user data
-            localStorage.setItem('jwt_token', data.token);
+            apiClient.auth.setToken(data.token);
             localStorage.setItem('user_data', JSON.stringify({
                 userId: data.userId,
                 email: data.email,
@@ -73,43 +69,41 @@ export const AuthProvider = ({ children }) => {
                 token: data.token
             });
 
-            return { success: true, user: data };
+            return {
+                success: true,
+                user: data,
+                message: metadata?.message || 'Login successful'
+            };
         } catch (error) {
             console.error('Login error:', error);
 
-            // Handle specific CORS errors
-            if (error.name === 'TypeError' && error.message.includes('fetch')) {
-                return {
-                    success: false,
-                    error: 'Unable to connect to server. Please check if the backend is running and CORS is configured properly.'
-                };
-            }
+            // Use enhanced error handling
+            const errorDetails = apiClient.getErrorDetails(error);
 
-            return { success: false, error: error.message };
+            return {
+                success: false,
+                error: errorDetails.message,
+                errors: errorDetails.errors
+            };
         }
     };
 
     const register = async (name, email, password) => {
         try {
-            const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8080';
-            const response = await fetch(`${backendUrl}/users/create`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ name, email, password }),
-                credentials: 'include', // Include cookies if needed
-            });
+            // Use the enhanced apiClient for registration
+            const response = await apiClient.post('/users/create', { name, email, password });
 
-            if (!response.ok) {
-                const errorData = await response.json().catch(() => ({ message: 'Network error or server unavailable' }));
-                throw new Error(errorData.message || 'Registration failed');
+            // Extract data using the new API response structure
+            const data = apiClient.extractData(response);
+            const metadata = apiClient.getResponseMetadata(response);
+
+            // Log success message if available
+            if (metadata?.message) {
+                console.log('Registration response:', metadata.message);
             }
 
-            const data = await response.json();
-
             // Store token and user data
-            localStorage.setItem('jwt_token', data.token);
+            apiClient.auth.setToken(data.token);
             localStorage.setItem('user_data', JSON.stringify({
                 userId: data.userId,
                 email: data.email,
@@ -126,25 +120,27 @@ export const AuthProvider = ({ children }) => {
                 token: data.token
             });
 
-            return { success: true, user: data };
+            return {
+                success: true,
+                user: data,
+                message: metadata?.message || 'Registration successful'
+            };
         } catch (error) {
             console.error('Registration error:', error);
 
-            // Handle specific CORS errors
-            if (error.name === 'TypeError' && error.message.includes('fetch')) {
-                return {
-                    success: false,
-                    error: 'Unable to connect to server. Please check if the backend is running and CORS is configured properly.'
-                };
-            }
+            // Use enhanced error handling
+            const errorDetails = apiClient.getErrorDetails(error);
 
-            return { success: false, error: error.message };
+            return {
+                success: false,
+                error: errorDetails.message,
+                errors: errorDetails.errors
+            };
         }
     };
 
     const logout = () => {
-        localStorage.removeItem('jwt_token');
-        localStorage.removeItem('user_data');
+        apiClient.auth.removeToken();
         setUser(null);
     };
 

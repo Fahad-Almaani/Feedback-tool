@@ -28,30 +28,31 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
 
-        // Skip JWT processing for public endpoints
-        String requestPath = request.getRequestURI();
-        if (requestPath.matches(".*/surveys/.*/public.*")) {
-            filterChain.doFilter(request, response);
-            return;
-        }
-
         final String authorizationHeader = request.getHeader("Authorization");
+        String requestPath = request.getRequestURI();
+        boolean isPublicEndpoint = requestPath.startsWith("/public/") ||
+                requestPath.startsWith("/api/public/") ||
+                requestPath.matches("/surveys/\\d+/public");
 
         String email = null;
         String jwt = null;
 
-        // Extract JWT from Authorization header
+        // Extract JWT from Authorization header if present
         if (authorizationHeader != null && authorizationHeader.startsWith("Bearer ")) {
             jwt = authorizationHeader.substring(7);
             try {
                 email = jwtUtil.extractEmail(jwt);
             } catch (Exception e) {
-                // Invalid token - let it pass through, will be handled by security config
-                logger.warn("Invalid JWT token: " + e.getMessage());
+                // Invalid token - for public endpoints, continue without auth; for protected
+                // endpoints, let security config handle
+                if (!isPublicEndpoint) {
+                    logger.warn("Invalid JWT token: " + e.getMessage());
+                }
             }
         }
 
-        // If we have a valid email and no existing authentication
+        // If we have a valid email and no existing authentication, set up the security
+        // context
         if (email != null && SecurityContextHolder.getContext().getAuthentication() == null) {
             try {
                 // Validate the token
@@ -73,7 +74,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     SecurityContextHolder.getContext().setAuthentication(authToken);
                 }
             } catch (Exception e) {
-                logger.warn("JWT authentication failed: " + e.getMessage());
+                if (!isPublicEndpoint) {
+                    logger.warn("JWT authentication failed: " + e.getMessage());
+                }
             }
         }
 

@@ -31,7 +31,19 @@ export default function SurveyFormPage() {
                     throw new Error('Survey not found or not available');
                 }
 
-                const surveyData = await response.json();
+                const responseData = await response.json();
+
+                // Handle the new API response structure
+                let surveyData;
+                if (responseData.success && responseData.data) {
+                    surveyData = responseData.data;
+                } else if (responseData.title) {
+                    // Fallback for old format
+                    surveyData = responseData;
+                } else {
+                    throw new Error(responseData.message || 'Invalid survey data');
+                }
+
                 setSurvey(surveyData);
 
                 // Initialize answers object
@@ -99,6 +111,22 @@ export default function SurveyFormPage() {
     const handleSubmit = async (e) => {
         e.preventDefault();
 
+        // Validate required fields
+        const missingRequiredFields = [];
+        survey.questions.forEach((question) => {
+            if (question.required) {
+                const answer = answers[question.id];
+                if (!answer || answer.toString().trim() === "") {
+                    missingRequiredFields.push(question.questionText);
+                }
+            }
+        });
+
+        if (missingRequiredFields.length > 0) {
+            setError(`Please answer all required questions: ${missingRequiredFields.join(", ")}`);
+            return;
+        }
+
         // Check if survey requires authentication
         if (survey.isPrivate && !isAuthenticated()) {
             setShowAuthDialog(true);
@@ -113,37 +141,63 @@ export default function SurveyFormPage() {
         setError("");
 
         try {
-            const responses = Object.entries(answers)
-                .filter(([_, answer]) => answer.trim() !== "")
+            // Format answers according to the backend DTO format
+            const formattedAnswers = Object.entries(answers)
+                .filter(([_, answer]) => answer && answer.toString().trim() !== "")
                 .map(([questionId, answer]) => ({
                     questionId: parseInt(questionId),
-                    responseText: answer
+                    answerValue: answer.toString()
                 }));
 
             const submissionData = {
-                surveyId: parseInt(surveyId),
-                responses
+                answers: formattedAnswers
             };
 
-            let response;
+            const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8080';
+            let success = false;
+            let errorMessage = null;
+
             if (isAuthenticated()) {
-                response = await apiClient.post("/responses", submissionData);
+                // Use authenticated request with JWT token
+                try {
+                    const response = await apiClient.post(`/public/surveys/${surveyId}/responses`, submissionData);
+                    const data = apiClient.extractData(response);
+                    success = true;
+                } catch (apiError) {
+                    const errorDetails = apiClient.getErrorDetails(apiError);
+                    errorMessage = errorDetails.message || 'Failed to submit survey';
+                }
             } else {
-                const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8080';
-                response = await fetch(`${backendUrl}/api/responses/anonymous`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(submissionData),
-                });
+                // Anonymous submission
+                try {
+                    const response = await fetch(`${backendUrl}/api/public/surveys/${surveyId}/responses`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(submissionData),
+                    });
+
+                    if (response.ok) {
+                        const responseData = await response.json();
+                        if (responseData.success) {
+                            success = true;
+                        } else {
+                            errorMessage = responseData.message || 'Failed to submit survey';
+                        }
+                    } else {
+                        const errorData = await response.text().catch(() => 'Failed to submit survey');
+                        errorMessage = errorData || 'Failed to submit survey';
+                    }
+                } catch (fetchError) {
+                    errorMessage = 'Failed to submit survey. Please check your connection.';
+                }
             }
 
-            if (response.ok) {
+            if (success) {
                 setSubmitted(true);
             } else {
-                const errorData = await response.json().catch(() => ({ message: 'Failed to submit survey' }));
-                setError(errorData.message || 'Failed to submit survey');
+                setError(errorMessage);
             }
         } catch (error) {
             console.error('Error submitting survey:', error);
