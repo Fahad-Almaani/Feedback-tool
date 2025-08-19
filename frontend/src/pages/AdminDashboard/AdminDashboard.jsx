@@ -27,13 +27,15 @@ export default function AdminDashboard() {
     totalSurveys: 0,
     activeSurveys: 0,
     totalResponses: 0,
-    avgCompletionRate: 0,
     responsesThisWeek: 0,
     responsesLastWeek: 0,
     newSurveysThisMonth: 0
   });
   const [selectedSurveyId, setSelectedSurveyId] = useState(null);
   const [filterStatus, setFilterStatus] = useState("ALL");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(5);
   const [loading, setLoading] = useState(true);
   const [isVisible, setIsVisible] = useState(false);
   const [error, setError] = useState(null);
@@ -98,9 +100,6 @@ export default function AdminDashboard() {
         const totalSurveys = surveysArray.length;
         const activeSurveys = surveysArray.filter(s => s.status === 'ACTIVE').length;
         const totalResponses = surveysArray.reduce((sum, s) => sum + s.totalResponses, 0);
-        const avgCompletionRate = totalSurveys > 0
-          ? Math.round(surveysArray.reduce((sum, s) => sum + s.completionRate, 0) / totalSurveys)
-          : 0;
 
         // Mock some additional stats (these would need more backend work to calculate accurately)
         const responsesThisWeek = Math.floor(totalResponses * 0.2);
@@ -116,7 +115,6 @@ export default function AdminDashboard() {
           totalSurveys,
           activeSurveys,
           totalResponses,
-          avgCompletionRate,
           responsesThisWeek,
           responsesLastWeek,
           newSurveysThisMonth
@@ -143,9 +141,34 @@ export default function AdminDashboard() {
   };
 
   const filteredSurveys = useMemo(() => {
-    if (filterStatus === "ALL") return surveys;
-    return surveys.filter(survey => survey.status === filterStatus);
-  }, [surveys, filterStatus]);
+    let filtered = surveys;
+
+    // Filter by status
+    if (filterStatus !== "ALL") {
+      filtered = filtered.filter(survey => survey.status === filterStatus);
+    }
+
+    // Filter by search term
+    if (searchTerm.trim()) {
+      const term = searchTerm.toLowerCase();
+      filtered = filtered.filter(survey =>
+        survey.title.toLowerCase().includes(term) ||
+        (survey.description && survey.description.toLowerCase().includes(term))
+      );
+    }
+
+    return filtered;
+  }, [surveys, filterStatus, searchTerm]);
+
+  // Pagination
+  const totalPages = Math.ceil(filteredSurveys.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const paginatedSurveys = filteredSurveys.slice(startIndex, startIndex + itemsPerPage);
+
+  // Reset to first page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filterStatus, searchTerm]);
 
   const surveyStatusDistribution = useMemo(() => {
     const statusCounts = surveys.reduce((acc, survey) => {
@@ -288,24 +311,37 @@ export default function AdminDashboard() {
             <div className={styles.statLabel}>Total Responses</div>
           </div>
 
+          {/* Quick Actions Card */}
           <div className={styles.statCard}>
             <div className={styles.statHeader}>
               <svg className={styles.statIcon} viewBox="0 0 24 24" fill="currentColor">
-                <path d="M11 15l-3-3 1.5-1.5L11 12l5-5L17.5 8.5 11 15z" />
+                <path d="M11.25 4.533A9.707 9.707 0 006 3a9.735 9.735 0 00-3.25.555.75.75 0 00-.5.707v14.25a.75.75 0 001 .708A8.237 8.237 0 016 18.75c1.995 0 3.823.707 5.25 1.886V4.533zM12.75 20.636A8.214 8.214 0 0118 18.75c.966 0 1.89.166 2.75.47a.75.75 0 001-.708V4.262a.75.75 0 00-.5-.707A9.735 9.735 0 0018 3a9.707 9.707 0 00-5.25 1.533v16.103z" />
               </svg>
-              <div className={`${styles.statTrend} ${getTrendClass(statistics.avgCompletionRate, Math.max(0, statistics.avgCompletionRate - 5))}`}>
-                {getTrendIcon(statistics.avgCompletionRate, Math.max(0, statistics.avgCompletionRate - 5))} +5%
-              </div>
             </div>
-            <div className={styles.statValue}>{statistics.avgCompletionRate}%</div>
-            <div className={styles.statLabel}>Avg Completion Rate</div>
+            <div className={styles.quickActionsInCard}>
+              <button
+                className={styles.quickActionBtn}
+                onClick={() => navigate("/admin/surveys/create")}
+              >
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12 4.5v15m7.5-7.5h-15" />
+                </svg>
+                Create Survey
+              </button>
+              <button className={styles.quickActionBtn}>
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+                </svg>
+                Export Data
+              </button>
+            </div>
           </div>
         </div>
 
-        {/* Content Grid */}
-        <div className={styles.contentGrid}>
-          {/* Survey Management */}
-          <div className={styles.section}>
+        {/* Main Content Grid */}
+        <div className={styles.mainContentGrid}>
+          {/* Survey Management - Full Width */}
+          <div className={styles.surveyManagementSection}>
             <div className={styles.sectionHeader}>
               <h2 className={styles.sectionTitle}>
                 <svg className={styles.sectionIcon} viewBox="0 0 24 24" fill="currentColor">
@@ -316,21 +352,46 @@ export default function AdminDashboard() {
               <p className={styles.sectionSubtitle}>Manage all your surveys and track their performance</p>
             </div>
             <div className={styles.sectionContent}>
-              {/* Filters */}
-              <div className={styles.surveyFilters}>
-                {["ALL", "ACTIVE", "INACTIVE", "DRAFT"].map((status) => (
-                  <button
-                    key={status}
-                    className={`${styles.filterButton} ${filterStatus === status ? styles.active : ''}`}
-                    onClick={() => setFilterStatus(status)}
-                  >
-                    {status} ({status === "ALL" ? surveys.length : surveys.filter(s => s.status === status).length})
-                  </button>
-                ))}
+              {/* Search and Filters */}
+              <div className={styles.surveyControls}>
+                <div className={styles.searchContainer}>
+                  <svg className={styles.searchIcon} viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+                  </svg>
+                  <input
+                    type="text"
+                    placeholder="Search surveys by title or description..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className={styles.searchInput}
+                  />
+                  {searchTerm && (
+                    <button
+                      onClick={() => setSearchTerm("")}
+                      className={styles.clearSearchBtn}
+                    >
+                      <svg viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  )}
+                </div>
+
+                <div className={styles.surveyFilters}>
+                  {["ALL", "ACTIVE", "INACTIVE", "DRAFT"].map((status) => (
+                    <button
+                      key={status}
+                      className={`${styles.filterButton} ${filterStatus === status ? styles.active : ''}`}
+                      onClick={() => setFilterStatus(status)}
+                    >
+                      {status} ({status === "ALL" ? surveys.length : surveys.filter(s => s.status === status).length})
+                    </button>
+                  ))}
+                </div>
               </div>
 
               {/* Survey List */}
-              <div className={styles.surveyList}>
+              <div className={styles.surveyListContainer}>
                 {loading && (
                   <div className={styles.loadingContainer}>
                     <div className={styles.spinner}></div>
@@ -352,90 +413,134 @@ export default function AdminDashboard() {
 
                 {!loading && !error && filteredSurveys.length === 0 && (
                   <div className={styles.emptyState}>
-                    <p>No surveys found {filterStatus !== "ALL" ? `with status ${filterStatus}` : ''}.</p>
+                    <svg className={styles.emptyIcon} viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25zM6.75 12h.008v.008H6.75V12zm0 3h.008v.008H6.75V15zm0 3h.008v.008H6.75V18z" />
+                    </svg>
+                    <div className={styles.emptyTitle}>No surveys found</div>
+                    <div className={styles.emptyDescription}>
+                      {searchTerm
+                        ? `No surveys match "${searchTerm}" ${filterStatus !== "ALL" ? `with status ${filterStatus}` : ''}.`
+                        : `No surveys found ${filterStatus !== "ALL" ? `with status ${filterStatus}` : ''}.`
+                      }
+                    </div>
                   </div>
                 )}
 
-                {!loading && !error && filteredSurveys.map((survey) => (
-                  <div
-                    key={survey.id}
-                    className={`${styles.surveyItem} ${selectedSurveyId === survey.id ? styles.selected : ''}`}
-                    onClick={() => setSelectedSurveyId(survey.id)}
-                  >
-                    <div className={styles.surveyItemHeader}>
-                      <div className={styles.surveyTitle}>{survey.title}</div>
-                      <span className={`${styles.statusBadge} ${styles[`status${survey.status.charAt(0) + survey.status.slice(1).toLowerCase()}`]}`}>
-                        {survey.status}
-                      </span>
+                {!loading && !error && paginatedSurveys.length > 0 && (
+                  <>
+                    <div className={styles.surveyGrid}>
+                      {paginatedSurveys.map((survey) => (
+                        <div
+                          key={survey.id}
+                          className={`${styles.enhancedSurveyCard} ${selectedSurveyId === survey.id ? styles.selected : ''} ${styles[`status${survey.status.charAt(0) + survey.status.slice(1).toLowerCase()}`]}`}
+                          onClick={() => setSelectedSurveyId(survey.id)}
+                        >
+                          <div className={styles.surveyCardHeader}>
+                            <div className={styles.surveyTitleSection}>
+                              <h3 className={styles.surveyCardTitle}>{survey.title}</h3>
+                              <span className={`${styles.statusBadge} ${styles[`status${survey.status.charAt(0) + survey.status.slice(1).toLowerCase()}`]}`}>
+                                {survey.status}
+                              </span>
+                            </div>
+                            <div className={styles.surveyActions}>
+                              <button className={styles.actionBtn} title="Edit Survey">
+                                <svg viewBox="0 0 24 24" fill="currentColor">
+                                  <path d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
+                                </svg>
+                              </button>
+                              <button className={styles.actionBtn} title="View Details">
+                                <svg viewBox="0 0 24 24" fill="currentColor">
+                                  <path d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
+                                  <path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                </svg>
+                              </button>
+                              <button className={styles.actionBtn} title="More Options">
+                                <svg viewBox="0 0 24 24" fill="currentColor">
+                                  <path d="M12 6.75a.75.75 0 110-1.5.75.75 0 010 1.5zM12 12.75a.75.75 0 110-1.5.75.75 0 010 1.5zM12 18.75a.75.75 0 110-1.5.75.75 0 010 1.5z" />
+                                </svg>
+                              </button>
+                            </div>
+                          </div>
+
+                          {survey.description && (
+                            <div className={styles.surveyDescription}>
+                              {survey.description}
+                            </div>
+                          )}
+
+                          <div className={styles.surveyMetaGrid}>
+                            <div className={styles.metaItem}>
+                              <span className={styles.metaIcon}>📅</span>
+                              <span className={styles.metaLabel}>Created:</span>
+                              <span className={styles.metaValue}>{formatDate(survey.createdAt)}</span>
+                            </div>
+                            <div className={styles.metaItem}>
+                              <span className={styles.metaIcon}>⏰</span>
+                              <span className={styles.metaLabel}>Updated:</span>
+                              <span className={styles.metaValue}>{formatDate(survey.updatedAt)}</span>
+                            </div>
+                            <div className={styles.metaItem}>
+                              <span className={styles.metaIcon}>📊</span>
+                              <span className={styles.metaLabel}>Responses:</span>
+                              <span className={styles.metaValue}>{survey.totalResponses}</span>
+                            </div>
+                            <div className={styles.metaItem}>
+                              <span className={styles.metaIcon}>❓</span>
+                              <span className={styles.metaLabel}>Questions:</span>
+                              <span className={styles.metaValue}>{survey.totalQuestions}</span>
+                            </div>
+                          </div>
+
+                          <div className={styles.surveyProgress}>
+                            <div className={styles.progressInfo}>
+                              <span>Completion Rate: {survey.completionRate}%</span>
+                              <span className={styles.progressPercentage}>{survey.completionRate}%</span>
+                            </div>
+                            <div className={styles.progressBar}>
+                              <div
+                                className={styles.progressFill}
+                                style={{ width: `${survey.completionRate}%` }}
+                              ></div>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                    <div className={styles.surveyMeta}>
-                      <span>📅 Created: {formatDate(survey.createdAt)}</span>
-                      <span>⏰ Updated: {formatDate(survey.updatedAt)}</span>
-                    </div>
-                    <div className={styles.surveyStats}>
-                      <span className={styles.responseCount}>
-                        📊 {survey.totalResponses} responses ({survey.completionRate}% completion)
-                      </span>
-                      <span className={styles.questionCount}>
-                        ❓ {survey.totalQuestions} questions
-                      </span>
-                    </div>
-                    {survey.description && (
-                      <div className={styles.surveyDescription}>
-                        {survey.description}
+
+                    {/* Pagination */}
+                    {totalPages > 1 && (
+                      <div className={styles.pagination}>
+                        <button
+                          onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                          disabled={currentPage === 1}
+                          className={styles.paginationBtn}
+                        >
+                          <svg viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M15.75 19.5L8.25 12l7.5-7.5" />
+                          </svg>
+                          Previous
+                        </button>
+
+                        <div className={styles.paginationInfo}>
+                          <span>
+                            Page {currentPage} of {totalPages} ({filteredSurveys.length} surveys)
+                          </span>
+                        </div>
+
+                        <button
+                          onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                          disabled={currentPage === totalPages}
+                          className={styles.paginationBtn}
+                        >
+                          Next
+                          <svg viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+                          </svg>
+                        </button>
                       </div>
                     )}
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Analytics & Quick Actions */}
-          <div className={styles.section}>
-            <div className={styles.sectionHeader}>
-              <h2 className={styles.sectionTitle}>
-                <svg className={styles.sectionIcon} viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                </svg>
-                Quick Actions
-              </h2>
-              <p className={styles.sectionSubtitle}>Common administrative tasks</p>
-            </div>
-            <div className={styles.sectionContent}>
-              <div className={styles.quickActions}>
-                <div className={styles.actionCard} onClick={() => navigate("/admin/surveys/create")}>
-                  <svg className={styles.actionIcon} viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M12 4.5v15m7.5-7.5h-15" />
-                  </svg>
-                  <h3 className={styles.actionTitle}>Create Survey</h3>
-                  <p className={styles.actionDescription}>Build a new survey from scratch</p>
-                </div>
-
-                <div className={styles.actionCard}>
-                  <svg className={styles.actionIcon} viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
-                  </svg>
-                  <h3 className={styles.actionTitle}>Export Data</h3>
-                  <p className={styles.actionDescription}>Download survey responses</p>
-                </div>
-
-                <div className={styles.actionCard}>
-                  <svg className={styles.actionIcon} viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m.94 3.198l.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0112 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 016 18.719m12 0a5.971 5.971 0 00-.941-3.197m0 0A5.995 5.995 0 0012 12.75a5.995 5.995 0 00-5.058 2.772m0 0a3 3 0 00-4.681 2.72 8.986 8.986 0 003.74.477m.94-3.197a5.971 5.971 0 00-.94 3.197M15 6.75a3 3 0 11-6 0 3 3 0 016 0zm6 3a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zm-13.5 0a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z" />
-                  </svg>
-                  <h3 className={styles.actionTitle}>Manage Users</h3>
-                  <p className={styles.actionDescription}>View and manage user accounts</p>
-                </div>
-
-                <div className={styles.actionCard}>
-                  <svg className={styles.actionIcon} viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M10.5 6a7.5 7.5 0 107.5 7.5h-7.5V6z" />
-                    <path d="M13.5 10.5H21A7.5 7.5 0 0013.5 3v7.5z" />
-                  </svg>
-                  <h3 className={styles.actionTitle}>View Reports</h3>
-                  <p className={styles.actionDescription}>Generate detailed analytics</p>
-                </div>
+                  </>
+                )}
               </div>
             </div>
           </div>
