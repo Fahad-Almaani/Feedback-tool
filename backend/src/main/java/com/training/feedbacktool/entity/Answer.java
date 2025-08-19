@@ -28,9 +28,10 @@ public class Answer {
     @JoinColumn(name = "question_id", nullable = false)
     private Question question;
 
-    // Relationship to User (who provided the answer)
+    // Relationship to User (who provided the answer) - nullable for anonymous
+    // responses
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", nullable = false)
+    @JoinColumn(name = "user_id", nullable = true)
     private User user;
 
     public Answer() {

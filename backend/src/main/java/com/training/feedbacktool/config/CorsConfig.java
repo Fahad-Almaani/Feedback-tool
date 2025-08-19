@@ -14,47 +14,33 @@ public class CorsConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        
-        // Allow requests from frontend development server and production
-        configuration.setAllowedOriginPatterns(Arrays.asList(
-            "http://localhost:*",
-            "http://127.0.0.1:*",
-            "https://localhost:*",
-            "https://127.0.0.1:*"
-        ));
-        
+
+        // Allow all origins for development (use specific origins in production)
+        configuration.setAllowedOriginPatterns(Arrays.asList("*"));
+
         // Allow specific HTTP methods
         configuration.setAllowedMethods(Arrays.asList(
-            "GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"
-        ));
-        
-        // Allow specific headers
-        configuration.setAllowedHeaders(Arrays.asList(
-            "Authorization",
-            "Content-Type",
-            "X-Requested-With",
-            "Accept",
-            "Origin",
-            "Access-Control-Request-Method",
-            "Access-Control-Request-Headers"
-        ));
-        
+                "GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH", "HEAD"));
+
+        // Allow all headers
+        configuration.setAllowedHeaders(Arrays.asList("*"));
+
         // Allow credentials (important for cookies, authorization headers, etc.)
         configuration.setAllowCredentials(true);
-        
+
         // Expose headers that the frontend can access
         configuration.setExposedHeaders(Arrays.asList(
-            "Access-Control-Allow-Origin",
-            "Access-Control-Allow-Credentials",
-            "Authorization"
-        ));
-        
+                "Access-Control-Allow-Origin",
+                "Access-Control-Allow-Credentials",
+                "Authorization",
+                "Content-Type"));
+
         // How long the browser can cache the preflight response
         configuration.setMaxAge(3600L);
-        
+
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
-        
+
         return source;
     }
 }
