@@ -95,6 +95,18 @@ public class ResponsesController {
                 response.put("respondentName", user != null ? user.getName() : "Anonymous User");
                 response.put("respondentEmail", user != null ? user.getEmail() : null);
                 response.put("isAnonymous", user == null);
+
+                // Add user details when not anonymous
+                if (user != null) {
+                    Map<String, Object> userDetails = new HashMap<>();
+                    userDetails.put("id", user.getId());
+                    userDetails.put("name", user.getName());
+                    userDetails.put("email", user.getEmail());
+                    response.put("user", userDetails);
+                } else {
+                    response.put("user", null);
+                }
+
                 response.put("submittedAt", respondentAnswers.stream()
                         .map(Answer::getCreatedAt)
                         .min(java.time.Instant::compareTo)
