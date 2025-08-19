@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 
@@ -12,6 +12,58 @@ import AdminDashboard from './pages/AdminDashboard/AdminDashboard'
 import UserDashboard from './pages/UserDashboard/UserDashboard';
 import SurveyCreationPage from './pages/SurveyCreation/SurveyCreationPage';
 import SurveyFormPage from './pages/SurveyForm/SurveyFormPage';
+
+// Component to handle login route with return URL logic
+const LoginRoute = () => {
+  const { isAuthenticated, user } = useAuth();
+  const location = useLocation();
+
+  if (isAuthenticated()) {
+    // Check for return URL in localStorage first, then navigation state
+    const returnToFromStorage = localStorage.getItem('returnTo');
+    const returnToFromState = location.state?.returnTo;
+    const returnTo = returnToFromStorage || returnToFromState;
+
+    if (returnTo) {
+      // Clear the stored return URL and redirect to it
+      localStorage.removeItem('returnTo');
+      return <Navigate to={returnTo} replace />;
+    } else {
+      // Default redirect based on user role
+      return user?.role === 'ADMIN' ?
+        <Navigate to="/admin/dashboard" replace /> :
+        <Navigate to="/user/dashboard" replace />;
+    }
+  }
+
+  return <Login />;
+};
+
+// Component to handle signup route with return URL logic
+const SignUpRoute = () => {
+  const { isAuthenticated, user } = useAuth();
+  const location = useLocation();
+
+  if (isAuthenticated()) {
+    // Check for return URL in localStorage first, then navigation state
+    const returnToFromStorage = localStorage.getItem('returnTo');
+    const returnToFromState = location.state?.returnTo;
+    const returnTo = returnToFromStorage || returnToFromState;
+
+    if (returnTo) {
+      // Clear the stored return URL and redirect to it
+      localStorage.removeItem('returnTo');
+      return <Navigate to={returnTo} replace />;
+    } else {
+      // Default redirect based on user role
+      return user?.role === 'ADMIN' ?
+        <Navigate to="/admin/dashboard" replace /> :
+        <Navigate to="/user/dashboard" replace />;
+    }
+  }
+
+  return <SignUp />;
+};
 
 // Component that handles initial routing based on auth state
 const AppRoutes = () => {
@@ -28,14 +80,8 @@ const AppRoutes = () => {
   return (
     <Routes>
       {/* Public Routes */}
-      <Route path="/login" element={
-        isAuthenticated() ? (
-          user?.role === 'ADMIN' ? <Navigate to="/admin/dashboard" replace /> : <Navigate to="/user/dashboard" replace />
-        ) : (
-          <Login />
-        )
-      } />
-      <Route path="/signup" element={<SignUp />} />
+      <Route path="/login" element={<LoginRoute />} />
+      <Route path="/signup" element={<SignUpRoute />} />
       <Route path="/forgot" element={<ForgotPassword />} />
 
       {/* Survey Form Route - Public/Anonymous access */}
