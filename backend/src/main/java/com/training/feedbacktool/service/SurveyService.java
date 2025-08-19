@@ -6,17 +6,21 @@ import com.training.feedbacktool.dto.PublicSurveyResponse;
 import com.training.feedbacktool.dto.QuestionResponse;
 import com.training.feedbacktool.dto.SubmitResponseRequest;
 import com.training.feedbacktool.dto.SurveyResponse;
+import com.training.feedbacktool.dto.SurveyResultsResponse;
+import com.training.feedbacktool.entity.Answer;
 import com.training.feedbacktool.entity.Question;
 import com.training.feedbacktool.entity.Response;
 import com.training.feedbacktool.entity.Survey;
+import com.training.feedbacktool.entity.User;
+import com.training.feedbacktool.repository.AnswersRepository;
 import com.training.feedbacktool.repository.ResponsesRepository;
 import com.training.feedbacktool.repository.SurveyRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.lang.reflect.Method;
-import java.util.ArrayList;
-import java.util.List;
+import java.time.Instant;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -24,10 +28,13 @@ public class SurveyService {
 
     private final SurveyRepository repo;
     private final ResponsesRepository responsesRepository;
+    private final AnswersRepository answersRepository;
 
-    public SurveyService(SurveyRepository repo, ResponsesRepository responsesRepository) {
+    public SurveyService(SurveyRepository repo, ResponsesRepository responsesRepository,
+            AnswersRepository answersRepository) {
         this.repo = repo;
         this.responsesRepository = responsesRepository;
+        this.answersRepository = answersRepository;
     }
 
     @Transactional
@@ -62,8 +69,7 @@ public class SurveyService {
                 saved.getDescription(),
                 saved.getStatus(),
                 saved.getCreatedAt(),
-                saved.getUpdatedAt()
-        );
+                saved.getUpdatedAt());
     }
 
     public List<SurveyResponse> listAll() {
@@ -88,7 +94,8 @@ public class SurveyService {
                         q.getType(),
                         q.getQuestionText(),
                         q.getOptionsJson(),
-                        q.getOrderNumber()))
+                        q.getOrderNumber(),
+                        q.getRequired()))
                 .collect(Collectors.toList());
 
         return new PublicSurveyResponse(
@@ -98,8 +105,7 @@ public class SurveyService {
                 survey.getStatus(),
                 survey.getCreatedAt(),
                 survey.getUpdatedAt(),
-                questionResponses
-        );
+                questionResponses);
     }
 
     public PublicSurveyResponse getSurveyForRespondent(Long id) {
@@ -129,7 +135,7 @@ public class SurveyService {
             Response r = new Response();
 
             // Use reflection helpers to support different entity designs:
-            applySurveyRef(r, survey);     // tries setSurvey(Survey) or setSurveyId(Long)
+            applySurveyRef(r, survey); // tries setSurvey(Survey) or setSurveyId(Long)
             applyQuestionRef(r, question); // tries setQuestion(Question) or setQuestionId(Long) (or setQid)
 
             applyAnswerValue(r, a.answerValue()); // tries setAnswerValue(String) or setAnswer(String)
@@ -217,5 +223,139 @@ public class SurveyService {
         } catch (Exception e) {
             throw new RuntimeException("Failed to set answer on Response", e);
         }
+    }
+
+    // New method to get comprehensive survey results
+    @Transactional(readOnly = true)
+    public SurveyResultsResponse getSurveyResults(Long surveyId) {
+        // Get the survey
+        Survey survey = repo.findById(surveyId)
+                .orElseThrow(() -> new IllegalArgumentException("Survey not found with id: " + surveyId));
+
+        // Get all answers for this survey
+        List<Answer> allAnswers = answersRepository.findBySurveyId(surveyId);
+
+        // Create anonymous user counter
+        Map<User, String> anonymousUserIds = new HashMap<>();
+        int anonymousCounter = 1;
+
+        // Group answers by user (including anonymous)
+        Map<String, List<Answer>> answersByRespondent = new HashMap<>();
+        Set<User> uniqueUsers = new HashSet<>();
+
+        for (Answer answer : allAnswers) {
+            String respondentId;
+            if (answer.getUser() != null) {
+                respondentId = "user_" + answer.getUser().getId();
+                uniqueUsers.add(answer.getUser());
+            } else {
+                // For anonymous users, we need to group them somehow
+                // Since we can't identify them, we'll treat each answer as from a different
+                // anonymous user
+                // In a real scenario, you might want to group by session or IP
+                respondentId = "anonymous_" + answer.getId();
+            }
+
+            answersByRespondent.computeIfAbsent(respondentId, k -> new ArrayList<>()).add(answer);
+        }
+
+        // Create respondent DTOs
+        List<SurveyResultsResponse.RespondentDTO> respondents = new ArrayList<>();
+
+        for (Map.Entry<String, List<Answer>> entry : answersByRespondent.entrySet()) {
+            String respondentId = entry.getKey();
+            List<Answer> userAnswers = entry.getValue();
+
+            // Get user info from first answer
+            Answer firstAnswer = userAnswers.get(0);
+            User user = firstAnswer.getUser();
+
+            boolean isAnonymous = user == null;
+            String name = isAnonymous ? "Anonymous User" : user.getName();
+            String email = isAnonymous ? null : user.getEmail();
+
+            // Create response details for this respondent
+            List<SurveyResultsResponse.ResponseDetailDTO> responses = userAnswers.stream()
+                    .map(answer -> new SurveyResultsResponse.ResponseDetailDTO(
+                            answer.getQuestion().getId(),
+                            answer.getQuestion().getQuestionText(),
+                            answer.getAnswerText(),
+                            answer.getCreatedAt()))
+                    .sorted((r1, r2) -> r1.questionId().compareTo(r2.questionId()))
+                    .collect(Collectors.toList());
+
+            // Find earliest submission time
+            Instant firstSubmission = userAnswers.stream()
+                    .map(Answer::getCreatedAt)
+                    .min(Instant::compareTo)
+                    .orElse(Instant.now());
+
+            respondents.add(new SurveyResultsResponse.RespondentDTO(
+                    respondentId,
+                    name,
+                    email,
+                    isAnonymous,
+                    userAnswers.size(),
+                    firstSubmission,
+                    responses));
+        }
+
+        // Sort respondents by first submission time
+        respondents.sort((r1, r2) -> r1.firstSubmissionAt().compareTo(r2.firstSubmissionAt()));
+
+        // Create question results
+        List<SurveyResultsResponse.QuestionResultDTO> questionResults = new ArrayList<>();
+
+        for (Question question : survey.getQuestions()) {
+            List<Answer> questionAnswers = allAnswers.stream()
+                    .filter(answer -> answer.getQuestion().getId().equals(question.getId()))
+                    .collect(Collectors.toList());
+
+            List<SurveyResultsResponse.AnswerSummaryDTO> answerSummaries = questionAnswers.stream()
+                    .map(answer -> {
+                        User user = answer.getUser();
+                        String respondentId = user != null ? "user_" + user.getId() : "anonymous_" + answer.getId();
+
+                        SurveyResultsResponse.RespondentInfoDTO respondentInfo = new SurveyResultsResponse.RespondentInfoDTO(
+                                respondentId,
+                                user != null ? user.getName() : "Anonymous User",
+                                user != null ? user.getEmail() : null,
+                                user == null);
+
+                        return new SurveyResultsResponse.AnswerSummaryDTO(
+                                answer.getId(),
+                                answer.getAnswerText(),
+                                answer.getCreatedAt(),
+                                respondentInfo);
+                    })
+                    .sorted((a1, a2) -> a1.submittedAt().compareTo(a2.submittedAt()))
+                    .collect(Collectors.toList());
+
+            questionResults.add(new SurveyResultsResponse.QuestionResultDTO(
+                    question.getId(),
+                    question.getQuestionText(),
+                    question.getType(),
+                    question.getOrderNumber(),
+                    question.getRequired(),
+                    questionAnswers.size(),
+                    answerSummaries));
+        }
+
+        // Sort questions by order number
+        questionResults.sort((q1, q2) -> {
+            Integer order1 = q1.orderNumber() != null ? q1.orderNumber() : Integer.MAX_VALUE;
+            Integer order2 = q2.orderNumber() != null ? q2.orderNumber() : Integer.MAX_VALUE;
+            return order1.compareTo(order2);
+        });
+
+        return new SurveyResultsResponse(
+                survey.getId(),
+                survey.getTitle(),
+                survey.getDescription(),
+                survey.getCreatedAt(),
+                respondents.size(),
+                survey.getQuestions().size(),
+                questionResults,
+                respondents);
     }
 }

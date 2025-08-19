@@ -4,6 +4,7 @@ import com.training.feedbacktool.service.SurveyService;
 import com.training.feedbacktool.dto.CreateSurveyRequest;
 import com.training.feedbacktool.dto.SurveyResponse;
 import com.training.feedbacktool.dto.PublicSurveyResponse;
+import com.training.feedbacktool.dto.SurveyResultsResponse;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -52,5 +53,16 @@ public class SurveyController {
     public ResponseEntity<PublicSurveyResponse> getPublicSurvey(@PathVariable Long id) {
         PublicSurveyResponse survey = service.findByIdWithQuestions(id);
         return ResponseEntity.ok(survey);
+    }
+
+    @GetMapping("/{id}/results")
+    @PreAuthorize("hasRole('ADMIN')") // Admin only - survey results are sensitive
+    public ResponseEntity<SurveyResultsResponse> getSurveyResults(@PathVariable Long id) {
+        try {
+            SurveyResultsResponse results = service.getSurveyResults(id);
+            return ResponseEntity.ok(results);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.notFound().build();
+        }
     }
 }

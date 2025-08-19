@@ -31,7 +31,8 @@ public class SecurityConfig {
     SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
                 // Use the CORS bean from CorsConfig (do NOT redeclare a bean here)
-                .cors(cors -> {})
+                .cors(cors -> {
+                })
                 .csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
@@ -42,11 +43,11 @@ public class SecurityConfig {
                         .requestMatchers("/actuator/**").permitAll()
                         .requestMatchers("/users/create").permitAll()
                         .requestMatchers("/auth/login").permitAll()
-                        .requestMatchers("/public/**").permitAll()   // <-- important for your two public APIs
+                        .requestMatchers("/public/**").permitAll() // <-- important for your two public APIs
+                        .requestMatchers("/surveys/*/public").permitAll() // <-- Allow public survey access
 
                         // Everything else requires JWT
-                        .anyRequest().authenticated()
-                )
+                        .anyRequest().authenticated())
                 // Register JWT filter BEFORE UsernamePasswordAuthenticationFilter
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 

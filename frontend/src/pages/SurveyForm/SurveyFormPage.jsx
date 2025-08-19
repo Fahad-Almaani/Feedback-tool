@@ -99,6 +99,22 @@ export default function SurveyFormPage() {
     const handleSubmit = async (e) => {
         e.preventDefault();
 
+        // Validate required fields
+        const missingRequiredFields = [];
+        survey.questions.forEach((question) => {
+            if (question.required) {
+                const answer = answers[question.id];
+                if (!answer || answer.toString().trim() === "") {
+                    missingRequiredFields.push(question.questionText);
+                }
+            }
+        });
+
+        if (missingRequiredFields.length > 0) {
+            setError(`Please answer all required questions: ${missingRequiredFields.join(", ")}`);
+            return;
+        }
+
         // Check if survey requires authentication
         if (survey.isPrivate && !isAuthenticated()) {
             setShowAuthDialog(true);
@@ -113,24 +129,27 @@ export default function SurveyFormPage() {
         setError("");
 
         try {
-            const responses = Object.entries(answers)
-                .filter(([_, answer]) => answer.trim() !== "")
+            // Format answers according to the backend DTO format
+            const formattedAnswers = Object.entries(answers)
+                .filter(([_, answer]) => answer && answer.toString().trim() !== "")
                 .map(([questionId, answer]) => ({
                     questionId: parseInt(questionId),
-                    responseText: answer
+                    answerValue: answer.toString()
                 }));
 
             const submissionData = {
-                surveyId: parseInt(surveyId),
-                responses
+                answers: formattedAnswers
             };
 
+            const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8080';
             let response;
+
             if (isAuthenticated()) {
-                response = await apiClient.post("/responses", submissionData);
+                // Use authenticated request with JWT token
+                response = await apiClient.post(`/public/surveys/${surveyId}/responses`, submissionData);
             } else {
-                const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8080';
-                response = await fetch(`${backendUrl}/api/responses/anonymous`, {
+                // Anonymous submission
+                response = await fetch(`${backendUrl}/api/public/surveys/${surveyId}/responses`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -142,8 +161,8 @@ export default function SurveyFormPage() {
             if (response.ok) {
                 setSubmitted(true);
             } else {
-                const errorData = await response.json().catch(() => ({ message: 'Failed to submit survey' }));
-                setError(errorData.message || 'Failed to submit survey');
+                const errorData = await response.text().catch(() => 'Failed to submit survey');
+                setError(errorData || 'Failed to submit survey');
             }
         } catch (error) {
             console.error('Error submitting survey:', error);
