@@ -84,17 +84,34 @@ axiosInstance.interceptors.response.use(
       if (data.success) {
         // For successful responses, return the actual data
         // but preserve the message for user feedback
-        return {
-          ...response,
-          data: {
-            ...data.data, // The actual response data
-            _apiResponse: {
-              message: data.message,
-              timestamp: data.timestamp,
-              status: data.status,
+
+        // Handle array responses properly
+        if (Array.isArray(data.data)) {
+          // For array responses, preserve the array structure
+          const responseData = [...data.data]; // Clone the array
+          responseData._apiResponse = {
+            message: data.message,
+            timestamp: data.timestamp,
+            status: data.status,
+          };
+          return {
+            ...response,
+            data: responseData,
+          };
+        } else {
+          // For object responses, spread normally
+          return {
+            ...response,
+            data: {
+              ...data.data, // The actual response data
+              _apiResponse: {
+                message: data.message,
+                timestamp: data.timestamp,
+                status: data.status,
+              },
             },
-          },
-        };
+          };
+        }
       } else {
         // For failed responses, throw error with structured information
         const errorMessage = data.message || "Request failed";

@@ -81,15 +81,11 @@ export default function AdminDashboard() {
         // Handle different response formats
         let surveysArray = [];
         if (Array.isArray(response)) {
-          // Direct array response
+          // Direct array response (after apiClient processing)
           surveysArray = response;
         } else if (response && Array.isArray(response.data)) {
           // Wrapped in data property
           surveysArray = response.data;
-        } else if (response && response._apiResponse && Array.isArray(response)) {
-          // Already processed by interceptor
-          const { _apiResponse, ...actualData } = response;
-          surveysArray = Array.isArray(actualData) ? actualData : [];
         } else {
           console.warn('Unexpected response format:', response);
           surveysArray = [];
