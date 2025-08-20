@@ -163,6 +163,21 @@ public class SurveyService {
         return findByIdWithQuestions(id);
     }
 
+    @Transactional
+    public void deleteSurvey(Long id) {
+        Survey survey = repo.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Survey not found with id: " + id));
+
+        // Delete all associated answers first
+        answersRepository.deleteBySurveyId(id);
+
+        // Delete all associated responses
+        responsesRepository.deleteBySurveyId(id);
+
+        // Finally delete the survey (this will also delete questions due to cascade)
+        repo.delete(survey);
+    }
+
     // ---------- submission ----------
     @Transactional
     public void submitResponses(Long surveyId, SubmitResponseRequest request) {

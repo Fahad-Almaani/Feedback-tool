@@ -174,18 +174,24 @@ export default function AdminDashboard() {
           await SurveyService.deleteSurvey(surveyId);
 
           // Remove the survey from the local state
-          setSurveys(prevSurveys => prevSurveys.filter(s => s.id !== surveyId));
+          setSurveys(prevSurveys => {
+            const updatedSurveys = prevSurveys.filter(s => s.id !== surveyId);
 
-          // Update statistics
-          const updatedSurveys = surveys.filter(s => s.id !== surveyId);
-          const updatedStats = SurveyService.calculateStats(updatedSurveys);
-          setStatistics(updatedStats);
+            // Update statistics with the updated surveys list
+            const updatedStats = SurveyService.calculateStats(updatedSurveys);
+            setStatistics(updatedStats);
+
+            return updatedSurveys;
+          });
 
           closeDialog();
           showSuccess('Survey Deleted', 'The survey has been successfully deleted.');
+
         } catch (error) {
           console.error('Error deleting survey:', error);
-          showDanger('Delete Failed', 'Failed to delete the survey. Please try again.');
+          const errorMessage = apiClient.getErrorMessage(error);
+          closeDialog();
+          showDanger('Delete Failed', errorMessage || 'Failed to delete the survey. Please try again.');
         } finally {
           setDialogLoading(false);
         }
@@ -548,7 +554,7 @@ export default function AdminDashboard() {
                                       }}
                                     >
                                       <Trash2 size={14} />
-                                      Delete Survey
+                                      Delete
                                     </button>
                                   </div>
                                 )}
