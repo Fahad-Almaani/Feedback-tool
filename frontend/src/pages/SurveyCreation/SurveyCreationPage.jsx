@@ -3,6 +3,8 @@ import { useAuth } from "../../context/AuthContext";
 import { apiClient } from "../../utils/apiClient";
 import { useNavigate } from "react-router-dom";
 import InputWithAI from "../../components/Input/InputWithAI";
+import { improveSurveyTitle, improveSurveyDescription } from "../../utils/TextPhrasing";
+import { improveQuestionPhrasing } from "../../utils/QuestionPhrasing";
 import styles from "./SurveyCreationPage.module.css";
 
 const QUESTION_TYPES = {
@@ -113,6 +115,76 @@ export default function SurveyCreationPage() {
             }
         };
     }, [unsavedChanges, survey.title]);
+
+    // AI improvement handlers
+    const handleTitleImprovement = useCallback(async (currentTitle) => {
+        console.log("📋 SurveyCreation - Title improvement started:", {
+            currentTitle: currentTitle?.substring(0, 100) + (currentTitle?.length > 100 ? "..." : ""),
+            length: currentTitle?.length
+        });
+
+        if (!currentTitle.trim()) {
+            console.warn("⚠️ SurveyCreation - Empty title provided");
+            alert('Please enter some text first to get AI assistance.');
+            return;
+        }
+
+        try {
+            console.log("🚀 SurveyCreation - Calling improveSurveyTitle...");
+            const improvedTitle = await improveSurveyTitle(currentTitle);
+            
+            console.log("✅ SurveyCreation - Title improved:", {
+                original: currentTitle,
+                improved: improvedTitle,
+                originalLength: currentTitle.length,
+                improvedLength: improvedTitle?.length
+            });
+            
+            setSurvey(prev => ({ ...prev, title: improvedTitle }));
+            setUnsavedChanges(true);
+            if (errors.title) {
+                setErrors(prev => ({ ...prev, title: null }));
+            }
+            return improvedTitle; // Return the improved text
+        } catch (error) {
+            console.error('❌ SurveyCreation - Error improving title:', error);
+            alert('Failed to improve title. Please try again.');
+            throw error; // Re-throw to maintain error handling
+        }
+    }, [errors.title]);
+
+    const handleDescriptionImprovement = useCallback(async (currentDescription) => {
+        console.log("📝 SurveyCreation - Description improvement started:", {
+            currentDescription: currentDescription?.substring(0, 100) + (currentDescription?.length > 100 ? "..." : ""),
+            length: currentDescription?.length
+        });
+
+        if (!currentDescription.trim()) {
+            console.warn("⚠️ SurveyCreation - Empty description provided");
+            alert('Please enter some text first to get AI assistance.');
+            return;
+        }
+
+        try {
+            console.log("🚀 SurveyCreation - Calling improveSurveyDescription...");
+            const improvedDescription = await improveSurveyDescription(currentDescription);
+            
+            console.log("✅ SurveyCreation - Description improved:", {
+                original: currentDescription,
+                improved: improvedDescription,
+                originalLength: currentDescription.length,
+                improvedLength: improvedDescription?.length
+            });
+            
+            setSurvey(prev => ({ ...prev, description: improvedDescription }));
+            setUnsavedChanges(true);
+            return improvedDescription; // Return the improved text
+        } catch (error) {
+            console.error('❌ SurveyCreation - Error improving description:', error);
+            alert('Failed to improve description. Please try again.');
+            throw error; // Re-throw to maintain error handling
+        }
+    }, []);
 
     // Keyboard shortcuts
     useEffect(() => {
@@ -237,6 +309,25 @@ export default function SurveyCreationPage() {
         updateQuestion(questionIndex, "optionsJson", JSON.stringify(ratingConfig));
         setUnsavedChanges(true);
     }, [updateQuestion]);
+
+    // Handle question text improvement
+    const handleQuestionImprovement = useCallback(async (questionIndex, currentQuestionText) => {
+        if (!currentQuestionText.trim()) {
+            alert('Please enter some text first to get AI assistance.');
+            return;
+        }
+
+        try {
+            const questionType = questions[questionIndex]?.type || '';
+            const improvedQuestion = await improveQuestionPhrasing(currentQuestionText, questionType);
+            updateQuestion(questionIndex, 'questionText', improvedQuestion);
+            return improvedQuestion; // Return the improved text
+        } catch (error) {
+            console.error('Error improving question:', error);
+            alert('Failed to improve question. Please try again.');
+            throw error; // Re-throw to maintain error handling
+        }
+    }, [questions, updateQuestion]);
 
     // Drag and drop handlers
     const handleDragStart = (e, index) => {
@@ -543,11 +634,7 @@ export default function SurveyCreationPage() {
                                         }}
                                         placeholder="Enter survey title..."
                                         error={!!errors.title}
-                                        onAIClick={(currentValue) => {
-                                            console.log('AI assistance for title:', currentValue);
-                                            // TODO: Implement AI suggestion logic for survey titles
-                                            alert('AI title suggestions coming soon!');
-                                        }}
+                                        onAIClick={handleTitleImprovement}
                                     />
 
                                 </div>
@@ -566,11 +653,7 @@ export default function SurveyCreationPage() {
                                         }}
                                         placeholder="Describe your survey's purpose and instructions..."
                                         rows={3}
-                                        onAIClick={(currentValue) => {
-                                            console.log('AI assistance for description:', currentValue);
-                                            // TODO: Implement AI suggestion logic for survey descriptions
-                                            alert('AI description suggestions coming soon!');
-                                        }}
+                                        onAIClick={handleDescriptionImprovement}
                                     />
                                     <div className={styles.characterCount}>
                                         {survey.description.length}/500
@@ -621,6 +704,7 @@ export default function SurveyCreationPage() {
                                             onDrop={handleDrop}
                                             onUpdateMultipleChoice={updateMultipleChoiceOptions}
                                             onUpdateRating={updateRatingOptions}
+                                            onQuestionImprovement={handleQuestionImprovement}
                                             errors={errors}
                                             isDragging={draggedIndex === index}
                                             isFocused={focusedQuestionIndex === index}
@@ -793,6 +877,7 @@ function QuestionEditor({
     onDrop,
     onUpdateMultipleChoice,
     onUpdateRating,
+    onQuestionImprovement,
     errors,
     isDragging,
     isFocused,
@@ -948,13 +1033,15 @@ function QuestionEditor({
                         <label className={styles.label}>
                             Question Text <span className={styles.required}>*</span>
                         </label>
-                        <textarea
-                            className={`${styles.textarea} ${errors[`question_${index}_text`] ? styles.error : ''}`}
-                            placeholder="Enter your question..."
+                        <InputWithAI
+                            type="textarea"
                             value={question.questionText}
                             onChange={(e) => onUpdate(index, "questionText", e.target.value)}
+                            placeholder="Enter your question..."
                             rows={3}
-                            autoFocus={isFocused}
+                            error={!!errors[`question_${index}_text`]}
+                            onAIClick={(currentText) => onQuestionImprovement && onQuestionImprovement(index, currentText)}
+                            className={errors[`question_${index}_text`] ? styles.error : ''}
                         />
                         {errors[`question_${index}_text`] && (
                             <span className={styles.errorText}>{errors[`question_${index}_text`]}</span>
