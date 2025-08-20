@@ -18,123 +18,307 @@ import {
   AreaChart,
   Area
 } from "recharts";
+import {
+  Edit3,
+  Eye,
+  MoreHorizontal,
+  Calendar,
+  Clock,
+  BarChart3,
+  HelpCircle,
+  Search,
+  X,
+  ClipboardList,
+  ChevronLeft,
+  ChevronRight,
+  FileText,
+  Trash2
+} from "lucide-react";
 import styles from "./AdminDashboard.module.css";
-
-// Enhanced mock data for admin dashboard
-const mockData = {
-  surveys: [
-    {
-      id: 1,
-      title: "Customer Satisfaction Q4 2025",
-      status: "ACTIVE",
-      responses: 245,
-      createdDate: "2025-08-01",
-      deadline: "2025-09-30",
-      completionRate: 78
-    },
-    {
-      id: 2,
-      title: "Employee Engagement Survey",
-      status: "ACTIVE",
-      responses: 156,
-      createdDate: "2025-08-05",
-      deadline: "2025-08-25",
-      completionRate: 92
-    },
-    {
-      id: 3,
-      title: "Website User Experience",
-      status: "INACTIVE",
-      responses: 89,
-      createdDate: "2025-07-15",
-      deadline: "2025-08-15",
-      completionRate: 65
-    },
-    {
-      id: 4,
-      title: "Product Feedback Survey",
-      status: "DRAFT",
-      responses: 0,
-      createdDate: "2025-08-10",
-      deadline: "2025-09-15",
-      completionRate: 0
-    },
-    {
-      id: 5,
-      title: "Training Effectiveness",
-      status: "ACTIVE",
-      responses: 123,
-      createdDate: "2025-07-28",
-      deadline: "2025-08-28",
-      completionRate: 85
-    }
-  ],
-  statistics: {
-    totalSurveys: 5,
-    activeSurveys: 3,
-    totalResponses: 613,
-    avgCompletionRate: 64,
-    responsesThisWeek: 45,
-    responsesLastWeek: 38,
-    newSurveysThisMonth: 2
-  },
-  responsesOverTime: [
-    { date: "Aug 1", responses: 42 },
-    { date: "Aug 2", responses: 35 },
-    { date: "Aug 3", responses: 58 },
-    { date: "Aug 4", responses: 48 },
-    { date: "Aug 5", responses: 62 },
-    { date: "Aug 6", responses: 39 },
-    { date: "Aug 7", responses: 71 },
-    { date: "Aug 8", responses: 55 },
-    { date: "Aug 9", responses: 67 },
-    { date: "Aug 10", responses: 44 }
-  ],
-  surveyStatusDistribution: [
-    { name: "Active", value: 3, color: "#43e97b" },
-    { name: "Inactive", value: 1, color: "#ff6b6b" },
-    { name: "Draft", value: 1, color: "#feca57" }
-  ],
-  recentActivity: [
-    { id: 1, action: "New response", survey: "Customer Satisfaction Q4", time: "2 minutes ago" },
-    { id: 2, action: "Survey activated", survey: "Employee Engagement", time: "1 hour ago" },
-    { id: 3, action: "Survey created", survey: "Product Feedback", time: "3 hours ago" },
-    { id: 4, action: "Response milestone", survey: "Website UX", time: "1 day ago" }
-  ]
-};
+import { apiClient } from "../../utils/apiClient";
+import { Dialog } from "../../components";
+import { useDialog } from "../../hooks/useDialog";
+import { SurveyService, AnalyticsService, ResponseService } from "../../services/apiServices";
 
 export default function AdminDashboard() {
   const [surveys, setSurveys] = useState([]);
+  const [statistics, setStatistics] = useState({
+    totalSurveys: 0,
+    activeSurveys: 0,
+    totalResponses: 0,
+    responsesThisWeek: 0,
+    responsesLastWeek: 0,
+    newSurveysThisMonth: 0
+  });
   const [selectedSurveyId, setSelectedSurveyId] = useState(null);
   const [filterStatus, setFilterStatus] = useState("ALL");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(5);
   const [loading, setLoading] = useState(true);
   const [isVisible, setIsVisible] = useState(false);
+  const [error, setError] = useState(null);
+  const [activeDropdown, setActiveDropdown] = useState(null);
+  const [responseTrends, setResponseTrends] = useState([{ date: "", responses: 0 }]); // Initialize with an empty object to avoid rendering issues
+  const [recentActivity, setRecentActivity] = useState([]);
+  const [recentResponses, setRecentResponses] = useState([]);
+  const [chartData, setChartData] = useState([]); // State for chart data
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const {
+    dialogState,
+    closeDialog,
+    showDangerConfirmation,
+    showSuccess,
+    showDanger,
+    setLoading: setDialogLoading
+  } = useDialog();
 
   useEffect(() => {
     // Trigger entrance animation
     setIsVisible(true);
 
-    // Simulate API call
-    setTimeout(() => {
-      setSurveys(mockData.surveys);
-      setLoading(false);
-    }, 1000);
+    // Fetch all required data
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        // Fetch surveys and analytics data in parallel
+        const [surveysResponse, responseTrendsData, recentActivityData, overviewData, recentResponsesData] = await Promise.all([
+          apiClient.get('/surveys/admin'),
+          AnalyticsService.getResponseTrends(30), // Last 30 days for the chart (whole month)
+          AnalyticsService.getRecentActivity(4), // Last 4 activities
+          AnalyticsService.getDashboardOverview(),
+          AnalyticsService.getRecentResponses(5) // Get latest 5 responses with detailed info
+        ]);
+
+        // console.log('Full API Response:', surveysResponse);
+        // console.log('Response trends:', responseTrendsData);
+        // console.log('Recent activity:', recentActivityData);
+        // console.log('Overview data:', overviewData);
+        // console.log('Recent responses:', recentResponsesData);
+
+        // Handle surveys data
+        let surveysArray = [];
+        if (Array.isArray(surveysResponse)) {
+          surveysArray = surveysResponse;
+        } else if (surveysResponse && Array.isArray(surveysResponse.data)) {
+          surveysArray = surveysResponse.data;
+        } else {
+          // console.warn('Unexpected response format:', surveysResponse);
+          surveysArray = [];
+        }
+
+        // console.log('Final surveys array:', surveysArray);
+        setSurveys(surveysArray);
+
+        // Set analytics data - extract the data array from the response
+        setResponseTrends(responseTrendsData || []);
+        setRecentActivity(recentActivityData || []);
+        // console.log(responseTrendsData)
+        // console.log('Setting responseTrends to:', responseTrendsData?.data);
+        // console.log('responseTrendsData length:', responseTrendsData?.data?.length || 0);
+
+        // Process recent responses - get latest 5 with detailed info
+        let processedResponses = [];
+        if (Array.isArray(recentResponsesData)) {
+          processedResponses = recentResponsesData.map(response => ({
+            id: response.surveyId,
+            surveyName: response.surveyName,
+            userName: response.isAnonymous ? null : response.userName,
+            submittedAt: response.submittedAt,
+            completionPercentage: response.completionPercentage,
+            formattedTime: response.formattedTime,
+            formattedDate: response.formattedDate,
+            isAnonymous: response.isAnonymous
+          }));
+        }
+        setRecentResponses(processedResponses);
+
+        // Update statistics with overview data or calculate from surveys
+        if (overviewData) {
+          setStatistics({
+            totalSurveys: overviewData.totalSurveys || surveysArray.length,
+            activeSurveys: overviewData.activeSurveys || surveysArray.filter(s => s.status === 'ACTIVE').length,
+            totalResponses: overviewData.totalResponses || surveysArray.reduce((sum, s) => sum + s.totalResponses, 0),
+            responsesThisWeek: overviewData.responsesThisWeek || 0,
+            responsesLastWeek: overviewData.responsesLastWeek || 0,
+            newSurveysThisMonth: overviewData.newSurveysThisMonth || 0
+          });
+        } else {
+          // Fallback to calculated statistics
+          const totalSurveys = surveysArray.length;
+          const activeSurveys = surveysArray.filter(s => s.status === 'ACTIVE').length;
+          const totalResponses = surveysArray.reduce((sum, s) => sum + s.totalResponses, 0);
+
+          setStatistics({
+            totalSurveys,
+            activeSurveys,
+            totalResponses,
+            responsesThisWeek: Math.floor(totalResponses * 0.2),
+            responsesLastWeek: Math.floor(totalResponses * 0.15),
+            newSurveysThisMonth: surveysArray.filter(s => {
+              const createdDate = new Date(s.createdAt);
+              const currentDate = new Date();
+              return createdDate.getMonth() === currentDate.getMonth() &&
+                createdDate.getFullYear() === currentDate.getFullYear();
+            }).length
+          });
+        }
+
+      } catch (err) {
+        console.error('Error fetching data:', err);
+        const errorDetails = apiClient.getErrorDetails(err);
+        setError(errorDetails.message || 'Failed to load dashboard data. Please try again.');
+
+        // Set fallback data for charts
+        setResponseTrends([
+          { date: "Today", responses: 0, fullDate: new Date().toISOString().split('T')[0] }
+        ]);
+        setRecentActivity([
+          { id: 1, action: "System initialized", survey: "Welcome", time: "just now", type: "system" }
+        ]);
+        setRecentResponses([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
   }, []);
 
-  const handleLogout = () => {
+  // Mock data for charts (keeping these as they require more complex backend changes)
+
+  // console.log('responseTrends received:', responseTrends);
+  // console.log('responseTrends length:', responseTrends?.length);
+  // console.log('First responseTrends item:', responseTrends?.[0]);
+
+  // Determine chart data to use - only render when data is available
+  // let chartData = responseTrends
+  useEffect(() => {
+    if (responseTrends && Object.keys(responseTrends).length > 0) {
+      setChartData(
+        Object.values(responseTrends).map((item) => ({
+          date: item.date,
+          responses: item.responses || 0
+        }))
+      );
+    }
+    console.log("responseTrends", responseTrends);
+  }, [responseTrends]);
+
+
+
+  console.log('loading state:', loading); const handleLogout = () => {
     logout();
   };
+
+  const handleDeleteSurvey = async (surveyId, surveyTitle) => {
+    showDangerConfirmation(
+      'Delete Survey',
+      `Are you sure you want to delete "${surveyTitle}"? This action cannot be undone and will permanently remove all associated responses.`,
+      async () => {
+        try {
+          setDialogLoading(true);
+          await SurveyService.deleteSurvey(surveyId);
+
+          // Remove the survey from the local state
+          setSurveys(prevSurveys => {
+            const updatedSurveys = prevSurveys.filter(s => s.id !== surveyId);
+
+            // Update statistics with the updated surveys list
+            const updatedStats = SurveyService.calculateStats(updatedSurveys);
+            setStatistics(updatedStats);
+
+            return updatedSurveys;
+          });
+
+          closeDialog();
+          // showSuccess('Survey Deleted', 'The survey has been successfully deleted.');
+
+        } catch (error) {
+          console.error('Error deleting survey:', error);
+          const errorMessage = apiClient.getErrorMessage(error);
+          closeDialog();
+          // showDanger('Delete Failed', errorMessage || 'Failed to delete the survey. Please try again.');
+        } finally {
+          setDialogLoading(false);
+        }
+      },
+      () => {
+        setActiveDropdown(null); // Close dropdown when cancelled
+      }
+    );
+  };
+
+  const toggleDropdown = (surveyId, event) => {
+    event.stopPropagation();
+    setActiveDropdown(activeDropdown === surveyId ? null : surveyId);
+  };
+
+  const closeDropdown = () => {
+    setActiveDropdown(null);
+  };
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = () => {
+      if (activeDropdown) {
+        setActiveDropdown(null);
+      }
+    };
+
+    document.addEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('click', handleClickOutside);
+  }, [activeDropdown]);
 
   const getInitials = (name) => {
     return name ? name.split(' ').map(n => n[0]).join('').toUpperCase() : 'A';
   };
 
   const filteredSurveys = useMemo(() => {
-    if (filterStatus === "ALL") return surveys;
-    return surveys.filter(survey => survey.status === filterStatus);
-  }, [surveys, filterStatus]);
+    let filtered = surveys;
+
+    // Filter by status
+    if (filterStatus !== "ALL") {
+      filtered = filtered.filter(survey => survey.status === filterStatus);
+    }
+
+    // Filter by search term
+    if (searchTerm.trim()) {
+      const term = searchTerm.toLowerCase();
+      filtered = filtered.filter(survey =>
+        survey.title.toLowerCase().includes(term) ||
+        (survey.description && survey.description.toLowerCase().includes(term))
+      );
+    }
+
+    return filtered;
+  }, [surveys, filterStatus, searchTerm]);
+
+  // Pagination
+  const totalPages = Math.ceil(filteredSurveys.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const paginatedSurveys = filteredSurveys.slice(startIndex, startIndex + itemsPerPage);
+
+  // Reset to first page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filterStatus, searchTerm]);
+
+  const surveyStatusDistribution = useMemo(() => {
+    const statusCounts = surveys.reduce((acc, survey) => {
+      acc[survey.status] = (acc[survey.status] || 0) + 1;
+      return acc;
+    }, {});
+
+    return [
+      { name: "Active", value: statusCounts.ACTIVE || 0, color: "#43e97b" },
+      { name: "Inactive", value: statusCounts.INACTIVE || 0, color: "#ff6b6b" },
+      { name: "Draft", value: statusCounts.DRAFT || 0, color: "#feca57" }
+    ].filter(item => item.value > 0); // Only show statuses that have surveys
+  }, [surveys]);
 
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -142,6 +326,32 @@ export default function AdminDashboard() {
       day: 'numeric',
       year: 'numeric'
     });
+  };
+
+  const formatDateTime = (dateString) => {
+    return new Date(dateString).toLocaleString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true
+    });
+  };
+
+  const getTimeAgo = (dateString) => {
+    const now = new Date();
+    const date = new Date(dateString);
+    const diffInMs = now - date;
+    const diffInMinutes = Math.floor(diffInMs / (1000 * 60));
+    const diffInHours = Math.floor(diffInMs / (1000 * 60 * 60));
+    const diffInDays = Math.floor(diffInMs / (1000 * 60 * 60 * 24));
+
+    if (diffInMinutes < 1) return 'just now';
+    if (diffInMinutes < 60) return `${diffInMinutes}m ago`;
+    if (diffInHours < 24) return `${diffInHours}h ago`;
+    if (diffInDays < 7) return `${diffInDays}d ago`;
+    return formatDate(dateString);
   };
 
   const getTrendIcon = (current, previous) => {
@@ -229,11 +439,11 @@ export default function AdminDashboard() {
               <svg className={styles.statIcon} viewBox="0 0 24 24" fill="currentColor">
                 <path d="M9 12l2 2 4-4M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
-              <div className={`${styles.statTrend} ${getTrendClass(mockData.statistics.totalSurveys, 4)}`}>
-                {getTrendIcon(mockData.statistics.totalSurveys, 4)} +1
+              <div className={`${styles.statTrend} ${getTrendClass(statistics.totalSurveys, statistics.totalSurveys - 1)}`}>
+                {getTrendIcon(statistics.totalSurveys, statistics.totalSurveys - 1)} +{statistics.newSurveysThisMonth}
               </div>
             </div>
-            <div className={styles.statValue}>{mockData.statistics.totalSurveys}</div>
+            <div className={styles.statValue}>{statistics.totalSurveys}</div>
             <div className={styles.statLabel}>Total Surveys</div>
           </div>
 
@@ -242,11 +452,12 @@ export default function AdminDashboard() {
               <svg className={styles.statIcon} viewBox="0 0 24 24" fill="currentColor">
                 <path d="M13 10V3L4 14h7v7l9-11h-7z" />
               </svg>
-              <div className={`${styles.statTrend} ${getTrendClass(mockData.statistics.activeSurveys, 2)}`}>
-                {getTrendIcon(mockData.statistics.activeSurveys, 2)} +1
+              <div className={`${styles.statTrend} ${getTrendClass(statistics.activeSurveys, Math.max(0, statistics.activeSurveys - 1))}`}>
+                {getTrendIcon(statistics.activeSurveys, Math.max(0, statistics.activeSurveys - 1))}
+                {statistics.activeSurveys > 0 ? '+' : ''}1
               </div>
             </div>
-            <div className={styles.statValue}>{mockData.statistics.activeSurveys}</div>
+            <div className={styles.statValue}>{statistics.activeSurveys}</div>
             <div className={styles.statLabel}>Active Surveys</div>
           </div>
 
@@ -255,32 +466,45 @@ export default function AdminDashboard() {
               <svg className={styles.statIcon} viewBox="0 0 24 24" fill="currentColor">
                 <path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
               </svg>
-              <div className={`${styles.statTrend} ${getTrendClass(mockData.statistics.responsesThisWeek, mockData.statistics.responsesLastWeek)}`}>
-                {getTrendIcon(mockData.statistics.responsesThisWeek, mockData.statistics.responsesLastWeek)} +7
+              <div className={`${styles.statTrend} ${getTrendClass(statistics.responsesThisWeek, statistics.responsesLastWeek)}`}>
+                {getTrendIcon(statistics.responsesThisWeek, statistics.responsesLastWeek)} +{statistics.responsesThisWeek - statistics.responsesLastWeek}
               </div>
             </div>
-            <div className={styles.statValue}>{mockData.statistics.totalResponses}</div>
+            <div className={styles.statValue}>{statistics.totalResponses}</div>
             <div className={styles.statLabel}>Total Responses</div>
           </div>
 
+          {/* Quick Actions Card */}
           <div className={styles.statCard}>
             <div className={styles.statHeader}>
               <svg className={styles.statIcon} viewBox="0 0 24 24" fill="currentColor">
-                <path d="M11 15l-3-3 1.5-1.5L11 12l5-5L17.5 8.5 11 15z" />
+                <path d="M11.25 4.533A9.707 9.707 0 006 3a9.735 9.735 0 00-3.25.555.75.75 0 00-.5.707v14.25a.75.75 0 001 .708A8.237 8.237 0 016 18.75c1.995 0 3.823.707 5.25 1.886V4.533zM12.75 20.636A8.214 8.214 0 0118 18.75c.966 0 1.89.166 2.75.47a.75.75 0 001-.708V4.262a.75.75 0 00-.5-.707A9.735 9.735 0 0018 3a9.707 9.707 0 00-5.25 1.533v16.103z" />
               </svg>
-              <div className={`${styles.statTrend} ${getTrendClass(mockData.statistics.avgCompletionRate, 58)}`}>
-                {getTrendIcon(mockData.statistics.avgCompletionRate, 58)} +6%
-              </div>
             </div>
-            <div className={styles.statValue}>{mockData.statistics.avgCompletionRate}%</div>
-            <div className={styles.statLabel}>Avg Completion Rate</div>
+            <div className={styles.quickActionsInCard}>
+              <button
+                className={styles.quickActionBtn}
+                onClick={() => navigate("/admin/surveys/create")}
+              >
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12 4.5v15m7.5-7.5h-15" />
+                </svg>
+                Create Survey
+              </button>
+              <button className={styles.quickActionBtn}>
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+                </svg>
+                Export Data
+              </button>
+            </div>
           </div>
         </div>
 
-        {/* Content Grid */}
-        <div className={styles.contentGrid}>
-          {/* Survey Management */}
-          <div className={styles.section}>
+        {/* Main Content Grid */}
+        <div className={styles.mainContentGrid}>
+          {/* Survey Management - Full Width */}
+          <div className={styles.surveyManagementSection}>
             <div className={styles.sectionHeader}>
               <h2 className={styles.sectionTitle}>
                 <svg className={styles.sectionIcon} viewBox="0 0 24 24" fill="currentColor">
@@ -291,93 +515,213 @@ export default function AdminDashboard() {
               <p className={styles.sectionSubtitle}>Manage all your surveys and track their performance</p>
             </div>
             <div className={styles.sectionContent}>
-              {/* Filters */}
-              <div className={styles.surveyFilters}>
-                {["ALL", "ACTIVE", "INACTIVE", "DRAFT"].map((status) => (
-                  <button
-                    key={status}
-                    className={`${styles.filterButton} ${filterStatus === status ? styles.active : ''}`}
-                    onClick={() => setFilterStatus(status)}
-                  >
-                    {status} ({status === "ALL" ? surveys.length : surveys.filter(s => s.status === status).length})
-                  </button>
-                ))}
+              {/* Search and Filters */}
+              <div className={styles.surveyControls}>
+                <div className={styles.searchContainer}>
+                  <Search className={styles.searchIcon} size={20} />
+                  <input
+                    type="text"
+                    placeholder="Search surveys by title or description..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className={styles.searchInput}
+                  />
+                  {searchTerm && (
+                    <button
+                      onClick={() => setSearchTerm("")}
+                      className={styles.clearSearchBtn}
+                    >
+                      <X size={16} />
+                    </button>
+                  )}
+                </div>
+
+                <div className={styles.surveyFilters}>
+                  {["ALL", "ACTIVE", "INACTIVE", "DRAFT"].map((status) => (
+                    <button
+                      key={status}
+                      className={`${styles.filterButton} ${filterStatus === status ? styles.active : ''}`}
+                      onClick={() => setFilterStatus(status)}
+                    >
+                      {status} ({status === "ALL" ? surveys.length : surveys.filter(s => s.status === status).length})
+                    </button>
+                  ))}
+                </div>
               </div>
 
               {/* Survey List */}
-              <div className={styles.surveyList}>
-                {filteredSurveys.map((survey) => (
-                  <div
-                    key={survey.id}
-                    className={`${styles.surveyItem} ${selectedSurveyId === survey.id ? styles.selected : ''}`}
-                    onClick={() => setSelectedSurveyId(survey.id)}
-                  >
-                    <div className={styles.surveyItemHeader}>
-                      <div className={styles.surveyTitle}>{survey.title}</div>
-                      <span className={`${styles.statusBadge} ${styles[`status${survey.status.charAt(0) + survey.status.slice(1).toLowerCase()}`]}`}>
-                        {survey.status}
-                      </span>
-                    </div>
-                    <div className={styles.surveyMeta}>
-                      <span>📅 Created: {formatDate(survey.createdDate)}</span>
-                      <span>⏰ Deadline: {formatDate(survey.deadline)}</span>
-                    </div>
-                    <div className={styles.surveyStats}>
-                      <span className={styles.responseCount}>
-                        📊 {survey.responses} responses ({survey.completionRate}% completion)
-                      </span>
+              <div className={styles.surveyListContainer}>
+                {loading && (
+                  <div className={styles.loadingContainer}>
+                    <div className={styles.spinner}></div>
+                    <div className={styles.loadingText}>Loading surveys...</div>
+                  </div>
+                )}
+
+                {error && (
+                  <div className={styles.errorContainer}>
+                    <p className={styles.errorText}>{error}</p>
+                    <button
+                      onClick={() => window.location.reload()}
+                      className={styles.retryButton}
+                    >
+                      Retry
+                    </button>
+                  </div>
+                )}
+
+                {!loading && !error && filteredSurveys.length === 0 && (
+                  <div className={styles.emptyState}>
+                    <FileText className={styles.emptyIcon} size={64} />
+                    <div className={styles.emptyTitle}>No surveys found</div>
+                    <div className={styles.emptyDescription}>
+                      {searchTerm
+                        ? `No surveys match "${searchTerm}" ${filterStatus !== "ALL" ? `with status ${filterStatus}` : ''}.`
+                        : `No surveys found ${filterStatus !== "ALL" ? `with status ${filterStatus}` : ''}.`
+                      }
                     </div>
                   </div>
-                ))}
-              </div>
-            </div>
-          </div>
+                )}                {!loading && !error && paginatedSurveys.length > 0 && (
+                  <>
+                    <div className={styles.surveyGrid}>
+                      {paginatedSurveys.map((survey) => (
+                        <div
+                          key={survey.id}
+                          className={`${styles.enhancedSurveyCard} ${selectedSurveyId === survey.id ? styles.selected : ''} ${styles[`status${survey.status.charAt(0) + survey.status.slice(1).toLowerCase()}`]}`}
+                          onClick={() => setSelectedSurveyId(survey.id)}
+                        >
+                          <div className={styles.surveyCardHeader}>
+                            <div className={styles.surveyTitleSection}>
+                              <h3 className={styles.surveyCardTitle}>{survey.title}</h3>
+                              <span className={`${styles.statusBadge} ${styles[`status${survey.status.charAt(0) + survey.status.slice(1).toLowerCase()}`]}`}>
+                                {survey.status}
+                              </span>
+                            </div>
+                            <div className={styles.surveyActions}>
+                              <button
+                                className={styles.actionBtn}
+                                title="Edit Survey"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  navigate(`/admin/surveys/${survey.id}/edit`);
+                                }}
+                              >
+                                <Edit3 size={16} />
+                              </button>
+                              <button
+                                className={styles.actionBtn}
+                                title="View Details"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  navigate(`/admin/surveys/${survey.id}`);
+                                }}
+                              >
+                                <Eye size={16} />
+                              </button>
+                              <div className={styles.dropdownContainer}>
+                                <button
+                                  className={styles.actionBtn}
+                                  title="More Options"
+                                  onClick={(e) => toggleDropdown(survey.id, e)}
+                                >
+                                  <MoreHorizontal size={16} />
+                                </button>
+                                {activeDropdown === survey.id && (
+                                  <div className={styles.dropdown}>
+                                    <button
+                                      className={styles.dropdownItem}
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleDeleteSurvey(survey.id, survey.title);
+                                        setActiveDropdown(null);
+                                      }}
+                                    >
+                                      <Trash2 size={14} />
+                                      Delete
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </div>
 
-          {/* Analytics & Quick Actions */}
-          <div className={styles.section}>
-            <div className={styles.sectionHeader}>
-              <h2 className={styles.sectionTitle}>
-                <svg className={styles.sectionIcon} viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                </svg>
-                Quick Actions
-              </h2>
-              <p className={styles.sectionSubtitle}>Common administrative tasks</p>
-            </div>
-            <div className={styles.sectionContent}>
-              <div className={styles.quickActions}>
-                <div className={styles.actionCard} onClick={() => navigate("/admin/surveys/create")}>
-                  <svg className={styles.actionIcon} viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M12 4.5v15m7.5-7.5h-15" />
-                  </svg>
-                  <h3 className={styles.actionTitle}>Create Survey</h3>
-                  <p className={styles.actionDescription}>Build a new survey from scratch</p>
-                </div>
+                          <div className={styles.surveyCardContent}>
+                            {survey.description && (
+                              <div className={styles.surveyDescription}>
+                                {survey.description}
+                              </div>
+                            )}
 
-                <div className={styles.actionCard}>
-                  <svg className={styles.actionIcon} viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
-                  </svg>
-                  <h3 className={styles.actionTitle}>Export Data</h3>
-                  <p className={styles.actionDescription}>Download survey responses</p>
-                </div>
+                            <div className={styles.surveyMetaGrid}>
+                              <div className={styles.metaItem}>
+                                <Calendar className={styles.metaIcon} size={16} />
+                                <span className={styles.metaLabel}>Created:</span>
+                                <span className={styles.metaValue}>{formatDate(survey.createdAt)}</span>
+                              </div>
+                              <div className={styles.metaItem}>
+                                <Clock className={styles.metaIcon} size={16} />
+                                <span className={styles.metaLabel}>Updated:</span>
+                                <span className={styles.metaValue}>{formatDate(survey.updatedAt)}</span>
+                              </div>
+                              <div className={styles.metaItem}>
+                                <BarChart3 className={styles.metaIcon} size={16} />
+                                <span className={styles.metaLabel}>Responses:</span>
+                                <span className={styles.metaValue}>{survey.totalResponses}</span>
+                              </div>
+                              <div className={styles.metaItem}>
+                                <HelpCircle className={styles.metaIcon} size={16} />
+                                <span className={styles.metaLabel}>Questions:</span>
+                                <span className={styles.metaValue}>{survey.totalQuestions}</span>
+                              </div>
+                            </div>
+                          </div>
 
-                <div className={styles.actionCard}>
-                  <svg className={styles.actionIcon} viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m.94 3.198l.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0112 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 016 18.719m12 0a5.971 5.971 0 00-.941-3.197m0 0A5.995 5.995 0 0012 12.75a5.995 5.995 0 00-5.058 2.772m0 0a3 3 0 00-4.681 2.72 8.986 8.986 0 003.74.477m.94-3.197a5.971 5.971 0 00-.94 3.197M15 6.75a3 3 0 11-6 0 3 3 0 016 0zm6 3a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zm-13.5 0a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z" />
-                  </svg>
-                  <h3 className={styles.actionTitle}>Manage Users</h3>
-                  <p className={styles.actionDescription}>View and manage user accounts</p>
-                </div>
+                          <div className={styles.surveyProgress}>
+                            <div className={styles.progressInfo}>
+                              <span>Completion Rate: {survey.completionRate}%</span>
+                              <span className={styles.progressPercentage}>{survey.completionRate}%</span>
+                            </div>
+                            <div className={styles.progressBar}>
+                              <div
+                                className={styles.progressFill}
+                                style={{ width: `${survey.completionRate}%` }}
+                              ></div>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
 
-                <div className={styles.actionCard}>
-                  <svg className={styles.actionIcon} viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M10.5 6a7.5 7.5 0 107.5 7.5h-7.5V6z" />
-                    <path d="M13.5 10.5H21A7.5 7.5 0 0013.5 3v7.5z" />
-                  </svg>
-                  <h3 className={styles.actionTitle}>View Reports</h3>
-                  <p className={styles.actionDescription}>Generate detailed analytics</p>
-                </div>
+                    {/* Pagination */}
+                    {totalPages > 1 && (
+                      <div className={styles.pagination}>
+                        <button
+                          onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                          disabled={currentPage === 1}
+                          className={styles.paginationBtn}
+                        >
+                          <ChevronLeft size={16} />
+                          Previous
+                        </button>
+
+                        <div className={styles.paginationInfo}>
+                          <span>
+                            Page {currentPage} of {totalPages} ({filteredSurveys.length} surveys)
+                          </span>
+                        </div>
+
+                        <button
+                          onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                          disabled={currentPage === totalPages}
+                          className={styles.paginationBtn}
+                        >
+                          Next
+                          <ChevronRight size={16} />
+                        </button>
+                      </div>
+                    )}
+                  </>
+                )}
               </div>
             </div>
           </div>
@@ -394,40 +738,51 @@ export default function AdminDashboard() {
                 </svg>
                 Response Trends
               </h2>
-              <p className={styles.sectionSubtitle}>Daily response activity over the last 10 days</p>
+              <p className={styles.sectionSubtitle}>Real-time response activity trends</p>
             </div>
             <div className={styles.sectionContent}>
-              <div className={styles.chartContainer}>
-                <ResponsiveContainer width="100%" height={300}>
-                  <AreaChart data={mockData.responsesOverTime}>
-                    <defs>
-                      <linearGradient id="colorResponses" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#667eea" stopOpacity={0.8} />
-                        <stop offset="95%" stopColor="#667eea" stopOpacity={0.1} />
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.3)" />
-                    <XAxis dataKey="date" stroke="#718096" />
-                    <YAxis stroke="#718096" />
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: 'rgba(255,255,255,0.95)',
-                        border: 'none',
-                        borderRadius: '12px',
-                        boxShadow: '0 10px 15px rgba(0,0,0,0.1)'
-                      }}
-                    />
-                    <Area
-                      type="monotone"
-                      dataKey="responses"
-                      stroke="#667eea"
-                      strokeWidth={3}
-                      fillOpacity={1}
-                      fill="url(#colorResponses)"
-                    />
-                  </AreaChart>
-                </ResponsiveContainer>
-              </div>
+              {loading ? (
+                <div className={styles.chartLoadingContainer}>
+                  <div className={styles.spinner}></div>
+                  <div className={styles.loadingText}>Loading response trends...</div>
+                </div>
+              ) : chartData.length === 0 ? (
+                <div className={styles.chartEmptyContainer}>
+                  <div className={styles.emptyChartMessage}>No response data available</div>
+                </div>
+              ) : (
+                <div className={styles.chartContainer}>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <AreaChart data={chartData}>
+                      <defs>
+                        <linearGradient id="colorResponses" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#667eea" stopOpacity={0.8} />
+                          <stop offset="95%" stopColor="#667eea" stopOpacity={0.1} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.3)" />
+                      <XAxis dataKey="date" stroke="#718096" />
+                      <YAxis stroke="#718096" />
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: 'rgba(255,255,255,0.95)',
+                          border: 'none',
+                          borderRadius: '12px',
+                          boxShadow: '0 10px 15px rgba(0,0,0,0.1)'
+                        }}
+                      />
+                      <Area
+                        type="monotone"
+                        dataKey="responses"
+                        stroke="#667eea"
+                        strokeWidth={3}
+                        fillOpacity={1}
+                        fill="url(#colorResponses)"
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
             </div>
           </div>
 
@@ -448,7 +803,7 @@ export default function AdminDashboard() {
                 <ResponsiveContainer width="100%" height={300}>
                   <PieChart>
                     <Pie
-                      data={mockData.surveyStatusDistribution}
+                      data={surveyStatusDistribution}
                       cx="50%"
                       cy="50%"
                       outerRadius={80}
@@ -456,7 +811,7 @@ export default function AdminDashboard() {
                       labelLine={false}
                       label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
                     >
-                      {mockData.surveyStatusDistribution.map((entry, index) => (
+                      {surveyStatusDistribution.map((entry, index) => (
                         <Cell key={`cell-${index}`} fill={entry.color} />
                       ))}
                     </Pie>
@@ -475,36 +830,72 @@ export default function AdminDashboard() {
           </div>
         </div>
 
-        {/* Recent Activity */}
+        {/* Recent Responses */}
         <div className={styles.section}>
           <div className={styles.sectionHeader}>
             <h2 className={styles.sectionTitle}>
               <svg className={styles.sectionIcon} viewBox="0 0 24 24" fill="currentColor">
-                <path d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+                <path d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25zM6.75 12h.008v.008H6.75V12zm0 3h.008v.008H6.75V15zm0 3h.008v.008H6.75V18z" />
               </svg>
-              Recent Activity
+              Recent Responses
             </h2>
-            <p className={styles.sectionSubtitle}>Latest platform activity and updates</p>
+            <p className={styles.sectionSubtitle}>Latest 5 survey responses submitted</p>
           </div>
           <div className={styles.sectionContent}>
-            <div className={styles.activityList}>
-              {mockData.recentActivity.map((activity) => (
-                <div key={activity.id} className={styles.activityItem}>
-                  <svg className={styles.activityIcon} viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 01-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 011.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 00-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 01-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 00-3.375-3.375h-1.5a1.125 1.125 0 01-1.125-1.125v-1.5a3.375 3.375 0 00-3.375-3.375H9.75" />
+            <div className={styles.responsesList}>
+              {recentResponses.length === 0 ? (
+                <div className={styles.emptyResponsesState}>
+                  <svg className={styles.emptyResponsesIcon} viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25zM6.75 12h.008v.008H6.75V12zm0 3h.008v.008H6.75V15zm0 3h.008v.008H6.75V18z" />
                   </svg>
-                  <div className={styles.activityContent}>
-                    <div className={styles.activityTitle}>
-                      {activity.action} - {activity.survey}
-                    </div>
-                    <div className={styles.activityTime}>{activity.time}</div>
-                  </div>
+                  <div className={styles.emptyResponsesTitle}>No responses yet</div>
+                  <div className={styles.emptyResponsesDescription}>Survey responses will appear here when submitted</div>
                 </div>
-              ))}
+              ) : (
+                recentResponses.map((response, index) => (
+                  <div key={response.id || index} className={styles.responseItem}>
+                    <div className={styles.responseIcon}>
+                      <svg viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25zM6.75 12h.008v.008H6.75V12zm0 3h.008v.008H6.75V15zm0 3h.008v.008H6.75V18z" />
+                      </svg>
+                    </div>
+                    <div className={styles.responseContent}>
+                      <div className={styles.responseHeader}>
+                        <div className={styles.responseSurvey}>{response.surveyName}</div>
+                        <div className={styles.responseTime} title={response.formattedDate}>
+                          {response.formattedTime}
+                        </div>
+                      </div>
+                      <div className={styles.responseDetails}>
+                        <div className={styles.responseUser}>
+                          <svg className={styles.userIcon} viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+                          </svg>
+                          <span>{response.userName || 'Anonymous User'}</span>
+                        </div>
+                        <div className={styles.responseCompletion}>
+                          <div className={styles.completionText}>
+                            {response.completionPercentage}% completed
+                          </div>
+                          <div className={styles.completionBar}>
+                            <div
+                              className={styles.completionFill}
+                              style={{ width: `${response.completionPercentage}%` }}
+                            ></div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           </div>
         </div>
       </main>
+
+      {/* Dialog for confirmations and alerts */}
+      <Dialog {...dialogState} onClose={closeDialog} />
     </div>
   );
 }

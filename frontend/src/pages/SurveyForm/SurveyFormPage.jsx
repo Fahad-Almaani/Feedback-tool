@@ -17,6 +17,7 @@ export default function SurveyFormPage() {
     const [showAuthDialog, setShowAuthDialog] = useState(false);
     const [isVisible, setIsVisible] = useState(false);
     const [submitted, setSubmitted] = useState(false);
+    const [showStickyProgress, setShowStickyProgress] = useState(false);
 
     // Load survey data
     useEffect(() => {
@@ -24,13 +25,25 @@ export default function SurveyFormPage() {
             try {
                 setLoading(true);
                 const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8080';
-                const response = await fetch(`${backendUrl}/api/surveys/${surveyId}/public`);
+                const response = await fetch(`${backendUrl}/surveys/${surveyId}/public`);
 
                 if (!response.ok) {
                     throw new Error('Survey not found or not available');
                 }
 
-                const surveyData = await response.json();
+                const responseData = await response.json();
+
+                // Handle the new API response structure
+                let surveyData;
+                if (responseData.success && responseData.data) {
+                    surveyData = responseData.data;
+                } else if (responseData.title) {
+                    // Fallback for old format
+                    surveyData = responseData;
+                } else {
+                    throw new Error(responseData.message || 'Invalid survey data');
+                }
+
                 setSurvey(surveyData);
 
                 // Initialize answers object
@@ -60,6 +73,20 @@ export default function SurveyFormPage() {
         }
     }, [loading]);
 
+    // Handle scroll for sticky progress bar
+    useEffect(() => {
+        const handleScroll = () => {
+            const surveyHeader = document.querySelector(`.${styles.surveyHeader}`);
+            if (surveyHeader) {
+                const headerBottom = surveyHeader.getBoundingClientRect().bottom;
+                setShowStickyProgress(headerBottom < 0);
+            }
+        };
+
+        window.addEventListener('scroll', handleScroll);
+        return () => window.removeEventListener('scroll', handleScroll);
+    }, []);
+
     // Handle answer changes
     const handleAnswerChange = (questionId, value) => {
         setAnswers(prev => ({
@@ -68,9 +95,37 @@ export default function SurveyFormPage() {
         }));
     };
 
+    // Calculate progress
+    const calculateProgress = () => {
+        if (!survey || !survey.questions) return 0;
+
+        const totalQuestions = survey.questions.length;
+        const answeredQuestions = Object.values(answers).filter(answer =>
+            answer && answer.toString().trim() !== ""
+        ).length;
+
+        return Math.round((answeredQuestions / totalQuestions) * 100);
+    };
+
     // Check if survey is private and handle authentication
     const handleSubmit = async (e) => {
         e.preventDefault();
+
+        // Validate required fields
+        const missingRequiredFields = [];
+        survey.questions.forEach((question) => {
+            if (question.required) {
+                const answer = answers[question.id];
+                if (!answer || answer.toString().trim() === "") {
+                    missingRequiredFields.push(question.questionText);
+                }
+            }
+        });
+
+        if (missingRequiredFields.length > 0) {
+            setError(`Please answer all required questions: ${missingRequiredFields.join(", ")}`);
+            return;
+        }
 
         // Check if survey requires authentication
         if (survey.isPrivate && !isAuthenticated()) {
@@ -86,37 +141,82 @@ export default function SurveyFormPage() {
         setError("");
 
         try {
-            const responses = Object.entries(answers)
-                .filter(([_, answer]) => answer.trim() !== "")
-                .map(([questionId, answer]) => ({
-                    questionId: parseInt(questionId),
-                    responseText: answer
-                }));
+            // Format answers according to the backend DTO format
+            const formattedAnswers = Object.entries(answers)
+                .filter(([questionId, answer]) => {
+                    if (!answer || answer.toString().trim() === "") return false;
+
+                    // Find the question to check its type
+                    const question = survey.questions.find(q => q.id.toString() === questionId);
+                    return question; // Only include answers for valid questions
+                })
+                .map(([questionId, answer]) => {
+                    const question = survey.questions.find(q => q.id.toString() === questionId);
+                    const answerDto = { questionId: parseInt(questionId) };
+
+                    if (question && question.type === "RATING") {
+                        // For rating questions, send as numeric ratingValue (0-5)
+                        const ratingValue = parseInt(answer);
+                        if (ratingValue >= 0 && ratingValue <= 5) {
+                            answerDto.ratingValue = ratingValue;
+                        }
+                    } else {
+                        // For other question types, send as text answerValue
+                        answerDto.answerValue = answer.toString();
+                    }
+
+                    return answerDto;
+                });
 
             const submissionData = {
-                surveyId: parseInt(surveyId),
-                responses
+                answers: formattedAnswers
             };
 
-            let response;
+            const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8080';
+            let success = false;
+            let errorMessage = null;
+
             if (isAuthenticated()) {
-                response = await apiClient.post("/responses", submissionData);
+                // Use authenticated request with JWT token
+                try {
+                    const response = await apiClient.post(`/public/surveys/${surveyId}/responses`, submissionData);
+                    const data = apiClient.extractData(response);
+                    success = true;
+                } catch (apiError) {
+                    const errorDetails = apiClient.getErrorDetails(apiError);
+                    errorMessage = errorDetails.message || 'Failed to submit survey';
+                }
             } else {
-                const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8080';
-                response = await fetch(`${backendUrl}/api/responses/anonymous`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(submissionData),
-                });
+                // Anonymous submission
+                try {
+                    const response = await fetch(`${backendUrl}/api/public/surveys/${surveyId}/responses`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(submissionData),
+                    });
+
+                    if (response.ok) {
+                        const responseData = await response.json();
+                        if (responseData.success) {
+                            success = true;
+                        } else {
+                            errorMessage = responseData.message || 'Failed to submit survey';
+                        }
+                    } else {
+                        const errorData = await response.text().catch(() => 'Failed to submit survey');
+                        errorMessage = errorData || 'Failed to submit survey';
+                    }
+                } catch (fetchError) {
+                    errorMessage = 'Failed to submit survey. Please check your connection.';
+                }
             }
 
-            if (response.ok) {
+            if (success) {
                 setSubmitted(true);
             } else {
-                const errorData = await response.json().catch(() => ({ message: 'Failed to submit survey' }));
-                setError(errorData.message || 'Failed to submit survey');
+                setError(errorMessage);
             }
         } catch (error) {
             console.error('Error submitting survey:', error);
@@ -191,6 +291,26 @@ export default function SurveyFormPage() {
 
     return (
         <div className={styles.surveyPage}>
+            {/* Sticky Progress Bar */}
+            {showStickyProgress && (
+                <div className={styles.stickyProgressBar}>
+                    <div className={styles.stickyProgressContent}>
+                        <div className={styles.stickyProgressInfo}>
+                            <span className={styles.stickyProgressText}>
+                                {survey.title} • {Object.values(answers).filter(answer => answer && answer.toString().trim() !== "").length}/{survey.questions.length}
+                            </span>
+                            <span className={styles.stickyProgressPercentage}>{calculateProgress()}%</span>
+                        </div>
+                        <div className={styles.stickyProgressBarTrack}>
+                            <div
+                                className={styles.stickyProgressFill}
+                                style={{ width: `${calculateProgress()}%` }}
+                            ></div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* Animated Background Elements */}
             <div className={styles.backgroundElements}>
                 <div className={styles.floatingShape1}></div>
@@ -213,11 +333,84 @@ export default function SurveyFormPage() {
                         <h1 className={styles.logoText}>FeedbackPro</h1>
                     </div>
 
+                    {/* Auth Status */}
+                    {!isAuthenticated() && (
+                        <div className={styles.authPrompt}>
+                            <div className={styles.authPromptContent}>
+                                <div className={styles.authPromptLeft}>
+                                    <svg className={styles.authIcon} viewBox="0 0 24 24" fill="currentColor">
+                                        <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
+                                    </svg>
+                                    <span className={styles.authPromptText}>Sign in to save your progress</span>
+                                </div>
+                                <div className={styles.authButtons}>
+                                    <button
+                                        onClick={() => {
+                                            // Store return URL in localStorage
+                                            const returnUrl = `/survey/${surveyId}`;
+                                            console.log('Setting returnTo in localStorage:', returnUrl);
+                                            localStorage.setItem('returnTo', returnUrl);
+                                            console.log('Stored returnTo:', localStorage.getItem('returnTo'));
+                                            navigate('/login', { state: { returnTo: returnUrl } });
+                                        }}
+                                        className={styles.loginButton}
+                                        type="button"
+                                    >
+                                        <svg className={styles.loginIcon} viewBox="0 0 20 20" fill="currentColor">
+                                            <path fillRule="evenodd" d="M3 3a1 1 0 011 1v12a1 1 0 11-2 0V4a1 1 0 011-1zm7.707 3.293a1 1 0 010 1.414L9.414 9H17a1 1 0 110 2H9.414l1.293 1.293a1 1 0 01-1.414 1.414l-3-3a1 1 0 010-1.414l3-3a1 1 0 011.414 0z" clipRule="evenodd" />
+                                        </svg>
+                                        Sign In
+                                    </button>
+                                    <button
+                                        onClick={() => {
+                                            // Store return URL in localStorage
+                                            localStorage.setItem('returnTo', `/survey/${surveyId}`);
+                                            navigate('/signup', { state: { returnTo: `/survey/${surveyId}` } });
+                                        }}
+                                        className={styles.signupButton}
+                                        type="button"
+                                    >
+                                        <svg className={styles.signupIcon} viewBox="0 0 20 20" fill="currentColor">
+                                            <path d="M8 9a3 3 0 100-6 3 3 0 000 6zM8 11a6 6 0 016 6H2a6 6 0 016-6zM16 7a1 1 0 10-2 0v1h-1a1 1 0 100 2h1v1a1 1 0 102 0v-1h1a1 1 0 100-2h-1V7z" />
+                                        </svg>
+                                        Sign Up
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Welcome Message for Authenticated Users */}
+                    {isAuthenticated() && (
+                        <div className={styles.welcomeMessage}>
+                            <svg className={styles.welcomeIcon} viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
+                            </svg>
+                            <span className={styles.welcomeText}>Welcome back, {user?.name || user?.email}!</span>
+                        </div>
+                    )}
+
                     <div className={styles.surveyInfo}>
                         <h2 className={styles.surveyTitle}>{survey.title}</h2>
                         {survey.description && (
                             <p className={styles.surveyDescription}>{survey.description}</p>
                         )}
+                    </div>
+
+                    {/* Progress Bar */}
+                    <div className={styles.progressContainer}>
+                        <div className={styles.progressInfo}>
+                            <span className={styles.progressText}>
+                                Progress: {Object.values(answers).filter(answer => answer && answer.toString().trim() !== "").length} of {survey.questions.length} questions answered
+                            </span>
+                            <span className={styles.progressPercentage}>{calculateProgress()}%</span>
+                        </div>
+                        <div className={styles.progressBar}>
+                            <div
+                                className={styles.progressFill}
+                                style={{ width: `${calculateProgress()}%` }}
+                            ></div>
+                        </div>
                     </div>
                 </div>
 
@@ -326,6 +519,7 @@ export default function SurveyFormPage() {
 // Question Input Component
 function QuestionInput({ question, value, onChange }) {
     const handleRatingChange = (rating) => {
+        // Store rating as string for consistency with other input types
         onChange(rating.toString());
     };
 
@@ -375,27 +569,33 @@ function QuestionInput({ question, value, onChange }) {
             );
 
         case "RATING":
-            const ratingConfig = question.optionsJson ? JSON.parse(question.optionsJson) : { scale: 5, labels: { min: "Poor", max: "Excellent" } };
+            // Simple 0-5 numeric rating system
             return (
                 <div className={styles.ratingInput}>
                     <div className={styles.ratingScale}>
-                        <span className={styles.ratingLabel}>{ratingConfig.labels.min}</span>
+                        <span className={styles.ratingLabel}>Poor</span>
                         <div className={styles.ratingButtons}>
-                            {Array.from({ length: ratingConfig.scale }, (_, i) => (
-                                <button
-                                    key={i}
-                                    type="button"
-                                    className={`${styles.ratingButton} ${value === (i + 1).toString() ? styles.selected : ''}`}
-                                    onClick={() => handleRatingChange(i + 1)}
-                                >
-                                    {i + 1}
-                                </button>
-                            ))}
+                            {Array.from({ length: 6 }, (_, i) => {
+                                const ratingValue = i; // 0 to 5
+                                const isSelected = value === ratingValue.toString();
+
+                                return (
+                                    <button
+                                        key={i}
+                                        type="button"
+                                        className={`${styles.ratingButton} ${isSelected ? styles.selected : ''}`}
+                                        onClick={() => handleRatingChange(ratingValue)}
+                                        title={`Rating: ${ratingValue} out of 5`}
+                                    >
+                                        {ratingValue}
+                                    </button>
+                                );
+                            })}
                         </div>
-                        <span className={styles.ratingLabel}>{ratingConfig.labels.max}</span>
+                        <span className={styles.ratingLabel}>Excellent</span>
                     </div>
                     <div className={styles.ratingHint}>
-                        Click a number to rate from {ratingConfig.labels.min} to {ratingConfig.labels.max}
+                        Click a number to rate from 0 (Poor) to 5 (Excellent)
                     </div>
                 </div>
             );

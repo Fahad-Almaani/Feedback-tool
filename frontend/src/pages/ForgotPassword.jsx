@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 
 const ForgotPassword = () => {
     return (
@@ -38,9 +39,9 @@ const ForgotPassword = () => {
                     </div>
 
                     <div className="text-center">
-                        <a href="/login" className="font-medium text-indigo-600 hover:text-indigo-500">
+                        <Link to="/login" className="font-medium text-indigo-600 hover:text-indigo-500">
                             Back to Login
-                        </a>
+                        </Link>
                     </div>
                 </form>
             </div>

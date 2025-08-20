@@ -330,8 +330,9 @@ export default function SurveyCreationPage() {
         setIsSubmitting(true);
         try {
             const surveyData = {
-                ...survey,
-                status,
+                title: survey.title,
+                description: survey.description,
+                active: status === "ACTIVE",
                 questions: questions.map(q => ({
                     type: q.type,
                     questionText: q.questionText,
@@ -341,15 +342,13 @@ export default function SurveyCreationPage() {
             };
 
             const response = await apiClient.post("/surveys", surveyData);
+            const data = apiClient.extractData(response);
 
-            if (response.ok) {
-                navigate("/admin");
-            } else {
-                const errorData = await response.json();
-                setErrors({ submit: errorData.message || "Failed to create survey" });
-            }
+            // Survey created successfully, navigate to admin dashboard
+            navigate("/admin");
         } catch (error) {
-            setErrors({ submit: "Network error. Please try again." });
+            const errorDetails = apiClient.getErrorDetails(error);
+            setErrors({ submit: errorDetails.message || "Failed to create survey" });
         } finally {
             setIsSubmitting(false);
         }
@@ -803,14 +802,8 @@ function QuestionEditor({
     });
 
     const [ratingConfig, setRatingConfig] = useState(() => {
-        if (question.type === "RATING" && question.optionsJson) {
-            try {
-                return JSON.parse(question.optionsJson);
-            } catch {
-                return { scale: 5, labels: { min: "Poor", max: "Excellent" } };
-            }
-        }
-        return { scale: 5, labels: { min: "Poor", max: "Excellent" } };
+        // Fixed 0-5 star rating system
+        return { scale: 6, labels: { min: "Poor", max: "Excellent" } };
     });
 
     const [isExpanded, setIsExpanded] = useState(!question.questionText.trim());
@@ -825,7 +818,7 @@ function QuestionEditor({
                     multipleChoiceOptions.every(opt => opt.trim());
                 state = hasValidOptions ? "valid" : "warning";
             } else if (question.type === "RATING") {
-                state = ratingConfig.scale >= 3 ? "valid" : "warning";
+                state = "valid"; // Always valid since we have a fixed 0-5 star system
             } else {
                 state = "valid";
             }
@@ -858,15 +851,14 @@ function QuestionEditor({
 
     const handleRatingChange = (field, value) => {
         const updated = { ...ratingConfig };
-        if (field === "scale") {
-            updated.scale = parseInt(value);
-        } else if (field === "minLabel") {
+        if (field === "minLabel") {
             updated.labels.min = value;
         } else if (field === "maxLabel") {
             updated.labels.max = value;
         }
         setRatingConfig(updated);
-        onUpdateRating(index, updated.scale, updated.labels.min, updated.labels.max);
+        // Always use scale 6 (0-5 stars) for the new system
+        onUpdateRating(index, 6, updated.labels.min, updated.labels.max);
     };
 
     return (
@@ -1014,25 +1006,11 @@ function QuestionEditor({
                     {/* Rating Scale Options */}
                     {question.type === "RATING" && (
                         <div className={styles.formGroup}>
-                            <label className={styles.label}>Rating Scale Configuration</label>
+                            <label className={styles.label}>Rating Scale Configuration (0-5 Numbers)</label>
                             <div className={styles.ratingConfig}>
-                                <div className={styles.scaleSelector}>
-                                    <label className={styles.subLabel}>Scale</label>
-                                    <select
-                                        className={styles.select}
-                                        value={ratingConfig.scale}
-                                        onChange={(e) => handleRatingChange("scale", e.target.value)}
-                                    >
-                                        {RATING_SCALES.map(scale => (
-                                            <option key={scale.value} value={scale.value}>
-                                                {scale.label}
-                                            </option>
-                                        ))}
-                                    </select>
-                                </div>
                                 <div className={styles.labelInputs}>
                                     <div className={styles.labelInput}>
-                                        <label className={styles.subLabel}>Min Label</label>
+                                        <label className={styles.subLabel}>Min Label (0)</label>
                                         <input
                                             type="text"
                                             className={styles.input}
@@ -1042,7 +1020,7 @@ function QuestionEditor({
                                         />
                                     </div>
                                     <div className={styles.labelInput}>
-                                        <label className={styles.subLabel}>Max Label</label>
+                                        <label className={styles.subLabel}>Max Label (5)</label>
                                         <input
                                             type="text"
                                             className={styles.input}
@@ -1137,16 +1115,16 @@ function QuestionPreview({ question, ratingConfig, multipleChoiceOptions }) {
                     <div className={styles.ratingScale}>
                         <span className={styles.ratingLabel}>{ratingConfig.labels.min}</span>
                         <div className={styles.ratingButtons}>
-                            {Array.from({ length: ratingConfig.scale }, (_, i) => (
+                            {Array.from({ length: 6 }, (_, i) => (
                                 <button key={i} className={styles.ratingButton} disabled>
-                                    {i + 1}
+                                    {i}
                                 </button>
                             ))}
                         </div>
                         <span className={styles.ratingLabel}>{ratingConfig.labels.max}</span>
                     </div>
                     <div className={styles.inputHint}>
-                        {ratingConfig.scale}-point scale • {ratingConfig.labels.min} to {ratingConfig.labels.max}
+                        0-5 numeric rating • {ratingConfig.labels.min} to {ratingConfig.labels.max}
                     </div>
                 </div>
             )}
