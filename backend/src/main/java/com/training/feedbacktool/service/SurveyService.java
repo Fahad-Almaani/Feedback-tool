@@ -169,33 +169,64 @@ public class SurveyService {
         Survey existingSurvey = repo.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Survey not found with id: " + id));
 
-        // Check if title is being changed and if it conflicts with another survey
-        if (!existingSurvey.getTitle().equalsIgnoreCase(req.title().trim())) {
-            if (repo.existsByTitleIgnoreCase(req.title())) {
-                throw new IllegalArgumentException("Survey title already exists");
+        // Check if survey has responses - if so, only allow limited updates
+        List<Answer> existingAnswers = answersRepository.findBySurveyId(id);
+        boolean hasResponses = !existingAnswers.isEmpty();
+
+        if (hasResponses) {
+            // If survey has responses, only allow updating title, description, and status
+            // but NOT questions
+            existingSurvey.setTitle(req.title().trim());
+            existingSurvey.setDescription(req.description());
+
+            // Only allow status changes from ACTIVE to INACTIVE (to close survey)
+            // Don't allow changing from INACTIVE back to ACTIVE if there are responses
+            String currentStatus = existingSurvey.getStatus();
+            String newStatus = Boolean.TRUE.equals(req.active()) ? "ACTIVE" : "INACTIVE";
+
+            if ("INACTIVE".equals(currentStatus) && "ACTIVE".equals(newStatus)) {
+                throw new IllegalArgumentException(
+                        "Cannot reactivate a survey that already has responses. Create a new survey instead.");
             }
-        }
 
-        // Update basic survey information
-        existingSurvey.setTitle(req.title().trim());
-        existingSurvey.setDescription(req.description());
-        existingSurvey.setStatus(Boolean.TRUE.equals(req.active()) ? "ACTIVE" : "DRAFT");
+            existingSurvey.setStatus(newStatus);
 
-        // Handle questions update - clear existing questions and add new ones
-        existingSurvey.getQuestions().clear();
-
-        if (req.questions() != null && !req.questions().isEmpty()) {
-            List<Question> questions = new ArrayList<>();
-            for (CreateQuestionRequest qReq : req.questions()) {
-                Question q = new Question();
-                q.setType(qReq.type());
-                q.setQuestionText(qReq.questionText());
-                q.setOptionsJson(qReq.optionsJson());
-                q.setOrderNumber(qReq.orderNumber());
-                q.setSurvey(existingSurvey);
-                questions.add(q);
+            // Don't modify questions at all when there are responses
+            if (req.questions() != null && !req.questions().isEmpty()) {
+                throw new IllegalArgumentException(
+                        "Cannot modify questions on a survey that already has responses. Create a new survey instead.");
             }
-            existingSurvey.setQuestions(questions);
+        } else {
+            // If no responses, allow full update (original logic)
+
+            // Check if title is being changed and if it conflicts with another survey
+            if (!existingSurvey.getTitle().equalsIgnoreCase(req.title().trim())) {
+                if (repo.existsByTitleIgnoreCase(req.title())) {
+                    throw new IllegalArgumentException("Survey title already exists");
+                }
+            }
+
+            // Update basic survey information
+            existingSurvey.setTitle(req.title().trim());
+            existingSurvey.setDescription(req.description());
+            existingSurvey.setStatus(Boolean.TRUE.equals(req.active()) ? "ACTIVE" : "DRAFT");
+
+            // Handle questions update - clear existing questions and add new ones
+            existingSurvey.getQuestions().clear();
+
+            if (req.questions() != null && !req.questions().isEmpty()) {
+                List<Question> questions = new ArrayList<>();
+                for (CreateQuestionRequest qReq : req.questions()) {
+                    Question q = new Question();
+                    q.setType(qReq.type());
+                    q.setQuestionText(qReq.questionText());
+                    q.setOptionsJson(qReq.optionsJson());
+                    q.setOrderNumber(qReq.orderNumber());
+                    q.setSurvey(existingSurvey);
+                    questions.add(q);
+                }
+                existingSurvey.setQuestions(questions);
+            }
         }
 
         Survey saved = repo.save(existingSurvey);
@@ -346,10 +377,6 @@ public class SurveyService {
         // Get all answers for this survey
         List<Answer> allAnswers = answersRepository.findBySurveyId(surveyId);
 
-        // Create anonymous user counter
-        Map<User, String> anonymousUserIds = new HashMap<>();
-        int anonymousCounter = 1;
-
         // Group answers by user (including anonymous)
         Map<String, List<Answer>> answersByRespondent = new HashMap<>();
         Set<User> uniqueUsers = new HashSet<>();
@@ -367,7 +394,7 @@ public class SurveyService {
                 respondentId = "anonymous_" + answer.getId();
             }
 
-            answersByRespondent.computeIfAbsent(respondentId, k -> new ArrayList<>()).add(answer);
+            answersByRespondent.computeIfAbsent(respondentId, unused -> new ArrayList<>()).add(answer);
         }
 
         // Create respondent DTOs

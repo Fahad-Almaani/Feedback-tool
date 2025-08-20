@@ -28,6 +28,7 @@ export default function EditSurveyPage() {
 
     // Questions state
     const [questions, setQuestions] = useState([]);
+    const [hasResponses, setHasResponses] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [errors, setErrors] = useState({});
@@ -61,6 +62,17 @@ export default function EditSurveyPage() {
                 }));
 
                 setQuestions(transformedQuestions);
+
+                // Check if survey has responses
+                try {
+                    const responsesData = await SurveyService.getSurveyResponses(surveyId);
+                    setHasResponses(responsesData && responsesData.responses && responsesData.responses.length > 0);
+                } catch (responseError) {
+                    // If we can't check responses, assume it might have responses for safety
+                    console.warn("Could not check survey responses:", responseError);
+                    setHasResponses(false);
+                }
+
                 setIsLoading(false);
             } catch (error) {
                 console.error("Failed to load survey:", error);
@@ -317,7 +329,21 @@ export default function EditSurveyPage() {
             navigate("/admin");
         } catch (error) {
             const errorDetails = apiClient.getErrorDetails(error);
-            setErrors({ submit: errorDetails.message || "Failed to update survey" });
+            const errorMessage = errorDetails.message || "Failed to update survey";
+
+            // Handle specific error cases
+            if (errorMessage.includes("Cannot modify questions") ||
+                errorMessage.includes("already has responses")) {
+                setErrors({
+                    submit: "⚠️ This survey already has responses. You can only update the title, description, and status. To make structural changes, create a new survey instead."
+                });
+            } else if (errorMessage.includes("Cannot reactivate")) {
+                setErrors({
+                    submit: "⚠️ Cannot reactivate a survey that already has responses. Create a new survey instead."
+                });
+            } else {
+                setErrors({ submit: errorMessage });
+            }
         } finally {
             setIsSubmitting(false);
         }
@@ -450,6 +476,21 @@ export default function EditSurveyPage() {
 
             {/* Main Content */}
             <main className={styles.mainContent}>
+                {/* Warning Banner for surveys with responses */}
+                {hasResponses && (
+                    <div className={styles.warningBanner}>
+                        <div className={styles.warningContent}>
+                            <svg className={styles.warningIcon} viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+                            </svg>
+                            <div className={styles.warningText}>
+                                <h3>Survey Has Responses</h3>
+                                <p>This survey already has responses from users. You can only modify the title, description, and status. To make structural changes to questions, create a new survey instead.</p>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
                 <div className={styles.surveyBuilder}>
                     {/* Main Content Area */}
                     <div className={styles.mainContentArea}>
@@ -529,6 +570,8 @@ export default function EditSurveyPage() {
                                     <button
                                         onClick={addQuestion}
                                         className={styles.addQuestionHeaderButton}
+                                        disabled={hasResponses}
+                                        title={hasResponses ? "Cannot add questions to surveys with responses" : "Add a new question"}
                                     >
                                         <svg className={styles.addIcon} viewBox="0 0 24 24" fill="currentColor">
                                             <path d="M12 4.5v15m7.5-7.5h-15" />
@@ -557,6 +600,7 @@ export default function EditSurveyPage() {
                                             isDragging={draggedIndex === index}
                                             isFocused={focusedQuestionIndex === index}
                                             questionTypes={QUESTION_TYPES}
+                                            disabled={hasResponses}
                                         />
                                     ))}
 
@@ -586,6 +630,8 @@ export default function EditSurveyPage() {
                                         <button
                                             onClick={addQuestion}
                                             className={styles.addQuestionButton}
+                                            disabled={hasResponses}
+                                            title={hasResponses ? "Cannot add questions to surveys with responses" : "Add another question"}
                                         >
                                             <svg className={styles.addIcon} viewBox="0 0 24 24" fill="currentColor">
                                                 <path d="M12 4.5v15m7.5-7.5h-15" />
@@ -720,7 +766,8 @@ function QuestionEditor({
     errors,
     isDragging,
     isFocused,
-    questionTypes
+    questionTypes,
+    disabled = false
 }) {
     const [multipleChoiceOptions, setMultipleChoiceOptions] = useState(() => {
         if (question.type === "MULTIPLE_CHOICE" && question.optionsJson) {
@@ -801,11 +848,11 @@ function QuestionEditor({
 
     return (
         <div
-            className={`${styles.questionCard} ${isDragging ? styles.dragging : ''} ${isFocused ? styles.focused : ''} ${styles[validationState]}`}
-            draggable
-            onDragStart={(e) => onDragStart(e, index)}
-            onDragOver={onDragOver}
-            onDrop={(e) => onDrop(e, index)}
+            className={`${styles.questionCard} ${isDragging ? styles.dragging : ''} ${isFocused ? styles.focused : ''} ${styles[validationState]} ${disabled ? styles.disabled : ''}`}
+            draggable={!disabled}
+            onDragStart={!disabled ? (e) => onDragStart(e, index) : undefined}
+            onDragOver={!disabled ? onDragOver : undefined}
+            onDrop={!disabled ? (e) => onDrop(e, index) : undefined}
         >
             <div className={styles.questionHeader}>
                 <div className={styles.questionNumber}>
@@ -834,6 +881,7 @@ function QuestionEditor({
                         onClick={() => onRemove(index)}
                         className={styles.removeButton}
                         title="Remove question"
+                        disabled={disabled}
                     >
                         <svg className={styles.removeIcon} viewBox="0 0 24 24" fill="currentColor">
                             <path d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
@@ -866,6 +914,7 @@ function QuestionEditor({
                                     key={type}
                                     onClick={() => onUpdate(index, "type", type)}
                                     className={`${styles.typeButton} ${question.type === type ? styles.active : ''}`}
+                                    disabled={disabled}
                                 >
                                     <span className={styles.typeIcon}>{config.icon}</span>
                                     <span className={styles.typeLabel}>{config.label}</span>
@@ -885,6 +934,7 @@ function QuestionEditor({
                             onChange={(e) => onUpdate(index, "questionText", e.target.value)}
                             rows={3}
                             autoFocus={isFocused}
+                            disabled={disabled}
                         />
                         {errors[`question_${index}_text`] && (
                             <span className={styles.errorText}>{errors[`question_${index}_text`]}</span>
@@ -910,12 +960,14 @@ function QuestionEditor({
                                             placeholder={`Option ${optionIndex + 1}`}
                                             value={option}
                                             onChange={(e) => handleMultipleChoiceChange(optionIndex, e.target.value)}
+                                            disabled={disabled}
                                         />
                                         {multipleChoiceOptions.length > 2 && (
                                             <button
                                                 onClick={() => removeMultipleChoiceOption(optionIndex)}
                                                 className={styles.removeOptionButton}
                                                 title="Remove option"
+                                                disabled={disabled}
                                             >
                                                 <svg viewBox="0 0 24 24" fill="currentColor">
                                                     <path d="M6 18L18 6M6 6l12 12" />
@@ -928,7 +980,7 @@ function QuestionEditor({
                             <button
                                 onClick={addMultipleChoiceOption}
                                 className={styles.addOptionButton}
-                                disabled={multipleChoiceOptions.length >= 8}
+                                disabled={multipleChoiceOptions.length >= 8 || disabled}
                             >
                                 <svg className={styles.addIcon} viewBox="0 0 24 24" fill="currentColor">
                                     <path d="M12 4.5v15m7.5-7.5h-15" />
@@ -955,6 +1007,7 @@ function QuestionEditor({
                                             placeholder="e.g., Poor"
                                             value={ratingConfig.labels.min}
                                             onChange={(e) => handleRatingChange("minLabel", e.target.value)}
+                                            disabled={disabled}
                                         />
                                     </div>
                                     <div className={styles.labelInput}>
@@ -965,6 +1018,7 @@ function QuestionEditor({
                                             placeholder="e.g., Excellent"
                                             value={ratingConfig.labels.max}
                                             onChange={(e) => handleRatingChange("maxLabel", e.target.value)}
+                                            disabled={disabled}
                                         />
                                     </div>
                                 </div>
