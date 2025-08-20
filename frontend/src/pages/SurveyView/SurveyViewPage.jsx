@@ -49,10 +49,14 @@ import {
     ChevronUp,
     ExternalLink,
     Copy,
-    RefreshCw
+    RefreshCw,
+    Edit3,
+    Trash2
 } from "lucide-react";
 import styles from "./SurveyViewPage.module.css";
 import { SurveyService, ResponseService } from "../../services/apiServices";
+import { useDialog } from "../../hooks/useDialog";
+import Dialog from "../../components/Dialog";
 
 const COLORS = {
     primary: "#667eea",
@@ -73,6 +77,7 @@ export default function SurveyViewPage() {
     const { surveyId } = useParams();
     const navigate = useNavigate();
     const { user } = useAuth();
+    const { dialogState, showDialog, closeDialog } = useDialog();
 
     // State management
     const [surveyDetails, setSurveyDetails] = useState(null);
@@ -208,6 +213,9 @@ export default function SurveyViewPage() {
         const { questionResults, respondents } = surveyResults;
         const { responses } = surveyResponses;
 
+        // Ensure questionResults is an array
+        if (!Array.isArray(questionResults)) return null;
+
         // Response trend data (last 30 days)
         const responseTrend = generateResponseTrendData(responses);
 
@@ -279,6 +287,41 @@ export default function SurveyViewPage() {
         } catch (error) {
             console.error("Export failed:", error);
         }
+    };
+
+    const handleDeleteSurvey = async () => {
+        const confirmed = await showDialog({
+            title: "Delete Survey",
+            message: `Are you sure you want to delete "${surveyDetails?.title}"? This action cannot be undone.`,
+            type: "danger",
+            confirmText: "Delete",
+            cancelText: "Cancel"
+        });
+
+        if (confirmed) {
+            try {
+                await SurveyService.deleteSurvey(surveyId);
+                // Show success message and navigate back
+                navigate("/admin", {
+                    state: {
+                        message: "Survey deleted successfully",
+                        type: "success"
+                    }
+                });
+            } catch (error) {
+                console.error("Failed to delete survey:", error);
+                await showDialog({
+                    title: "Delete Failed",
+                    message: "Failed to delete the survey. Please try again.",
+                    type: "error",
+                    confirmText: "OK"
+                });
+            }
+        }
+    };
+
+    const handleEditSurvey = () => {
+        navigate(`/admin/surveys/${surveyId}/edit`);
     };
 
     if (loading) {
@@ -371,6 +414,22 @@ export default function SurveyViewPage() {
                     </div>
                     <div className={styles.headerActions}>
                         <button
+                            onClick={handleEditSurvey}
+                            className={styles.actionButton}
+                            title="Edit Survey"
+                        >
+                            <Edit3 size={16} />
+                            Edit
+                        </button>
+                        <button
+                            onClick={handleDeleteSurvey}
+                            className={`${styles.actionButton} ${styles.dangerButton}`}
+                            title="Delete Survey"
+                        >
+                            <Trash2 size={16} />
+                            Delete
+                        </button>
+                        <button
                             onClick={() => setShowShareModal(true)}
                             className={styles.actionButton}
                         >
@@ -402,7 +461,7 @@ export default function SurveyViewPage() {
                         { id: "overview", label: "Overview", icon: Eye },
                         { id: "analytics", label: "Analytics", icon: BarChart3 },
                         { id: "responses", label: "Responses", icon: MessageSquare },
-                        { id: "questions", label: "Questions", icon: FileText }
+                        { id: "questions", label: "Response Analytics", icon: FileText }
                     ].map(({ id, label, icon: Icon }) => (
                         <button
                             key={id}
@@ -836,220 +895,363 @@ export default function SurveyViewPage() {
 
                 {activeTab === "questions" && (
                     <div className={styles.tabContent}>
-                        {/* Questions List */}
-                        <div className={styles.questionsList}>
-                            {surveyDetails?.questions?.map((question, index) => {
-                                const questionResult = surveyResults?.questionResults?.find(qr => qr.questionId === question.id);
-                                const analytics = questionResult?.analytics;
+                        {/* Check if there are any responses first */}
+                        {(!surveyResults?.totalResponses || surveyResults.totalResponses === 0) ? (
+                            <div className={styles.emptyQuestions}>
+                                <BarChart3 className={styles.emptyIcon} size={64} />
+                                <h3 className={styles.emptyTitle}>No Response Data Available</h3>
+                                <p className={styles.emptyDescription}>
+                                    Response analytics will appear here once people start submitting responses to your survey.
+                                </p>
+                            </div>
+                        ) : (
+                            /* Modern Response Analytics Layout */
+                            <div className={styles.responseAnalyticsContainer}>
+                                {surveyDetails?.questions?.map((question, index) => {
+                                    const questionResult = surveyResults?.questionResults?.find(qr => qr.questionId === question.id);
+                                    const analytics = questionResult?.analytics;
 
-                                return (
-                                    <div key={question.id} className={styles.questionCard}>
-                                        <div className={styles.questionHeader}>
-                                            <div className={styles.questionNumber}>
-                                                <Hash size={16} />
-                                                {question.orderNumber || index + 1}
-                                            </div>
-                                            <div className={styles.questionType}>
-                                                {formatQuestionType(question.type)}
-                                            </div>
-                                            {question.required && (
-                                                <div className={styles.requiredBadge}>Required</div>
-                                            )}
-                                        </div>
-                                        <div className={styles.questionContent}>
-                                            <h4 className={styles.questionText}>{question.questionText}</h4>
-                                            {question.optionsJson && (
-                                                <div className={styles.questionOptions}>
-                                                    <strong>Options:</strong>
-                                                    <ul>
-                                                        {JSON.parse(question.optionsJson).map((option, optIndex) => (
-                                                            <li key={optIndex}>{option}</li>
-                                                        ))}
-                                                    </ul>
+                                    return (
+                                        <div key={question.id} className={styles.modernQuestionCard}>
+                                            {/* Question Header with Enhanced Design */}
+                                            <div className={styles.modernQuestionHeader}>
+                                                <div className={styles.questionIdentifier}>
+                                                    <div className={styles.questionNumberBadge}>
+                                                        Q{question.orderNumber || index + 1}
+                                                    </div>
+                                                    <div className={styles.questionMeta}>
+                                                        <span className={styles.questionTypeBadge}>
+                                                            {formatQuestionType(question.type)}
+                                                        </span>
+                                                        {question.required && (
+                                                            <span className={styles.requiredIndicator}>
+                                                                Required
+                                                            </span>
+                                                        )}
+                                                    </div>
                                                 </div>
-                                            )}
-                                        </div>
-
-                                        {/* Question Analytics Section */}
-                                        {analytics && (
-                                            <div className={styles.questionAnalytics}>
-                                                <h5 className={styles.analyticsTitle}>📊 Question Analytics</h5>
-
-                                                {/* Rating Analytics */}
-                                                {question.type === 'RATING' && analytics.averageRating !== null && (
-                                                    <div className={styles.ratingAnalytics}>
-                                                        <div className={styles.analyticsGrid}>
-                                                            <div className={styles.analyticsCard}>
-                                                                <div className={styles.analyticsLabel}>Average Rating</div>
-                                                                <div className={styles.analyticsValue}>
-                                                                    ⭐ {analytics.averageRating?.toFixed(1) || 'N/A'}
-                                                                </div>
-                                                            </div>
-                                                            <div className={styles.analyticsCard}>
-                                                                <div className={styles.analyticsLabel}>Median Rating</div>
-                                                                <div className={styles.analyticsValue}>
-                                                                    📊 {analytics.medianRating?.toFixed(1) || 'N/A'}
-                                                                </div>
-                                                            </div>
-                                                            <div className={styles.analyticsCard}>
-                                                                <div className={styles.analyticsLabel}>Range</div>
-                                                                <div className={styles.analyticsValue}>
-                                                                    📈 {analytics.minRating} - {analytics.maxRating}
-                                                                </div>
-                                                            </div>
-                                                        </div>
-
-                                                        {/* Rating Distribution Chart */}
-                                                        {analytics.ratingDistribution && Object.keys(analytics.ratingDistribution).length > 0 && (
-                                                            <div className={styles.chartContainer}>
-                                                                <h6 className={styles.chartTitle}>Rating Distribution</h6>
-                                                                <ResponsiveContainer width="100%" height={200}>
-                                                                    <BarChart data={Object.entries(analytics.ratingDistribution).map(([rating, count]) => ({
-                                                                        rating: `${rating} ⭐`,
-                                                                        count
-                                                                    }))}>
-                                                                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.2)" />
-                                                                        <XAxis dataKey="rating" stroke="#718096" fontSize={12} />
-                                                                        <YAxis stroke="#718096" fontSize={12} />
-                                                                        <Tooltip
-                                                                            contentStyle={{
-                                                                                backgroundColor: 'rgba(255,255,255,0.95)',
-                                                                                border: 'none',
-                                                                                borderRadius: '12px',
-                                                                                boxShadow: '0 10px 25px rgba(0,0,0,0.1)'
-                                                                            }}
-                                                                        />
-                                                                        <Bar dataKey="count" fill={COLORS.warning} radius={[4, 4, 0, 0]} />
-                                                                    </BarChart>
-                                                                </ResponsiveContainer>
-                                                            </div>
-                                                        )}
+                                                <div className={styles.questionStats}>
+                                                    <div className={styles.statPill}>
+                                                        <Users size={14} />
+                                                        <span>{questionResult?.totalAnswers || 0} responses</span>
                                                     </div>
-                                                )}
+                                                    <div className={styles.statPill}>
+                                                        <TrendingUp size={14} />
+                                                        <span>{questionResult?.completionRate?.toFixed(1) || 0}% completion</span>
+                                                    </div>
+                                                </div>
+                                            </div>
 
-                                                {/* Multiple Choice Analytics */}
-                                                {['MULTIPLE_CHOICE', 'RADIO', 'DROPDOWN'].includes(question.type) && analytics.optionCounts && (
-                                                    <div className={styles.optionAnalytics}>
-                                                        <div className={styles.analyticsGrid}>
-                                                            {analytics.mostPopularOption && (
-                                                                <div className={styles.analyticsCard}>
-                                                                    <div className={styles.analyticsLabel}>Most Popular</div>
-                                                                    <div className={styles.analyticsValue}>
-                                                                        🏆 {analytics.mostPopularOption}
-                                                                    </div>
-                                                                </div>
-                                                            )}
-                                                            {analytics.leastPopularOption && (
-                                                                <div className={styles.analyticsCard}>
-                                                                    <div className={styles.analyticsLabel}>Least Popular</div>
-                                                                    <div className={styles.analyticsValue}>
-                                                                        📉 {analytics.leastPopularOption}
-                                                                    </div>
-                                                                </div>
-                                                            )}
-                                                        </div>
+                                            {/* Main Content Area with Side-by-side Layout */}
+                                            <div className={styles.questionMainContent}>
+                                                {/* Left Side - Question Info */}
+                                                <div className={styles.questionInfoSection}>
+                                                    <h4 className={styles.modernQuestionText}>{question.questionText}</h4>
 
-                                                        {/* Option Distribution Chart */}
-                                                        {Object.keys(analytics.optionCounts).length > 0 && (
-                                                            <div className={styles.chartContainer}>
-                                                                <h6 className={styles.chartTitle}>Option Distribution</h6>
-                                                                <ResponsiveContainer width="100%" height={200}>
-                                                                    <PieChart>
-                                                                        <Pie
-                                                                            data={Object.entries(analytics.optionCounts).map(([option, count]) => ({
-                                                                                name: option.length > 15 ? option.substring(0, 15) + '...' : option,
-                                                                                value: count,
-                                                                                fullName: option
-                                                                            }))}
-                                                                            cx="50%"
-                                                                            cy="50%"
-                                                                            outerRadius={60}
-                                                                            dataKey="value"
-                                                                            labelLine={false}
-                                                                            label={({ name, value }) => `${name}: ${value}`}
-                                                                        >
-                                                                            {Object.entries(analytics.optionCounts).map((entry, index) => (
-                                                                                <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
+                                                    {/* Question Options Preview */}
+                                                    {question.optionsJson && (() => {
+                                                        try {
+                                                            const parsedOptions = JSON.parse(question.optionsJson);
+                                                            if (Array.isArray(parsedOptions) && parsedOptions.length > 0) {
+                                                                return (
+                                                                    <div className={styles.optionsPreview}>
+                                                                        <div className={styles.optionsLabel}>Answer Options:</div>
+                                                                        <div className={styles.optionsList}>
+                                                                            {parsedOptions.slice(0, 4).map((option, optIndex) => (
+                                                                                <div key={optIndex} className={styles.optionChip}>
+                                                                                    {option}
+                                                                                </div>
                                                                             ))}
-                                                                        </Pie>
-                                                                        <Tooltip
-                                                                            contentStyle={{
-                                                                                backgroundColor: 'rgba(255,255,255,0.95)',
-                                                                                border: 'none',
-                                                                                borderRadius: '12px',
-                                                                                boxShadow: '0 10px 25px rgba(0,0,0,0.1)'
-                                                                            }}
-                                                                            formatter={(value, name, props) => [value, props.payload.fullName]}
-                                                                        />
-                                                                    </PieChart>
-                                                                </ResponsiveContainer>
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                )}
+                                                                            {parsedOptions.length > 4 && (
+                                                                                <div className={styles.optionChip}>
+                                                                                    +{parsedOptions.length - 4} more
+                                                                                </div>
+                                                                            )}
+                                                                        </div>
+                                                                    </div>
+                                                                );
+                                                            }
+                                                        } catch (error) {
+                                                            console.warn('Failed to parse question options:', error);
+                                                        }
+                                                        return null;
+                                                    })()}
 
-                                                {/* Text Analytics */}
-                                                {['TEXT', 'LONG_TEXT'].includes(question.type) && analytics.averageTextLength !== null && (
-                                                    <div className={styles.textAnalytics}>
-                                                        <div className={styles.analyticsGrid}>
-                                                            <div className={styles.analyticsCard}>
-                                                                <div className={styles.analyticsLabel}>Avg Length</div>
-                                                                <div className={styles.analyticsValue}>
-                                                                    📝 {analytics.averageTextLength} chars
-                                                                </div>
-                                                            </div>
-                                                            <div className={styles.analyticsCard}>
-                                                                <div className={styles.analyticsLabel}>Range</div>
-                                                                <div className={styles.analyticsValue}>
-                                                                    📏 {analytics.minTextLength} - {analytics.maxTextLength}
-                                                                </div>
+                                                    {/* Key Analytics Summary */}
+                                                    {analytics && (
+                                                        <div className={styles.analyticsPreview}>
+                                                            <div className={styles.analyticsPreviewTitle}>Quick Insights</div>
+                                                            <div className={styles.insightCards}>
+                                                                {/* Rating Insights */}
+                                                                {(question.type === 'RATING' || question.type === 'Rating') && analytics.averageRating !== null && (
+                                                                    <>
+                                                                        <div className={styles.insightCard}>
+                                                                            <div className={styles.insightIcon}>⭐</div>
+                                                                            <div className={styles.insightContent}>
+                                                                                <div className={styles.insightValue}>{analytics.averageRating?.toFixed(1)}</div>
+                                                                                <div className={styles.insightLabel}>Avg Rating</div>
+                                                                            </div>
+                                                                        </div>
+                                                                        <div className={styles.insightCard}>
+                                                                            <div className={styles.insightIcon}>📊</div>
+                                                                            <div className={styles.insightContent}>
+                                                                                <div className={styles.insightValue}>{analytics.medianRating?.toFixed(1)}</div>
+                                                                                <div className={styles.insightLabel}>Median</div>
+                                                                            </div>
+                                                                        </div>
+                                                                    </>
+                                                                )}
+
+                                                                {/* Multiple Choice Insights */}
+                                                                {['MULTIPLE_CHOICE', 'RADIO', 'DROPDOWN'].includes(question.type) && analytics.mostPopularOption && (
+                                                                    <div className={styles.insightCard}>
+                                                                        <div className={styles.insightIcon}>🏆</div>
+                                                                        <div className={styles.insightContent}>
+                                                                            <div className={styles.insightValue}>
+                                                                                {analytics.mostPopularOption.length > 20
+                                                                                    ? analytics.mostPopularOption.substring(0, 20) + '...'
+                                                                                    : analytics.mostPopularOption
+                                                                                }
+                                                                            </div>
+                                                                            <div className={styles.insightLabel}>Most Popular</div>
+                                                                        </div>
+                                                                    </div>
+                                                                )}
+
+                                                                {/* Text Analytics Insights */}
+                                                                {['TEXT', 'LONG_TEXT'].includes(question.type) && analytics.averageTextLength !== null && (
+                                                                    <div className={styles.insightCard}>
+                                                                        <div className={styles.insightIcon}>📝</div>
+                                                                        <div className={styles.insightContent}>
+                                                                            <div className={styles.insightValue}>{analytics.averageTextLength}</div>
+                                                                            <div className={styles.insightLabel}>Avg Length</div>
+                                                                        </div>
+                                                                    </div>
+                                                                )}
                                                             </div>
                                                         </div>
+                                                    )}
+                                                </div>
 
-                                                        {/* Common Keywords */}
-                                                        {analytics.commonKeywords && analytics.commonKeywords.length > 0 && (
-                                                            <div className={styles.keywordsSection}>
-                                                                <h6 className={styles.keywordsTitle}>Common Keywords</h6>
-                                                                <div className={styles.keywordsList}>
-                                                                    {analytics.commonKeywords.map((keyword, idx) => (
-                                                                        <span key={idx} className={styles.keywordTag}>
-                                                                            {keyword}
-                                                                        </span>
-                                                                    ))}
+                                                {/* Right Side - Beautiful Charts */}
+                                                {analytics && (
+                                                    <div className={styles.chartsSection}>
+                                                        {/* Debug info - Remove in production */}
+                                                        {console.log('Question:', question.questionText, 'Type:', question.type, 'Analytics:', analytics)}
+
+                                                        {/* Rating Analytics Chart */}
+                                                        {(question.type === 'RATING' || question.type === 'Rating' || question.type?.toLowerCase() === 'rating') && (
+                                                            <div className={styles.beautifulChartCard}>
+                                                                <div className={styles.chartCardHeader}>
+                                                                    <h6 className={styles.chartCardTitle}>Rating Distribution</h6>
+                                                                    <div className={styles.chartCardSubtitle}>
+                                                                        {analytics.ratingDistribution && typeof analytics.ratingDistribution === 'object' && Object.keys(analytics.ratingDistribution).length > 0
+                                                                            ? `${Object.values(analytics.ratingDistribution).reduce((a, b) => a + b, 0)} total ratings`
+                                                                            : 'No rating data available yet'
+                                                                        }
+                                                                    </div>
+                                                                </div>
+                                                                <div className={styles.chartWrapper}>
+                                                                    {analytics.ratingDistribution &&
+                                                                        typeof analytics.ratingDistribution === 'object' &&
+                                                                        Object.keys(analytics.ratingDistribution).length > 0 ? (
+                                                                        <ResponsiveContainer width="100%" height={280}>
+                                                                            <BarChart
+                                                                                data={Object.entries(analytics.ratingDistribution).map(([rating, count]) => ({
+                                                                                    rating: `${rating}★`,
+                                                                                    count,
+                                                                                    percentage: Math.round((count / Object.values(analytics.ratingDistribution).reduce((a, b) => a + b, 0)) * 100)
+                                                                                }))}
+                                                                                margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+                                                                            >
+                                                                                <defs>
+                                                                                    <linearGradient id={`ratingGradient-${question.id}`} x1="0" y1="0" x2="0" y2="1">
+                                                                                        <stop offset="5%" stopColor="#FFD700" stopOpacity={0.9} />
+                                                                                        <stop offset="95%" stopColor="#FFA500" stopOpacity={0.7} />
+                                                                                    </linearGradient>
+                                                                                </defs>
+                                                                                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
+                                                                                <XAxis
+                                                                                    dataKey="rating"
+                                                                                    stroke="#94A3B8"
+                                                                                    fontSize={12}
+                                                                                    tick={{ fill: '#94A3B8' }}
+                                                                                />
+                                                                                <YAxis
+                                                                                    stroke="#94A3B8"
+                                                                                    fontSize={12}
+                                                                                    tick={{ fill: '#94A3B8' }}
+                                                                                />
+                                                                                <Tooltip
+                                                                                    contentStyle={{
+                                                                                        backgroundColor: 'rgba(15, 23, 42, 0.95)',
+                                                                                        border: 'none',
+                                                                                        borderRadius: '16px',
+                                                                                        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+                                                                                        color: '#fff'
+                                                                                    }}
+                                                                                    formatter={(value, name, props) => [
+                                                                                        `${value} responses (${props.payload.percentage}%)`,
+                                                                                        'Count'
+                                                                                    ]}
+                                                                                />
+                                                                                <Bar
+                                                                                    dataKey="count"
+                                                                                    fill={`url(#ratingGradient-${question.id})`}
+                                                                                    radius={[8, 8, 0, 0]}
+                                                                                    stroke="#FFD700"
+                                                                                    strokeWidth={1}
+                                                                                />
+                                                                            </BarChart>
+                                                                        </ResponsiveContainer>
+                                                                    ) : (
+                                                                        /* Placeholder for no data */
+                                                                        <div style={{
+                                                                            display: 'flex',
+                                                                            flexDirection: 'column',
+                                                                            alignItems: 'center',
+                                                                            justifyContent: 'center',
+                                                                            height: '280px',
+                                                                            color: '#94A3B8',
+                                                                            fontSize: '14px',
+                                                                            gap: '12px'
+                                                                        }}>
+                                                                            <div style={{ fontSize: '48px', opacity: 0.3 }}>📊</div>
+                                                                            <div>No rating responses yet</div>
+                                                                            <div style={{ fontSize: '12px', opacity: 0.7 }}>
+                                                                                Charts will appear once users submit ratings
+                                                                            </div>
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                        )}
+
+                                                        {/* Multiple Choice Analytics Chart */}
+                                                        {['MULTIPLE_CHOICE', 'RADIO', 'DROPDOWN'].includes(question.type) &&
+                                                            analytics.optionCounts &&
+                                                            typeof analytics.optionCounts === 'object' &&
+                                                            Object.keys(analytics.optionCounts).length > 0 && (
+                                                                <div className={styles.beautifulChartCard}>
+                                                                    <div className={styles.chartCardHeader}>
+                                                                        <h6 className={styles.chartCardTitle}>Option Distribution</h6>
+                                                                        <div className={styles.chartCardSubtitle}>
+                                                                            {Object.values(analytics.optionCounts).reduce((a, b) => a + b, 0)} total selections
+                                                                        </div>
+                                                                    </div>
+                                                                    <div className={styles.chartWrapper}>
+                                                                        <ResponsiveContainer width="100%" height={280}>
+                                                                            <PieChart margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
+                                                                                <defs>
+                                                                                    {Object.entries(analytics.optionCounts).map((entry, index) => (
+                                                                                        <linearGradient key={`gradient-${index}`} id={`gradient-${index}`} x1="0" y1="0" x2="1" y2="1">
+                                                                                            <stop offset="0%" stopColor={CHART_COLORS[index % CHART_COLORS.length]} stopOpacity={0.9} />
+                                                                                            <stop offset="100%" stopColor={CHART_COLORS[index % CHART_COLORS.length]} stopOpacity={0.6} />
+                                                                                        </linearGradient>
+                                                                                    ))}
+                                                                                </defs>
+                                                                                <Pie
+                                                                                    data={Object.entries(analytics.optionCounts).map(([option, count], index) => ({
+                                                                                        name: option.length > 25 ? option.substring(0, 25) + '...' : option,
+                                                                                        value: count,
+                                                                                        fullName: option,
+                                                                                        percentage: Math.round((count / Object.values(analytics.optionCounts).reduce((a, b) => a + b, 0)) * 100),
+                                                                                        fill: `url(#gradient-${index})`
+                                                                                    }))}
+                                                                                    cx="50%"
+                                                                                    cy="50%"
+                                                                                    outerRadius={90}
+                                                                                    innerRadius={30}
+                                                                                    dataKey="value"
+                                                                                    stroke="#fff"
+                                                                                    strokeWidth={2}
+                                                                                >
+                                                                                    {Object.entries(analytics.optionCounts).map((entry, index) => (
+                                                                                        <Cell key={`cell-${index}`} fill={`url(#gradient-${index})`} />
+                                                                                    ))}
+                                                                                </Pie>
+                                                                                <Tooltip
+                                                                                    contentStyle={{
+                                                                                        backgroundColor: 'rgba(15, 23, 42, 0.95)',
+                                                                                        border: 'none',
+                                                                                        borderRadius: '16px',
+                                                                                        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+                                                                                        color: '#fff'
+                                                                                    }}
+                                                                                    formatter={(value, name, props) => [
+                                                                                        `${value} selections (${props.payload.percentage}%)`,
+                                                                                        props.payload.fullName
+                                                                                    ]}
+                                                                                />
+                                                                            </PieChart>
+                                                                        </ResponsiveContainer>
+                                                                    </div>
+                                                                </div>
+                                                            )}
+
+                                                        {/* Text Analytics */}
+                                                        {['TEXT', 'LONG_TEXT'].includes(question.type) && analytics.averageTextLength !== null && (
+                                                            <div className={styles.beautifulChartCard}>
+                                                                <div className={styles.chartCardHeader}>
+                                                                    <h6 className={styles.chartCardTitle}>Text Analysis</h6>
+                                                                    <div className={styles.chartCardSubtitle}>Response length insights</div>
+                                                                </div>
+                                                                <div className={styles.textAnalyticsContent}>
+                                                                    <div className={styles.textMetrics}>
+                                                                        <div className={styles.textMetric}>
+                                                                            <div className={styles.textMetricIcon}>📏</div>
+                                                                            <div className={styles.textMetricInfo}>
+                                                                                <div className={styles.textMetricValue}>{analytics.averageTextLength}</div>
+                                                                                <div className={styles.textMetricLabel}>Avg Characters</div>
+                                                                            </div>
+                                                                        </div>
+                                                                        <div className={styles.textMetric}>
+                                                                            <div className={styles.textMetricIcon}>📐</div>
+                                                                            <div className={styles.textMetricInfo}>
+                                                                                <div className={styles.textMetricValue}>{analytics.minTextLength} - {analytics.maxTextLength}</div>
+                                                                                <div className={styles.textMetricLabel}>Range</div>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                    {/* Common Keywords */}
+                                                                    {analytics.commonKeywords && analytics.commonKeywords.length > 0 && (
+                                                                        <div className={styles.keywordsCloud}>
+                                                                            <div className={styles.keywordsCloudTitle}>Popular Keywords</div>
+                                                                            <div className={styles.keywordsCloudContainer}>
+                                                                                {analytics.commonKeywords.slice(0, 8).map((keyword, idx) => (
+                                                                                    <span
+                                                                                        key={idx}
+                                                                                        className={styles.keywordBubble}
+                                                                                        style={{
+                                                                                            fontSize: `${Math.max(12, 16 - (idx * 0.5))}px`,
+                                                                                            opacity: Math.max(0.6, 1 - (idx * 0.1))
+                                                                                        }}
+                                                                                    >
+                                                                                        {keyword}
+                                                                                    </span>
+                                                                                ))}
+                                                                            </div>
+                                                                        </div>
+                                                                    )}
                                                                 </div>
                                                             </div>
                                                         )}
                                                     </div>
                                                 )}
                                             </div>
-                                        )}
-
-                                        <div className={styles.questionStats}>
-                                            <div className={styles.statItem}>
-                                                <span className={styles.statLabel}>Responses:</span>
-                                                <span className={styles.statValue}>
-                                                    {questionResult?.totalAnswers || 0}
-                                                </span>
-                                            </div>
-                                            <div className={styles.statItem}>
-                                                <span className={styles.statLabel}>Completion:</span>
-                                                <span className={styles.statValue}>
-                                                    {questionResult?.completionRate?.toFixed(1) || 0}%
-                                                </span>
-                                            </div>
                                         </div>
-                                    </div>
-                                );
-                            }) || (
-                                    <div className={styles.emptyQuestions}>
-                                        <FileText className={styles.emptyIcon} size={64} />
-                                        <h3 className={styles.emptyTitle}>No questions found</h3>
-                                        <p className={styles.emptyDescription}>
-                                            This survey doesn't have any questions yet.
-                                        </p>
-                                    </div>
-                                )}
-                        </div>
+                                    );
+                                }) || (
+                                        <div className={styles.emptyQuestions}>
+                                            <FileText className={styles.emptyIcon} size={64} />
+                                            <h3 className={styles.emptyTitle}>No questions found</h3>
+                                            <p className={styles.emptyDescription}>
+                                                This survey doesn't have any questions yet.
+                                            </p>
+                                        </div>
+                                    )}
+                            </div>
+                        )}
                     </div>
                 )}
             </main>
@@ -1090,6 +1292,12 @@ export default function SurveyViewPage() {
                     </div>
                 </div>
             )}
+
+            {/* Dialog Component */}
+            <Dialog
+                {...dialogState}
+                onClose={closeDialog}
+            />
         </div>
     );
 }

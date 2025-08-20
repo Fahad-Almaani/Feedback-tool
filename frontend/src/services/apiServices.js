@@ -32,6 +32,14 @@ export class SurveyService {
   }
 
   /**
+   * Get survey for editing (admin only)
+   */
+  static async getSurvey(surveyId) {
+    const response = await apiClient.get(`${this.baseUrl}/${surveyId}`);
+    return apiClient.extractData(response);
+  }
+
+  /**
    * Get survey results (admin only)
    */
   static async getSurveyResults(surveyId) {
@@ -397,5 +405,66 @@ export class UserService {
       isValid: Object.keys(errors).length === 0,
       errors,
     };
+  }
+
+  /**
+   * Get user dashboard data
+   */
+  static async getUserDashboard() {
+    const response = await apiClient.get(`${this.baseUrl}/dashboard`);
+    return apiClient.extractData(response);
+  }
+}
+
+/**
+ * Analytics service layer - encapsulates analytics-related API operations
+ */
+export class AnalyticsService {
+  static baseUrl = "/analytics";
+
+  /**
+   * Get response trends data
+   */
+  static async getResponseTrends(days = 30) {
+    const response = await apiClient.get(
+      `${this.baseUrl}/response-trends?days=${days}`
+    );
+    return apiClient.extractData(response);
+  }
+
+  /**
+   * Get recent activity
+   */
+  static async getRecentActivity(limit = 50) {
+    const response = await apiClient.get(
+      `${this.baseUrl}/recent-activity?limit=${limit}`
+    );
+    return apiClient.extractData(response);
+  }
+
+  /**
+   * Get recent responses with detailed information
+   */
+  static async getRecentResponses(limit = 5) {
+    const response = await apiClient.get(
+      `${this.baseUrl}/recent-responses?limit=${limit}`
+    );
+    return apiClient.extractData(response);
+  }
+
+  /**
+   * Get dashboard overview
+   */
+  static async getDashboardOverview() {
+    const response = await apiClient.get(`${this.baseUrl}/overview`);
+    return apiClient.extractData(response);
+  }
+
+  /**
+   * Get survey performance metrics
+   */
+  static async getSurveyPerformance() {
+    const response = await apiClient.get(`${this.baseUrl}/survey-performance`);
+    return apiClient.extractData(response);
   }
 }

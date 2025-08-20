@@ -8,6 +8,7 @@ import com.training.feedbacktool.dto.QuestionResponse;
 import com.training.feedbacktool.dto.SubmitResponseRequest;
 import com.training.feedbacktool.dto.SurveyResponse;
 import com.training.feedbacktool.dto.SurveyResultsResponse;
+import com.training.feedbacktool.dto.UpdateSurveyRequest;
 import com.training.feedbacktool.entity.Answer;
 import com.training.feedbacktool.entity.Question;
 import com.training.feedbacktool.entity.Response;
@@ -163,6 +164,96 @@ public class SurveyService {
         return findByIdWithQuestions(id);
     }
 
+    @Transactional
+    public SurveyResponse updateSurvey(Long id, UpdateSurveyRequest req) {
+        Survey existingSurvey = repo.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Survey not found with id: " + id));
+
+        // Check if survey has responses - if so, only allow limited updates
+        List<Answer> existingAnswers = answersRepository.findBySurveyId(id);
+        boolean hasResponses = !existingAnswers.isEmpty();
+
+        if (hasResponses) {
+            // If survey has responses, only allow updating title, description, and status
+            // but NOT questions
+            existingSurvey.setTitle(req.title().trim());
+            existingSurvey.setDescription(req.description());
+
+            // Only allow status changes from ACTIVE to INACTIVE (to close survey)
+            // Don't allow changing from INACTIVE back to ACTIVE if there are responses
+            String currentStatus = existingSurvey.getStatus();
+            String newStatus = Boolean.TRUE.equals(req.active()) ? "ACTIVE" : "INACTIVE";
+
+            if ("INACTIVE".equals(currentStatus) && "ACTIVE".equals(newStatus)) {
+                throw new IllegalArgumentException(
+                        "Cannot reactivate a survey that already has responses. Create a new survey instead.");
+            }
+
+            existingSurvey.setStatus(newStatus);
+
+            // Don't modify questions at all when there are responses
+            if (req.questions() != null && !req.questions().isEmpty()) {
+                throw new IllegalArgumentException(
+                        "Cannot modify questions on a survey that already has responses. Create a new survey instead.");
+            }
+        } else {
+            // If no responses, allow full update (original logic)
+
+            // Check if title is being changed and if it conflicts with another survey
+            if (!existingSurvey.getTitle().equalsIgnoreCase(req.title().trim())) {
+                if (repo.existsByTitleIgnoreCase(req.title())) {
+                    throw new IllegalArgumentException("Survey title already exists");
+                }
+            }
+
+            // Update basic survey information
+            existingSurvey.setTitle(req.title().trim());
+            existingSurvey.setDescription(req.description());
+            existingSurvey.setStatus(Boolean.TRUE.equals(req.active()) ? "ACTIVE" : "DRAFT");
+
+            // Handle questions update - clear existing questions and add new ones
+            existingSurvey.getQuestions().clear();
+
+            if (req.questions() != null && !req.questions().isEmpty()) {
+                List<Question> questions = new ArrayList<>();
+                for (CreateQuestionRequest qReq : req.questions()) {
+                    Question q = new Question();
+                    q.setType(qReq.type());
+                    q.setQuestionText(qReq.questionText());
+                    q.setOptionsJson(qReq.optionsJson());
+                    q.setOrderNumber(qReq.orderNumber());
+                    q.setSurvey(existingSurvey);
+                    questions.add(q);
+                }
+                existingSurvey.setQuestions(questions);
+            }
+        }
+
+        Survey saved = repo.save(existingSurvey);
+        return new SurveyResponse(
+                saved.getId(),
+                saved.getTitle(),
+                saved.getDescription(),
+                saved.getStatus(),
+                saved.getCreatedAt(),
+                saved.getUpdatedAt());
+    }
+
+    @Transactional
+    public void deleteSurvey(Long id) {
+        Survey survey = repo.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Survey not found with id: " + id));
+
+        // Delete all associated answers first
+        answersRepository.deleteBySurveyId(id);
+
+        // Delete all associated responses
+        responsesRepository.deleteBySurveyId(id);
+
+        // Finally delete the survey (this will also delete questions due to cascade)
+        repo.delete(survey);
+    }
+
     // ---------- submission ----------
     @Transactional
     public void submitResponses(Long surveyId, SubmitResponseRequest request) {
@@ -286,10 +377,6 @@ public class SurveyService {
         // Get all answers for this survey
         List<Answer> allAnswers = answersRepository.findBySurveyId(surveyId);
 
-        // Create anonymous user counter
-        Map<User, String> anonymousUserIds = new HashMap<>();
-        int anonymousCounter = 1;
-
         // Group answers by user (including anonymous)
         Map<String, List<Answer>> answersByRespondent = new HashMap<>();
         Set<User> uniqueUsers = new HashSet<>();
@@ -307,7 +394,7 @@ public class SurveyService {
                 respondentId = "anonymous_" + answer.getId();
             }
 
-            answersByRespondent.computeIfAbsent(respondentId, k -> new ArrayList<>()).add(answer);
+            answersByRespondent.computeIfAbsent(respondentId, unused -> new ArrayList<>()).add(answer);
         }
 
         // Create respondent DTOs
@@ -331,6 +418,7 @@ public class SurveyService {
                             answer.getQuestion().getId(),
                             answer.getQuestion().getQuestionText(),
                             answer.getAnswerText(),
+                            answer.getRatingValue(),
                             answer.getCreatedAt()))
                     .sorted((r1, r2) -> r1.questionId().compareTo(r2.questionId()))
                     .collect(Collectors.toList());
@@ -385,6 +473,7 @@ public class SurveyService {
                         return new SurveyResultsResponse.AnswerSummaryDTO(
                                 answer.getId(),
                                 answer.getAnswerText(),
+                                answer.getRatingValue(),
                                 answer.getCreatedAt(),
                                 respondentInfo);
                     })
@@ -456,18 +545,10 @@ public class SurveyService {
             case "RATING":
                 calculateRatingAnalytics(answers, ratingDistribution, customMetrics);
 
-                // Calculate rating statistics
+                // Calculate rating statistics using the new ratingValue field
                 List<Integer> ratings = answers.stream()
-                        .map(Answer::getAnswerText)
-                        .filter(text -> text != null && !text.trim().isEmpty())
-                        .map(text -> {
-                            try {
-                                return Integer.parseInt(text.trim());
-                            } catch (NumberFormatException e) {
-                                return null;
-                            }
-                        })
-                        .filter(Objects::nonNull)
+                        .map(Answer::getRatingValue)
+                        .filter(rating -> rating != null && rating >= 0 && rating <= 5)
                         .collect(Collectors.toList());
 
                 if (!ratings.isEmpty()) {
@@ -536,14 +617,9 @@ public class SurveyService {
     private void calculateRatingAnalytics(List<Answer> answers, Map<String, Integer> ratingDistribution,
             Map<String, Object> customMetrics) {
         for (Answer answer : answers) {
-            String ratingText = answer.getAnswerText();
-            if (ratingText != null && !ratingText.trim().isEmpty()) {
-                try {
-                    Integer.parseInt(ratingText.trim()); // Validate it's a number
-                    ratingDistribution.merge(ratingText.trim(), 1, Integer::sum);
-                } catch (NumberFormatException e) {
-                    // Invalid rating, skip
-                }
+            Integer ratingValue = answer.getRatingValue();
+            if (ratingValue != null && ratingValue >= 0 && ratingValue <= 5) {
+                ratingDistribution.merge(ratingValue.toString(), 1, Integer::sum);
             }
         }
 

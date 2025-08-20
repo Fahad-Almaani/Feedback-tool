@@ -1,7 +1,6 @@
 package com.training.feedbacktool.entity;
 
 import jakarta.persistence.*;
-import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import java.time.Instant;
 
@@ -12,10 +11,13 @@ public class Answer {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @NotBlank(message = "Answer text cannot be blank")
     @Size(max = 1000, message = "Answer text cannot exceed 1000 characters")
-    @Column(name = "answer_text", nullable = false, length = 1000)
+    @Column(name = "answer_text", nullable = true, length = 1000)
     private String answerText;
+
+    // For rating questions: store numeric value (0-5 stars)
+    @Column(name = "rating_value", nullable = true)
+    private Integer ratingValue;
 
     @Column(name = "created_at", nullable = false)
     private Instant createdAt = Instant.now();
@@ -43,6 +45,19 @@ public class Answer {
         this.user = user;
     }
 
+    public Answer(Integer ratingValue, Question question, User user) {
+        this.ratingValue = ratingValue;
+        this.question = question;
+        this.user = user;
+    }
+
+    public Answer(String answerText, Integer ratingValue, Question question, User user) {
+        this.answerText = answerText;
+        this.ratingValue = ratingValue;
+        this.question = question;
+        this.user = user;
+    }
+
     @PreUpdate
     protected void onUpdate() {
         updatedAt = Instant.now();
@@ -63,6 +78,14 @@ public class Answer {
 
     public void setAnswerText(String answerText) {
         this.answerText = answerText;
+    }
+
+    public Integer getRatingValue() {
+        return ratingValue;
+    }
+
+    public void setRatingValue(Integer ratingValue) {
+        this.ratingValue = ratingValue;
     }
 
     public Instant getCreatedAt() {
