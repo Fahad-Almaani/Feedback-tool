@@ -8,6 +8,7 @@ import com.training.feedbacktool.dto.QuestionResponse;
 import com.training.feedbacktool.dto.SubmitResponseRequest;
 import com.training.feedbacktool.dto.SurveyResponse;
 import com.training.feedbacktool.dto.SurveyResultsResponse;
+import com.training.feedbacktool.dto.UpdateSurveyRequest;
 import com.training.feedbacktool.entity.Answer;
 import com.training.feedbacktool.entity.Question;
 import com.training.feedbacktool.entity.Response;
@@ -161,6 +162,50 @@ public class SurveyService {
 
     public PublicSurveyResponse getSurveyForRespondent(Long id) {
         return findByIdWithQuestions(id);
+    }
+
+    @Transactional
+    public SurveyResponse updateSurvey(Long id, UpdateSurveyRequest req) {
+        Survey existingSurvey = repo.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Survey not found with id: " + id));
+
+        // Check if title is being changed and if it conflicts with another survey
+        if (!existingSurvey.getTitle().equalsIgnoreCase(req.title().trim())) {
+            if (repo.existsByTitleIgnoreCase(req.title())) {
+                throw new IllegalArgumentException("Survey title already exists");
+            }
+        }
+
+        // Update basic survey information
+        existingSurvey.setTitle(req.title().trim());
+        existingSurvey.setDescription(req.description());
+        existingSurvey.setStatus(Boolean.TRUE.equals(req.active()) ? "ACTIVE" : "DRAFT");
+
+        // Handle questions update - clear existing questions and add new ones
+        existingSurvey.getQuestions().clear();
+
+        if (req.questions() != null && !req.questions().isEmpty()) {
+            List<Question> questions = new ArrayList<>();
+            for (CreateQuestionRequest qReq : req.questions()) {
+                Question q = new Question();
+                q.setType(qReq.type());
+                q.setQuestionText(qReq.questionText());
+                q.setOptionsJson(qReq.optionsJson());
+                q.setOrderNumber(qReq.orderNumber());
+                q.setSurvey(existingSurvey);
+                questions.add(q);
+            }
+            existingSurvey.setQuestions(questions);
+        }
+
+        Survey saved = repo.save(existingSurvey);
+        return new SurveyResponse(
+                saved.getId(),
+                saved.getTitle(),
+                saved.getDescription(),
+                saved.getStatus(),
+                saved.getCreatedAt(),
+                saved.getUpdatedAt());
     }
 
     @Transactional

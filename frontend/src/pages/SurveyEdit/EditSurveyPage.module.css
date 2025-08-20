@@ -1,0 +1,57 @@
+/* Import styles from SurveyCreationPage */
+@import "../SurveyCreation/SurveyCreationPage.module.css";
+
+/* Override specific styles for Edit page */
+.loadingContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  background: var(--primary-gradient);
+  color: var(--text-primary);
+  gap: var(--space-md);
+}
+
+.loadingContainer .spinner {
+  width: 48px;
+  height: 48px;
+  border: 4px solid rgba(255, 255, 255, 0.3);
+  border-top: 4px solid var(--primary-color);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+.loadingContainer p {
+  font-size: var(--font-size-lg);
+  font-weight: 500;
+  margin: 0;
+}
+
+/* Custom styles for edit specific elements */
+.pageTitle {
+  font-size: var(--font-size-xl);
+  font-weight: 700;
+  color: var(--text-primary);
+  background: var(--primary-gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  margin: 0;
+}
+
+.titleIcon {
+  width: 24px;
+  height: 24px;
+  color: var(--primary-color);
+}
+
+.pageSubtitle {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  margin: 0;
+  margin-left: var(--space-lg);
+}

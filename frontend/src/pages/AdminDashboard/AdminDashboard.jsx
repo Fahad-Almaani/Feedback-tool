@@ -522,7 +522,14 @@ export default function AdminDashboard() {
                               </span>
                             </div>
                             <div className={styles.surveyActions}>
-                              <button className={styles.actionBtn} title="Edit Survey">
+                              <button
+                                className={styles.actionBtn}
+                                title="Edit Survey"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  navigate(`/admin/surveys/${survey.id}/edit`);
+                                }}
+                              >
                                 <Edit3 size={16} />
                               </button>
                               <button

@@ -11,6 +11,7 @@ import NotFound from './pages/NotFound';
 import AdminDashboard from './pages/AdminDashboard/AdminDashboard'
 import UserDashboard from './pages/UserDashboard/UserDashboard';
 import SurveyCreationPage from './pages/SurveyCreation/SurveyCreationPage';
+import EditSurveyPage from './pages/SurveyEdit/EditSurveyPage';
 import SurveyFormPage from './pages/SurveyForm/SurveyFormPage';
 import SurveyViewPage from './pages/SurveyView/SurveyViewPage';
 
@@ -97,6 +98,11 @@ const AppRoutes = () => {
       <Route path="/admin/surveys/create" element={
         <ProtectedRoute requiredRole="ADMIN">
           <SurveyCreationPage />
+        </ProtectedRoute>
+      } />
+      <Route path="/admin/surveys/:surveyId/edit" element={
+        <ProtectedRoute requiredRole="ADMIN">
+          <EditSurveyPage />
         </ProtectedRoute>
       } />
       <Route path="/admin/surveys/:surveyId" element={

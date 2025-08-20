@@ -32,6 +32,14 @@ export class SurveyService {
   }
 
   /**
+   * Get survey for editing (admin only)
+   */
+  static async getSurvey(surveyId) {
+    const response = await apiClient.get(`${this.baseUrl}/${surveyId}`);
+    return apiClient.extractData(response);
+  }
+
+  /**
    * Get survey results (admin only)
    */
   static async getSurveyResults(surveyId) {
