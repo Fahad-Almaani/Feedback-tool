@@ -16,6 +16,10 @@ import EditSurveyPage from './pages/SurveyEdit/EditSurveyPage';
 import SurveyFormPage from './pages/SurveyForm/SurveyFormPage';
 import SurveyViewPage from './pages/SurveyView/SurveyViewPage';
 
+// ...existing code...
+
+
+
 // Component to handle login route with return URL logic
 const LoginRoute = () => {
   const { isAuthenticated, user } = useAuth();
@@ -87,61 +91,74 @@ const AppRoutes = () => {
       <Route path="/login" element={<LoginRoute />} />
       <Route path="/signup" element={<SignUpRoute />} />
       <Route path="/forgot" element={<ForgotPassword />} />
-
       {/* Survey Form Route - Public/Anonymous access */}
       <Route path="/survey/:surveyId" element={<SurveyFormPage />} />
-
       {/* Admin Routes */}
-      <Route path="/admin/dashboard" element={
-        <ProtectedRoute requiredRole="ADMIN">
-          <AdminDashboard />
-        </ProtectedRoute>
-      } />
-      <Route path="/admin/surveys/create" element={
-        <ProtectedRoute requiredRole="ADMIN">
-          <SurveyCreationPage />
-        </ProtectedRoute>
-      } />
-      <Route path="/admin/surveys/:surveyId/edit" element={
-        <ProtectedRoute requiredRole="ADMIN">
-          <EditSurveyPage />
-        </ProtectedRoute>
-      } />
-      <Route path="/admin/surveys/:surveyId" element={
-        <ProtectedRoute requiredRole="ADMIN">
-          <SurveyViewPage />
-        </ProtectedRoute>
-      } />
-
+      <Route
+        path="/admin/dashboard"
+        element={
+          <ProtectedRoute requiredRole="ADMIN">
+            <AdminDashboard />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/surveys/create"
+        element={
+          <ProtectedRoute requiredRole="ADMIN">
+            <SurveyCreationPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/surveys/:surveyId/edit"
+        element={
+          <ProtectedRoute requiredRole="ADMIN">
+            <EditSurveyPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/surveys/:surveyId"
+        element={
+          <ProtectedRoute requiredRole="ADMIN">
+            <SurveyViewPage />
+          </ProtectedRoute>
+        }
+      />
       {/* Legacy admin routes */}
-      <Route path="/admin" element={
-        <ProtectedRoute requiredRole="ADMIN">
-          <Navigate to="/admin/dashboard" replace />
-        </ProtectedRoute>
-      } />
-
-      {/* User Routes */}
-      <Route path="/user/dashboard" element={
-        <ProtectedRoute requiredRole="USER">
-          <UserDashboard />
-        </ProtectedRoute>
-      } />
-
-      {/* Legacy dashboard route - redirect based on role */}
-      <Route path="/dashboard" element={
-        <ProtectedRoute>
-          {user?.role === 'ADMIN' ? (
+      <Route
+        path="/admin"
+        element={
+          <ProtectedRoute requiredRole="ADMIN">
             <Navigate to="/admin/dashboard" replace />
-          ) : (
-            <Navigate to="/user/dashboard" replace />
-          )}
-        </ProtectedRoute>
-      } />
-
+          </ProtectedRoute>
+        }
+      />
+      {/* User Routes */}
+      <Route
+        path="/user/dashboard"
+        element={
+          <ProtectedRoute requiredRole="USER">
+            <UserDashboard />
+          </ProtectedRoute>
+        }
+      />
+      {/* Legacy dashboard route - redirect based on role */}
+      <Route
+        path="/dashboard"
+        element={
+          <ProtectedRoute>
+            {user?.role === "ADMIN" ? (
+              <Navigate to="/admin/dashboard" replace />
+            ) : (
+              <Navigate to="/user/dashboard" replace />
+            )}
+          </ProtectedRoute>
+        }
+      />
       {/* Root redirect */}
       <Route path="/" element={<LandingPage />} />
-
-      {/* 404 Route */}
       <Route path="*" element={<NotFound />} />
     </Routes>
   );
