@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate, useLocation, Link } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { SimpleSpinner } from "../../components/LoadingSpinner";
 import styles from "./Login.module.css";
@@ -181,9 +181,9 @@ export default function Login() {
               {/* Form Options */}
               <div className={styles.formOptions}>
 
-                <a className={styles.forgotLink} href="/forgot-password">
+                <Link className={styles.forgotLink} to="/forgot-password">
                   Forgot password?
-                </a>
+                </Link>
               </div>
 
               {/* Submit Button */}
@@ -215,8 +215,8 @@ export default function Login() {
             {/* Signup Link */}
             <p className={styles.signupText}>
               Don't have an account?{" "}
-              <a
-                href="/signup"
+              <Link
+                to="/signup"
                 onClick={(e) => {
                   e.preventDefault();
                   navigate('/signup', { state: location.state });
@@ -224,7 +224,7 @@ export default function Login() {
                 className={styles.signupLink}
               >
                 Create one now
-              </a>
+              </Link>
             </p>
           </div>
         </div>
