@@ -185,13 +185,13 @@ export default function AdminDashboard() {
           });
 
           closeDialog();
-          showSuccess('Survey Deleted', 'The survey has been successfully deleted.');
+          // showSuccess('Survey Deleted', 'The survey has been successfully deleted.');
 
         } catch (error) {
           console.error('Error deleting survey:', error);
           const errorMessage = apiClient.getErrorMessage(error);
           closeDialog();
-          showDanger('Delete Failed', errorMessage || 'Failed to delete the survey. Please try again.');
+          // showDanger('Delete Failed', errorMessage || 'Failed to delete the survey. Please try again.');
         } finally {
           setDialogLoading(false);
         }
