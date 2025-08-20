@@ -2,6 +2,7 @@ import React, { useState, useCallback, useEffect, useRef } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { apiClient } from "../../utils/apiClient";
 import { useNavigate } from "react-router-dom";
+import InputWithAI from "../../components/Input/InputWithAI";
 import styles from "./SurveyCreationPage.module.css";
 
 const QUESTION_TYPES = {
@@ -530,10 +531,8 @@ export default function SurveyCreationPage() {
                                     <label className={styles.label}>
                                         Survey Title <span className={styles.required}>*</span>
                                     </label>
-                                    <input
-                                        type="text"
-                                        className={`${styles.input} ${errors.title ? styles.error : ''} ${survey.title ? styles.valid : ''}`}
-                                        placeholder="Enter survey title..."
+                                    <InputWithAI
+                                        type="input"
                                         value={survey.title}
                                         onChange={(e) => {
                                             setSurvey(prev => ({ ...prev, title: e.target.value }));
@@ -542,11 +541,15 @@ export default function SurveyCreationPage() {
                                                 setErrors(prev => ({ ...prev, title: null }));
                                             }
                                         }}
+                                        placeholder="Enter survey title..."
+                                        error={!!errors.title}
+                                        onAIClick={(currentValue) => {
+                                            console.log('AI assistance for title:', currentValue);
+                                            // TODO: Implement AI suggestion logic for survey titles
+                                            alert('AI title suggestions coming soon!');
+                                        }}
                                     />
-                                    {errors.title && <span className={styles.errorText}>{errors.title}</span>}
-                                    {survey.title && !errors.title && (
-                                        <span className={styles.validText}>✓ Title looks good</span>
-                                    )}
+
                                 </div>
 
                                 <div className={styles.formGroup}>
@@ -554,15 +557,20 @@ export default function SurveyCreationPage() {
                                         Description
                                         <span className={styles.optional}>(optional)</span>
                                     </label>
-                                    <textarea
-                                        className={styles.textarea}
-                                        placeholder="Describe your survey's purpose and instructions..."
+                                    <InputWithAI
+                                        type="textarea"
                                         value={survey.description}
                                         onChange={(e) => {
                                             setSurvey(prev => ({ ...prev, description: e.target.value }));
                                             setUnsavedChanges(true);
                                         }}
+                                        placeholder="Describe your survey's purpose and instructions..."
                                         rows={3}
+                                        onAIClick={(currentValue) => {
+                                            console.log('AI assistance for description:', currentValue);
+                                            // TODO: Implement AI suggestion logic for survey descriptions
+                                            alert('AI description suggestions coming soon!');
+                                        }}
                                     />
                                     <div className={styles.characterCount}>
                                         {survey.description.length}/500
