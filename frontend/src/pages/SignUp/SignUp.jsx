@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate, useLocation, Link } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import styles from "./SignUp.module.css";
 
@@ -340,9 +340,9 @@ export default function SignUp() {
                                     <input type="checkbox" required disabled={loading} />
                                     <span className={styles.checkmark}></span>
                                     I agree to the{" "}
-                                    <a href="/terms" className={styles.termsLink}>Terms of Service</a>{" "}
+                                    <Link to="/terms" className={styles.termsLink}>Terms of Service</Link>{" "}
                                     and{" "}
-                                    <a href="/privacy" className={styles.termsLink}>Privacy Policy</a>
+                                    <Link to="/privacy" className={styles.termsLink}>Privacy Policy</Link>
                                 </label>
                             </div>
 
@@ -375,8 +375,8 @@ export default function SignUp() {
                         {/* Login Link */}
                         <p className={styles.loginText}>
                             Already have an account?{" "}
-                            <a
-                                href="/login"
+                            <Link
+                                to="/login"
                                 onClick={(e) => {
                                     e.preventDefault();
                                     navigate('/login', { state: location.state });
@@ -384,7 +384,7 @@ export default function SignUp() {
                                 className={styles.loginLink}
                             >
                                 Sign in here
-                            </a>
+                            </Link>
                         </p>
                     </div>
                 </div>
