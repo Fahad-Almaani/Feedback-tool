@@ -8,6 +8,7 @@ import Login from './pages/Login/Login';
 import SignUp from './pages/SignUp/SignUp';
 import ForgotPassword from './pages/ForgotPassword';
 import NotFound from './pages/NotFound';
+import LandingPage from './pages/LandingPage/LandingPage';
 import AdminDashboard from './pages/AdminDashboard/AdminDashboard'
 import UserDashboard from './pages/UserDashboard/UserDashboard';
 import SurveyCreationPage from './pages/SurveyCreation/SurveyCreationPage';
@@ -82,6 +83,7 @@ const AppRoutes = () => {
   return (
     <Routes>
       {/* Public Routes */}
+      <Route path="/landing" element={<LandingPage />} />
       <Route path="/login" element={<LoginRoute />} />
       <Route path="/signup" element={<SignUpRoute />} />
       <Route path="/forgot" element={<ForgotPassword />} />
@@ -137,13 +139,7 @@ const AppRoutes = () => {
       } />
 
       {/* Root redirect */}
-      <Route path="/" element={
-        isAuthenticated() ? (
-          user?.role === 'ADMIN' ? <Navigate to="/admin/dashboard" replace /> : <Navigate to="/user/dashboard" replace />
-        ) : (
-          <Navigate to="/login" replace />
-        )
-      } />
+      <Route path="/" element={<LandingPage />} />
 
       {/* 404 Route */}
       <Route path="*" element={<NotFound />} />
