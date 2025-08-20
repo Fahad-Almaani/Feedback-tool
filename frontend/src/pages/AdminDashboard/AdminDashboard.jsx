@@ -89,7 +89,7 @@ export default function AdminDashboard() {
           AnalyticsService.getResponseTrends(10), // Last 10 days for the chart
           AnalyticsService.getRecentActivity(4), // Last 4 activities
           AnalyticsService.getDashboardOverview(),
-          ResponseService.getAllResponses() // Get all responses and we'll filter to latest 5
+          AnalyticsService.getRecentResponses(5) // Get latest 5 responses with detailed info
         ]);
 
         console.log('Full API Response:', surveysResponse);
@@ -116,19 +116,19 @@ export default function AdminDashboard() {
         setResponseTrends(responseTrendsData || []);
         setRecentActivity(recentActivityData || []);
 
-        // Process recent responses - get latest 5
+        // Process recent responses - get latest 5 with detailed info
         let processedResponses = [];
         if (Array.isArray(recentResponsesData)) {
-          processedResponses = recentResponsesData
-            .sort((a, b) => new Date(b.submittedAt) - new Date(a.submittedAt))
-            .slice(0, 5)
-            .map(response => ({
-              ...response,
-              surveyTitle: response.surveyTitle || 'Unknown Survey',
-              respondentName: response.respondentName || null,
-              submittedAt: response.submittedAt,
-              completionPercentage: response.completionPercentage || 0
-            }));
+          processedResponses = recentResponsesData.map(response => ({
+            id: response.surveyId,
+            surveyName: response.surveyName,
+            userName: response.isAnonymous ? null : response.userName,
+            submittedAt: response.submittedAt,
+            completionPercentage: response.completionPercentage,
+            formattedTime: response.formattedTime,
+            formattedDate: response.formattedDate,
+            isAnonymous: response.isAnonymous
+          }));
         }
         setRecentResponses(processedResponses);
 
@@ -836,9 +836,9 @@ export default function AdminDashboard() {
                     </div>
                     <div className={styles.responseContent}>
                       <div className={styles.responseHeader}>
-                        <div className={styles.responseSurvey}>{response.surveyTitle}</div>
-                        <div className={styles.responseTime} title={formatDateTime(response.submittedAt)}>
-                          {getTimeAgo(response.submittedAt)}
+                        <div className={styles.responseSurvey}>{response.surveyName}</div>
+                        <div className={styles.responseTime} title={response.formattedDate}>
+                          {response.formattedTime}
                         </div>
                       </div>
                       <div className={styles.responseDetails}>
@@ -846,7 +846,7 @@ export default function AdminDashboard() {
                           <svg className={styles.userIcon} viewBox="0 0 24 24" fill="currentColor">
                             <path d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
                           </svg>
-                          <span>{response.respondentName || 'Anonymous User'}</span>
+                          <span>{response.userName || 'Anonymous User'}</span>
                         </div>
                         <div className={styles.responseCompletion}>
                           <div className={styles.completionText}>

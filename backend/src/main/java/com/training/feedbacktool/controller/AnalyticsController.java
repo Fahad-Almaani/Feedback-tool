@@ -79,6 +79,25 @@ public class AnalyticsController {
     }
 
     /**
+     * Get recent responses with detailed information for admin dashboard
+     */
+    @GetMapping("/recent-responses")
+    public ResponseEntity<ApiResponse<List<Map<String, Object>>>> getRecentResponses(
+            @RequestParam(defaultValue = "5") int limit) {
+        try {
+            List<Map<String, Object>> recentResponses = analyticsService.getRecentResponses(limit);
+            ApiResponse<List<Map<String, Object>>> response = ApiResponse.success(recentResponses,
+                    "Recent responses retrieved successfully");
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            ApiResponse<List<Map<String, Object>>> response = ApiResponse.error(
+                    "Failed to retrieve recent responses: " + e.getMessage(),
+                    HttpStatus.INTERNAL_SERVER_ERROR);
+            return ResponseEntity.internalServerError().body(response);
+        }
+    }
+
+    /**
      * Get survey performance metrics
      */
     @GetMapping("/survey-performance")

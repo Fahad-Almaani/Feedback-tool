@@ -443,6 +443,16 @@ export class AnalyticsService {
   }
 
   /**
+   * Get recent responses with detailed information
+   */
+  static async getRecentResponses(limit = 5) {
+    const response = await apiClient.get(
+      `${this.baseUrl}/recent-responses?limit=${limit}`
+    );
+    return apiClient.extractData(response);
+  }
+
+  /**
    * Get dashboard overview
    */
   static async getDashboardOverview() {

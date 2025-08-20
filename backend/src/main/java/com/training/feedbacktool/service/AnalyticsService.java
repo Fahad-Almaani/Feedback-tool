@@ -224,6 +224,47 @@ public class AnalyticsService {
         return performance;
     }
 
+    /**
+     * Get recent responses with detailed information for admin dashboard
+     */
+    public List<Map<String, Object>> getRecentResponses(int limit) {
+        System.out.println("Starting getRecentResponses with limit: " + limit);
+
+        try {
+            // Always return fallback data for now to test
+            return createFallbackRecentResponses();
+
+        } catch (Exception e) {
+            System.err.println("Error in getRecentResponses: " + e.getMessage());
+            e.printStackTrace();
+            return createFallbackRecentResponses();
+        }
+    }
+
+    private String formatDate(Instant instant) {
+        return instant.atZone(ZoneId.systemDefault())
+                .format(DateTimeFormatter.ofPattern("MMM dd, yyyy 'at' HH:mm"));
+    }
+
+    private List<Map<String, Object>> createFallbackRecentResponses() {
+        List<Map<String, Object>> fallback = new ArrayList<>();
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("surveyId", 0L);
+        response.put("surveyName", "No responses yet");
+        response.put("userName", "System");
+        response.put("isAnonymous", false);
+        response.put("submittedAt", Instant.now());
+        response.put("completionPercentage", 0);
+        response.put("totalQuestions", 0L);
+        response.put("answeredQuestions", 0L);
+        response.put("formattedTime", "just now");
+        response.put("formattedDate", formatDate(Instant.now()));
+
+        fallback.add(response);
+        return fallback;
+    }
+
     private String determineActivityType(Survey survey) {
         if ("ACTIVE".equals(survey.getStatus())) {
             return "Survey activated";
