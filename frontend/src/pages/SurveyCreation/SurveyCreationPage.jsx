@@ -1133,7 +1133,7 @@ function QuestionEditor({
                     )}
 
                     {/* Preview */}
-                    <div className={styles.preview}>
+                    {/* <div className={styles.preview}>
                         <label className={styles.label}>Preview</label>
                         <div className={styles.previewContent}>
                             <QuestionPreview
@@ -1142,7 +1142,7 @@ function QuestionEditor({
                                 multipleChoiceOptions={multipleChoiceOptions}
                             />
                         </div>
-                    </div>
+                    </div> */}
                 </div>
             )}
         </div>
