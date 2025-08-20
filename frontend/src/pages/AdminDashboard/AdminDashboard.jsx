@@ -38,7 +38,7 @@ import styles from "./AdminDashboard.module.css";
 import { apiClient } from "../../utils/apiClient";
 import { Dialog } from "../../components";
 import { useDialog } from "../../hooks/useDialog";
-import { SurveyService, AnalyticsService } from "../../services/apiServices";
+import { SurveyService, AnalyticsService, ResponseService } from "../../services/apiServices";
 
 export default function AdminDashboard() {
   const [surveys, setSurveys] = useState([]);
@@ -61,6 +61,7 @@ export default function AdminDashboard() {
   const [activeDropdown, setActiveDropdown] = useState(null);
   const [responseTrends, setResponseTrends] = useState([]);
   const [recentActivity, setRecentActivity] = useState([]);
+  const [recentResponses, setRecentResponses] = useState([]);
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const {
@@ -83,17 +84,19 @@ export default function AdminDashboard() {
         setError(null);
 
         // Fetch surveys and analytics data in parallel
-        const [surveysResponse, responseTrendsData, recentActivityData, overviewData] = await Promise.all([
+        const [surveysResponse, responseTrendsData, recentActivityData, overviewData, recentResponsesData] = await Promise.all([
           apiClient.get('/surveys/admin'),
           AnalyticsService.getResponseTrends(10), // Last 10 days for the chart
           AnalyticsService.getRecentActivity(4), // Last 4 activities
-          AnalyticsService.getDashboardOverview()
+          AnalyticsService.getDashboardOverview(),
+          ResponseService.getAllResponses() // Get all responses and we'll filter to latest 5
         ]);
 
         console.log('Full API Response:', surveysResponse);
         console.log('Response trends:', responseTrendsData);
         console.log('Recent activity:', recentActivityData);
         console.log('Overview data:', overviewData);
+        console.log('Recent responses:', recentResponsesData);
 
         // Handle surveys data
         let surveysArray = [];
@@ -112,6 +115,22 @@ export default function AdminDashboard() {
         // Set analytics data
         setResponseTrends(responseTrendsData || []);
         setRecentActivity(recentActivityData || []);
+
+        // Process recent responses - get latest 5
+        let processedResponses = [];
+        if (Array.isArray(recentResponsesData)) {
+          processedResponses = recentResponsesData
+            .sort((a, b) => new Date(b.submittedAt) - new Date(a.submittedAt))
+            .slice(0, 5)
+            .map(response => ({
+              ...response,
+              surveyTitle: response.surveyTitle || 'Unknown Survey',
+              respondentName: response.respondentName || null,
+              submittedAt: response.submittedAt,
+              completionPercentage: response.completionPercentage || 0
+            }));
+        }
+        setRecentResponses(processedResponses);
 
         // Update statistics with overview data or calculate from surveys
         if (overviewData) {
@@ -156,6 +175,7 @@ export default function AdminDashboard() {
         setRecentActivity([
           { id: 1, action: "System initialized", survey: "Welcome", time: "just now", type: "system" }
         ]);
+        setRecentResponses([]);
       } finally {
         setLoading(false);
       }
@@ -292,6 +312,32 @@ export default function AdminDashboard() {
       day: 'numeric',
       year: 'numeric'
     });
+  };
+
+  const formatDateTime = (dateString) => {
+    return new Date(dateString).toLocaleString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true
+    });
+  };
+
+  const getTimeAgo = (dateString) => {
+    const now = new Date();
+    const date = new Date(dateString);
+    const diffInMs = now - date;
+    const diffInMinutes = Math.floor(diffInMs / (1000 * 60));
+    const diffInHours = Math.floor(diffInMs / (1000 * 60 * 60));
+    const diffInDays = Math.floor(diffInMs / (1000 * 60 * 60 * 24));
+
+    if (diffInMinutes < 1) return 'just now';
+    if (diffInMinutes < 60) return `${diffInMinutes}m ago`;
+    if (diffInHours < 24) return `${diffInHours}h ago`;
+    if (diffInDays < 7) return `${diffInDays}d ago`;
+    return formatDate(dateString);
   };
 
   const getTrendIcon = (current, previous) => {
@@ -759,32 +805,65 @@ export default function AdminDashboard() {
           </div>
         </div>
 
-        {/* Recent Activity */}
+        {/* Recent Responses */}
         <div className={styles.section}>
           <div className={styles.sectionHeader}>
             <h2 className={styles.sectionTitle}>
               <svg className={styles.sectionIcon} viewBox="0 0 24 24" fill="currentColor">
-                <path d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+                <path d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25zM6.75 12h.008v.008H6.75V12zm0 3h.008v.008H6.75V15zm0 3h.008v.008H6.75V18z" />
               </svg>
-              Recent Activity
+              Recent Responses
             </h2>
-            <p className={styles.sectionSubtitle}>Latest platform activity and updates</p>
+            <p className={styles.sectionSubtitle}>Latest 5 survey responses submitted</p>
           </div>
           <div className={styles.sectionContent}>
-            <div className={styles.activityList}>
-              {mockChartData.recentActivity.map((activity) => (
-                <div key={activity.id} className={styles.activityItem}>
-                  <svg className={styles.activityIcon} viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 01-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 011.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 00-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 01-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 00-3.375-3.375h-1.5a1.125 1.125 0 01-1.125-1.125v-1.5a3.375 3.375 0 00-3.375-3.375H9.75" />
+            <div className={styles.responsesList}>
+              {recentResponses.length === 0 ? (
+                <div className={styles.emptyResponsesState}>
+                  <svg className={styles.emptyResponsesIcon} viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25zM6.75 12h.008v.008H6.75V12zm0 3h.008v.008H6.75V15zm0 3h.008v.008H6.75V18z" />
                   </svg>
-                  <div className={styles.activityContent}>
-                    <div className={styles.activityTitle}>
-                      {activity.action} - {activity.survey}
-                    </div>
-                    <div className={styles.activityTime}>{activity.time}</div>
-                  </div>
+                  <div className={styles.emptyResponsesTitle}>No responses yet</div>
+                  <div className={styles.emptyResponsesDescription}>Survey responses will appear here when submitted</div>
                 </div>
-              ))}
+              ) : (
+                recentResponses.map((response, index) => (
+                  <div key={response.id || index} className={styles.responseItem}>
+                    <div className={styles.responseIcon}>
+                      <svg viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25zM6.75 12h.008v.008H6.75V12zm0 3h.008v.008H6.75V15zm0 3h.008v.008H6.75V18z" />
+                      </svg>
+                    </div>
+                    <div className={styles.responseContent}>
+                      <div className={styles.responseHeader}>
+                        <div className={styles.responseSurvey}>{response.surveyTitle}</div>
+                        <div className={styles.responseTime} title={formatDateTime(response.submittedAt)}>
+                          {getTimeAgo(response.submittedAt)}
+                        </div>
+                      </div>
+                      <div className={styles.responseDetails}>
+                        <div className={styles.responseUser}>
+                          <svg className={styles.userIcon} viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+                          </svg>
+                          <span>{response.respondentName || 'Anonymous User'}</span>
+                        </div>
+                        <div className={styles.responseCompletion}>
+                          <div className={styles.completionText}>
+                            {response.completionPercentage}% completed
+                          </div>
+                          <div className={styles.completionBar}>
+                            <div
+                              className={styles.completionFill}
+                              style={{ width: `${response.completionPercentage}%` }}
+                            ></div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           </div>
         </div>
