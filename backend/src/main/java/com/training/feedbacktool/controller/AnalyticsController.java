@@ -46,7 +46,7 @@ public class AnalyticsController {
      */
     @GetMapping("/recent-activity")
     public ResponseEntity<ApiResponse<List<Map<String, Object>>>> getRecentActivity(
-            @RequestParam(defaultValue = "50") int limit) {
+            @RequestParam(defaultValue = "5") int limit) {
         try {
             List<Map<String, Object>> activities = analyticsService.getRecentActivity(limit);
             ApiResponse<List<Map<String, Object>>> response = ApiResponse.success(activities,

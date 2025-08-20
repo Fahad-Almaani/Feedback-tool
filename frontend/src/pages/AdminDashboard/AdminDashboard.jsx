@@ -59,9 +59,10 @@ export default function AdminDashboard() {
   const [isVisible, setIsVisible] = useState(false);
   const [error, setError] = useState(null);
   const [activeDropdown, setActiveDropdown] = useState(null);
-  const [responseTrends, setResponseTrends] = useState([]);
+  const [responseTrends, setResponseTrends] = useState([{ date: "", responses: 0 }]); // Initialize with an empty object to avoid rendering issues
   const [recentActivity, setRecentActivity] = useState([]);
   const [recentResponses, setRecentResponses] = useState([]);
+  const [chartData, setChartData] = useState([]); // State for chart data
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const {
@@ -92,11 +93,11 @@ export default function AdminDashboard() {
           AnalyticsService.getRecentResponses(5) // Get latest 5 responses with detailed info
         ]);
 
-        console.log('Full API Response:', surveysResponse);
-        console.log('Response trends:', responseTrendsData);
-        console.log('Recent activity:', recentActivityData);
-        console.log('Overview data:', overviewData);
-        console.log('Recent responses:', recentResponsesData);
+        // console.log('Full API Response:', surveysResponse);
+        // console.log('Response trends:', responseTrendsData);
+        // console.log('Recent activity:', recentActivityData);
+        // console.log('Overview data:', overviewData);
+        // console.log('Recent responses:', recentResponsesData);
 
         // Handle surveys data
         let surveysArray = [];
@@ -105,19 +106,19 @@ export default function AdminDashboard() {
         } else if (surveysResponse && Array.isArray(surveysResponse.data)) {
           surveysArray = surveysResponse.data;
         } else {
-          console.warn('Unexpected response format:', surveysResponse);
+          // console.warn('Unexpected response format:', surveysResponse);
           surveysArray = [];
         }
 
-        console.log('Final surveys array:', surveysArray);
+        // console.log('Final surveys array:', surveysArray);
         setSurveys(surveysArray);
 
         // Set analytics data - extract the data array from the response
-        setResponseTrends(responseTrendsData?.data || []);
+        setResponseTrends(responseTrendsData || []);
         setRecentActivity(recentActivityData || []);
-
-        console.log('Setting responseTrends to:', responseTrendsData?.data);
-        console.log('responseTrendsData length:', responseTrendsData?.data?.length || 0);
+        // console.log(responseTrendsData)
+        // console.log('Setting responseTrends to:', responseTrendsData?.data);
+        // console.log('responseTrendsData length:', responseTrendsData?.data?.length || 0);
 
         // Process recent responses - get latest 5 with detailed info
         let processedResponses = [];
@@ -189,23 +190,27 @@ export default function AdminDashboard() {
 
   // Mock data for charts (keeping these as they require more complex backend changes)
 
-  console.log('responseTrends received:', responseTrends);
-  console.log('responseTrends length:', responseTrends?.length);
-  console.log('First responseTrends item:', responseTrends?.[0]);
+  // console.log('responseTrends received:', responseTrends);
+  // console.log('responseTrends length:', responseTrends?.length);
+  // console.log('First responseTrends item:', responseTrends?.[0]);
 
-  // Determine chart data to use - prioritize real data
-  const chartData = responseTrends && responseTrends.length > 0
-    ? responseTrends.map(item => ({
-      date: item.date || item.day,  // Handle different date field names
-      responses: item.responses || item.count || 0  // Handle different response count field names
-    }))
-    : [
-      { date: "No Data", responses: 0 }
-    ];
+  // Determine chart data to use - only render when data is available
+  // let chartData = responseTrends
+  useEffect(() => {
+    if (responseTrends && Object.keys(responseTrends).length > 0) {
+      setChartData(
+        Object.values(responseTrends).map((item) => ({
+          date: item.date,
+          responses: item.responses || 0
+        }))
+      );
+    }
+    console.log("responseTrends", responseTrends);
+  }, [responseTrends]);
 
-  console.log('Final chart data:', chartData);
-  console.log('Chart data length:', chartData.length);
-  console.log('First chart item:', chartData[0]); const handleLogout = () => {
+
+
+  console.log('loading state:', loading); const handleLogout = () => {
     logout();
   };
 
@@ -736,37 +741,48 @@ export default function AdminDashboard() {
               <p className={styles.sectionSubtitle}>Real-time response activity trends</p>
             </div>
             <div className={styles.sectionContent}>
-              <div className={styles.chartContainer}>
-                <ResponsiveContainer width="100%" height={300}>
-                  <AreaChart data={chartData}>
-                    <defs>
-                      <linearGradient id="colorResponses" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#667eea" stopOpacity={0.8} />
-                        <stop offset="95%" stopColor="#667eea" stopOpacity={0.1} />
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.3)" />
-                    <XAxis dataKey="date" stroke="#718096" />
-                    <YAxis stroke="#718096" />
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: 'rgba(255,255,255,0.95)',
-                        border: 'none',
-                        borderRadius: '12px',
-                        boxShadow: '0 10px 15px rgba(0,0,0,0.1)'
-                      }}
-                    />
-                    <Area
-                      type="monotone"
-                      dataKey="responses"
-                      stroke="#667eea"
-                      strokeWidth={3}
-                      fillOpacity={1}
-                      fill="url(#colorResponses)"
-                    />
-                  </AreaChart>
-                </ResponsiveContainer>
-              </div>
+              {loading ? (
+                <div className={styles.chartLoadingContainer}>
+                  <div className={styles.spinner}></div>
+                  <div className={styles.loadingText}>Loading response trends...</div>
+                </div>
+              ) : chartData.length === 0 ? (
+                <div className={styles.chartEmptyContainer}>
+                  <div className={styles.emptyChartMessage}>No response data available</div>
+                </div>
+              ) : (
+                <div className={styles.chartContainer}>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <AreaChart data={chartData}>
+                      <defs>
+                        <linearGradient id="colorResponses" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#667eea" stopOpacity={0.8} />
+                          <stop offset="95%" stopColor="#667eea" stopOpacity={0.1} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.3)" />
+                      <XAxis dataKey="date" stroke="#718096" />
+                      <YAxis stroke="#718096" />
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: 'rgba(255,255,255,0.95)',
+                          border: 'none',
+                          borderRadius: '12px',
+                          boxShadow: '0 10px 15px rgba(0,0,0,0.1)'
+                        }}
+                      />
+                      <Area
+                        type="monotone"
+                        dataKey="responses"
+                        stroke="#667eea"
+                        strokeWidth={3}
+                        fillOpacity={1}
+                        fill="url(#colorResponses)"
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
             </div>
           </div>
 
