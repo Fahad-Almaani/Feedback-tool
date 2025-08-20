@@ -10,6 +10,13 @@ const CONFIG = {
 
 // Auth utility functions
 const authUtils = {
+  // Navigation callback - will be set by AuthContext
+  navigationCallback: null,
+
+  setNavigationCallback(callback) {
+    this.navigationCallback = callback;
+  },
+
   getToken() {
     return localStorage.getItem(CONFIG.TOKEN_KEY);
   },
@@ -29,7 +36,16 @@ const authUtils = {
 
   logout() {
     this.removeToken();
-    window.location.href = "/login";
+    // Use React Router navigation instead of window.location
+    if (this.navigationCallback) {
+      this.navigationCallback("/login");
+    } else {
+      // Fallback for edge cases (should rarely happen)
+      console.warn(
+        "Navigation callback not set, falling back to window.location"
+      );
+      window.location.href = "/login";
+    }
   },
 };
 
@@ -56,6 +72,8 @@ axiosInstance.interceptors.request.use(
       }
     }
 
+    // Store request info for error handling
+    config._isAuthEndpoint = isAuthEndpoint;
     return config;
   },
   (error) => {
@@ -149,8 +167,14 @@ axiosInstance.interceptors.response.use(
         // Handle specific status codes
         switch (status) {
           case 401:
-            authUtils.logout();
-            apiError.message = "Session expired. Please login again.";
+            // Only logout if this is NOT an auth endpoint (login/register)
+            if (!error.config?._isAuthEndpoint) {
+              authUtils.logout();
+              apiError.message = "Session expired. Please login again.";
+            } else {
+              // For auth endpoints, just pass through the error without logout
+              apiError.message = data.message || "Invalid credentials";
+            }
             break;
           case 403:
             apiError.message =
@@ -167,8 +191,14 @@ axiosInstance.interceptors.response.use(
       // Handle legacy error responses
       switch (status) {
         case 401:
-          authUtils.logout();
-          throw new Error("Session expired. Please login again.");
+          // Only logout if this is NOT an auth endpoint (login/register)
+          if (!error.config?._isAuthEndpoint) {
+            authUtils.logout();
+            throw new Error("Session expired. Please login again.");
+          } else {
+            // For auth endpoints, just pass through the error without logout
+            throw new Error(data?.message || "Invalid credentials");
+          }
         case 403:
           throw new Error(
             "Access denied. You don't have permission to perform this action."
