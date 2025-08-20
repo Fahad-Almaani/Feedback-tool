@@ -406,4 +406,12 @@ export class UserService {
       errors,
     };
   }
+
+  /**
+   * Get user dashboard data
+   */
+  static async getUserDashboard() {
+    const response = await apiClient.get(`${this.baseUrl}/dashboard`);
+    return apiClient.extractData(response);
+  }
 }
