@@ -86,7 +86,7 @@ export default function AdminDashboard() {
         // Fetch surveys and analytics data in parallel
         const [surveysResponse, responseTrendsData, recentActivityData, overviewData, recentResponsesData] = await Promise.all([
           apiClient.get('/surveys/admin'),
-          AnalyticsService.getResponseTrends(10), // Last 10 days for the chart
+          AnalyticsService.getResponseTrends(30), // Last 30 days for the chart (whole month)
           AnalyticsService.getRecentActivity(4), // Last 4 activities
           AnalyticsService.getDashboardOverview(),
           AnalyticsService.getRecentResponses(5) // Get latest 5 responses with detailed info
@@ -112,9 +112,12 @@ export default function AdminDashboard() {
         console.log('Final surveys array:', surveysArray);
         setSurveys(surveysArray);
 
-        // Set analytics data
-        setResponseTrends(responseTrendsData || []);
+        // Set analytics data - extract the data array from the response
+        setResponseTrends(responseTrendsData?.data || []);
         setRecentActivity(recentActivityData || []);
+
+        console.log('Setting responseTrends to:', responseTrendsData?.data);
+        console.log('responseTrendsData length:', responseTrendsData?.data?.length || 0);
 
         // Process recent responses - get latest 5 with detailed info
         let processedResponses = [];
@@ -185,18 +188,24 @@ export default function AdminDashboard() {
   }, []);
 
   // Mock data for charts (keeping these as they require more complex backend changes)
-  const mockChartData = {
-    responsesOverTime: responseTrends.length > 0 ? responseTrends : [
-      { date: "Aug 1", responses: 0 },
-      { date: "Aug 2", responses: 0 },
-      { date: "Aug 3", responses: 0 }
-    ],
-    recentActivity: recentActivity.length > 0 ? recentActivity : [
-      { id: 1, action: "System ready", survey: "Dashboard loaded", time: "just now" }
-    ]
-  };
 
-  const handleLogout = () => {
+  console.log('responseTrends received:', responseTrends);
+  console.log('responseTrends length:', responseTrends?.length);
+  console.log('First responseTrends item:', responseTrends?.[0]);
+
+  // Determine chart data to use - prioritize real data
+  const chartData = responseTrends && responseTrends.length > 0
+    ? responseTrends.map(item => ({
+      date: item.date || item.day,  // Handle different date field names
+      responses: item.responses || item.count || 0  // Handle different response count field names
+    }))
+    : [
+      { date: "No Data", responses: 0 }
+    ];
+
+  console.log('Final chart data:', chartData);
+  console.log('Chart data length:', chartData.length);
+  console.log('First chart item:', chartData[0]); const handleLogout = () => {
     logout();
   };
 
@@ -729,7 +738,7 @@ export default function AdminDashboard() {
             <div className={styles.sectionContent}>
               <div className={styles.chartContainer}>
                 <ResponsiveContainer width="100%" height={300}>
-                  <AreaChart data={mockChartData.responsesOverTime}>
+                  <AreaChart data={chartData}>
                     <defs>
                       <linearGradient id="colorResponses" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="5%" stopColor="#667eea" stopOpacity={0.8} />
