@@ -45,6 +45,31 @@ export const useDialog = () => {
     }));
   }, []);
 
+  // Promise-based dialog method
+  const showDialog = useCallback(
+    (config) => {
+      return new Promise((resolve) => {
+        const handleConfirm = () => {
+          resolve(true);
+          closeDialog();
+        };
+
+        const handleCancel = () => {
+          resolve(false);
+          closeDialog();
+        };
+
+        openDialog({
+          ...config,
+          onConfirm: handleConfirm,
+          onCancel: handleCancel,
+          showCancel: config.type === "danger" || config.showCancel !== false,
+        });
+      });
+    },
+    [openDialog, closeDialog]
+  );
+
   // Convenience methods for different dialog types
   const showAlert = useCallback(
     (title, message, confirmText = "OK") => {
@@ -155,6 +180,7 @@ export const useDialog = () => {
     openDialog,
     closeDialog,
     setLoading,
+    showDialog,
     showAlert,
     showWarning,
     showDanger,

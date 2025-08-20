@@ -49,10 +49,14 @@ import {
     ChevronUp,
     ExternalLink,
     Copy,
-    RefreshCw
+    RefreshCw,
+    Edit3,
+    Trash2
 } from "lucide-react";
 import styles from "./SurveyViewPage.module.css";
 import { SurveyService, ResponseService } from "../../services/apiServices";
+import { useDialog } from "../../hooks/useDialog";
+import Dialog from "../../components/Dialog";
 
 const COLORS = {
     primary: "#667eea",
@@ -73,6 +77,7 @@ export default function SurveyViewPage() {
     const { surveyId } = useParams();
     const navigate = useNavigate();
     const { user } = useAuth();
+    const { dialogState, showDialog, closeDialog } = useDialog();
 
     // State management
     const [surveyDetails, setSurveyDetails] = useState(null);
@@ -284,6 +289,41 @@ export default function SurveyViewPage() {
         }
     };
 
+    const handleDeleteSurvey = async () => {
+        const confirmed = await showDialog({
+            title: "Delete Survey",
+            message: `Are you sure you want to delete "${surveyDetails?.title}"? This action cannot be undone.`,
+            type: "danger",
+            confirmText: "Delete",
+            cancelText: "Cancel"
+        });
+
+        if (confirmed) {
+            try {
+                await SurveyService.deleteSurvey(surveyId);
+                // Show success message and navigate back
+                navigate("/admin", {
+                    state: {
+                        message: "Survey deleted successfully",
+                        type: "success"
+                    }
+                });
+            } catch (error) {
+                console.error("Failed to delete survey:", error);
+                await showDialog({
+                    title: "Delete Failed",
+                    message: "Failed to delete the survey. Please try again.",
+                    type: "error",
+                    confirmText: "OK"
+                });
+            }
+        }
+    };
+
+    const handleEditSurvey = () => {
+        navigate(`/admin/surveys/${surveyId}/edit`);
+    };
+
     if (loading) {
         return (
             <div className={styles.surveyViewPage}>
@@ -373,6 +413,22 @@ export default function SurveyViewPage() {
                         </div>
                     </div>
                     <div className={styles.headerActions}>
+                        <button
+                            onClick={handleEditSurvey}
+                            className={styles.actionButton}
+                            title="Edit Survey"
+                        >
+                            <Edit3 size={16} />
+                            Edit
+                        </button>
+                        <button
+                            onClick={handleDeleteSurvey}
+                            className={`${styles.actionButton} ${styles.dangerButton}`}
+                            title="Delete Survey"
+                        >
+                            <Trash2 size={16} />
+                            Delete
+                        </button>
                         <button
                             onClick={() => setShowShareModal(true)}
                             className={styles.actionButton}
@@ -1236,6 +1292,12 @@ export default function SurveyViewPage() {
                     </div>
                 </div>
             )}
+
+            {/* Dialog Component */}
+            <Dialog
+                {...dialogState}
+                onClose={closeDialog}
+            />
         </div>
     );
 }
