@@ -305,7 +305,7 @@ export default function SurveyViewPage() {
     const exportData = async (format = 'csv', type = 'responses') => {
         try {
             console.log(`Starting export of type: ${type}`);
-            setExportLoading(true);
+            // setExportLoading(true);
 
             // Add a small delay to ensure loading state is visible
             await new Promise(resolve => setTimeout(resolve, 500));
