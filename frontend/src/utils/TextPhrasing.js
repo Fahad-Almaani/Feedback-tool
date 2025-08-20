@@ -30,7 +30,7 @@ export const improveTextPhrasing = async ({
     maxLength,
     context,
     tone,
-    preserveLength
+    preserveLength,
   });
 
   if (!text || !text.trim()) {
@@ -108,8 +108,8 @@ Focus on clarity, flow, and readability.`,
     systemPrompt: config.systemPrompt.substring(0, 100) + "...",
     config: {
       temperature: 0.7,
-      maxTokens: Math.ceil(config.maxLength / 2)
-    }
+      maxTokens: Math.ceil(config.maxLength / 2),
+    },
   });
 
   try {
@@ -121,17 +121,21 @@ Focus on clarity, flow, and readability.`,
     });
 
     console.log("📥 TextPhrasing - Received response:", {
-      improvedText: improvedText?.substring(0, 200) + (improvedText?.length > 200 ? "..." : ""),
+      improvedText:
+        improvedText?.substring(0, 200) +
+        (improvedText?.length > 200 ? "..." : ""),
       originalLength: text.length,
-      improvedLength: improvedText?.length
+      improvedLength: improvedText?.length,
     });
 
     // Basic cleanup - remove quotes if AI added them
     const cleanedText = improvedText.trim().replace(/^["']|["']$/g, "");
 
     console.log("🧹 TextPhrasing - After cleanup:", {
-      cleanedText: cleanedText?.substring(0, 200) + (cleanedText?.length > 200 ? "..." : ""),
-      length: cleanedText?.length
+      cleanedText:
+        cleanedText?.substring(0, 200) +
+        (cleanedText?.length > 200 ? "..." : ""),
+      length: cleanedText?.length,
     });
 
     // Validate length if maxLength is specified
@@ -139,22 +143,25 @@ Focus on clarity, flow, and readability.`,
       // Truncate if too long, but try to end at a word boundary
       const truncated = cleanedText.substring(0, config.maxLength);
       const lastSpace = truncated.lastIndexOf(" ");
-      const finalText = lastSpace > config.maxLength * 0.8
-        ? truncated.substring(0, lastSpace) + "..."
-        : truncated;
-      
+      const finalText =
+        lastSpace > config.maxLength * 0.8
+          ? truncated.substring(0, lastSpace) + "..."
+          : truncated;
+
       console.log("✂️ TextPhrasing - Truncated text:", {
         original: cleanedText.length,
         truncated: finalText.length,
-        text: finalText.substring(0, 100) + "..."
+        text: finalText.substring(0, 100) + "...",
       });
-      
+
       return finalText;
     }
 
     console.log("✅ TextPhrasing - Final result:", {
-      text: cleanedText?.substring(0, 200) + (cleanedText?.length > 200 ? "..." : ""),
-      length: cleanedText?.length
+      text:
+        cleanedText?.substring(0, 200) +
+        (cleanedText?.length > 200 ? "..." : ""),
+      length: cleanedText?.length,
     });
 
     return cleanedText;
@@ -162,7 +169,7 @@ Focus on clarity, flow, and readability.`,
     console.error("❌ TextPhrasing - Error improving text:", error);
     console.error("❌ TextPhrasing - Error details:", {
       message: error.message,
-      stack: error.stack
+      stack: error.stack,
     });
     throw new Error("Failed to improve text. Please try again.");
   }

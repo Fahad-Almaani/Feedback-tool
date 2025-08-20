@@ -132,14 +132,14 @@ export default function SurveyCreationPage() {
         try {
             console.log("🚀 SurveyCreation - Calling improveSurveyTitle...");
             const improvedTitle = await improveSurveyTitle(currentTitle);
-            
+
             console.log("✅ SurveyCreation - Title improved:", {
                 original: currentTitle,
                 improved: improvedTitle,
                 originalLength: currentTitle.length,
                 improvedLength: improvedTitle?.length
             });
-            
+
             setSurvey(prev => ({ ...prev, title: improvedTitle }));
             setUnsavedChanges(true);
             if (errors.title) {
@@ -168,14 +168,14 @@ export default function SurveyCreationPage() {
         try {
             console.log("🚀 SurveyCreation - Calling improveSurveyDescription...");
             const improvedDescription = await improveSurveyDescription(currentDescription);
-            
+
             console.log("✅ SurveyCreation - Description improved:", {
                 original: currentDescription,
                 improved: improvedDescription,
                 originalLength: currentDescription.length,
                 improvedLength: improvedDescription?.length
             });
-            
+
             setSurvey(prev => ({ ...prev, description: improvedDescription }));
             setUnsavedChanges(true);
             return improvedDescription; // Return the improved text

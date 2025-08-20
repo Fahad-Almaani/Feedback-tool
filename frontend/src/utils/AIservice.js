@@ -18,17 +18,19 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 export const generateFromAI = async ({
   prompt,
   systemPrompt = null,
-  model = "gemini-2.5-flash-preview-05-20",
+  model = "gemini-1.5-pro",
   temperature = 0.7,
   maxTokens = null,
   generationConfig = {},
 }) => {
   console.log("🤖 AI Service - Starting generation with:", {
     prompt: prompt?.substring(0, 100) + (prompt?.length > 100 ? "..." : ""),
-    systemPrompt: systemPrompt?.substring(0, 100) + (systemPrompt?.length > 100 ? "..." : ""),
+    systemPrompt:
+      systemPrompt?.substring(0, 100) +
+      (systemPrompt?.length > 100 ? "..." : ""),
     model,
     temperature,
-    maxTokens
+    maxTokens,
   });
 
   // Get the API key from environment variables
@@ -54,7 +56,7 @@ export const generateFromAI = async ({
     config.maxOutputTokens = maxTokens;
   }
 
-  console.log("🔧 Generation config:", config);
+  //   console.log("🔧 Generation config:", config);
 
   // Get the generative model to use.
   const generativeModel = genAI.getGenerativeModel({
@@ -63,31 +65,53 @@ export const generateFromAI = async ({
     systemInstruction: systemPrompt || undefined,
   });
 
-  console.log("📡 Making API call to Gemini...");
+  //   console.log("📡 Making API call to Gemini...");
 
   try {
     // Call the generateContent method to get a response.
     const result = await generativeModel.generateContent(prompt);
 
-    console.log("📥 Raw API response received:", result);
+    console.log("📥 Full API result:", JSON.stringify(result, null, 2));
 
-    // Extract the text from the response.
-    const response = await result.response;
-    console.log("📝 Response object:", response);
-    
-    const text = response.text();
-    console.log("✅ Final text extracted:", {
+    // Extract the text - handle different response structures
+    let text = null;
+
+    // Try the standard SDK response method first
+    try {
+      const response = await result.response;
+      text = response.text();
+      console.log("✅ Using response.text() method:", text);
+    } catch (responseError) {
+      console.log("⚠️ response.text() failed, trying direct access...");
+
+      // Fallback to direct access
+      if (result.response?.candidates?.[0]?.content?.parts?.[0]?.text) {
+        text = result.response.candidates[0].content.parts[0].text;
+        console.log("✅ Using result.response.candidates direct access:", text);
+      } else if (result.candidates?.[0]?.content?.parts?.[0]?.text) {
+        text = result.candidates[0].content.parts[0].text;
+        console.log("✅ Using result.candidates direct access:", text);
+      }
+    }
+
+    console.log("✅ Final text extraction:", {
       text: text?.substring(0, 200) + (text?.length > 200 ? "..." : ""),
-      length: text?.length
+      length: text?.length,
+      fullText: text,
     });
 
-    return text;
+    if (!text || text.trim() === "") {
+      console.error("❌ No text found in response");
+      return "No text generated from AI.";
+    }
+
+    return text.trim();
   } catch (error) {
     console.error("❌ Error calling the Gemini API:", error);
     console.error("❌ Error details:", {
       message: error.message,
       stack: error.stack,
-      name: error.name
+      name: error.name,
     });
     // Return an error message to the calling component.
     return "An error occurred while generating content.";
