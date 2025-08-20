@@ -231,6 +231,13 @@
   box-shadow: var(--shadow-lg);
 }
 
+.actionButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none !important;
+  background: rgba(255, 255, 255, 0.05) !important;
+}
+
 .dangerButton {
   background: rgba(239, 68, 68, 0.1) !important;
   border-color: rgba(239, 68, 68, 0.3) !important;
@@ -264,6 +271,87 @@
 .primaryButton:hover {
   transform: translateY(-2px);
   box-shadow: var(--shadow-xl);
+}
+
+/* Export Dropdown Styles */
+.exportDropdownContainer {
+  position: relative;
+  display: inline-block;
+}
+
+.dropdownIcon {
+  transition: transform var(--transition-normal);
+}
+
+.exportDropdownContainer:hover .dropdownIcon {
+  transform: rotate(180deg);
+}
+
+.exportDropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  background: var(--bg-overlay);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: var(--radius-xl);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+  z-index: 1000;
+  min-width: 260px;
+  padding: var(--space-sm);
+  animation: dropdownFadeIn 0.2s ease-out;
+}
+
+@keyframes dropdownFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.exportOption {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-sm);
+  width: 100%;
+  padding: var(--space-sm) var(--space-md);
+  background: transparent;
+  color: var(--text-primary);
+  border: none;
+  border-radius: var(--radius-lg);
+  font-size: var(--font-size-sm);
+  text-align: left;
+  cursor: pointer;
+  transition: all var(--transition-normal);
+}
+
+.exportOption:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.1);
+  transform: translateX(4px);
+}
+
+.exportOption:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.exportOption span {
+  flex: 1;
+}
+
+.exportOption div:first-child {
+  font-weight: 500;
+  margin-bottom: 2px;
+}
+
+.exportOptionDesc {
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+  font-weight: 400;
 }
 
 /* Tab Navigation */
