@@ -594,6 +594,63 @@
   height: 16px;
 }
 
+/* Dropdown Styles */
+.dropdownContainer {
+  position: relative;
+}
+
+.dropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  min-width: 160px;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: var(--radius-md);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1),
+    0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  z-index: 50;
+  padding: var(--space-xs) 0;
+  animation: dropdownSlide 0.15s ease-out;
+}
+
+@keyframes dropdownSlide {
+  from {
+    opacity: 0;
+    transform: translateY(-5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.dropdownItem {
+  width: 100%;
+  padding: var(--space-sm) var(--space-md);
+  border: none;
+  background: none;
+  color: #374151;
+  font-size: 0.875rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  transition: background-color var(--transition-fast);
+  text-align: left;
+}
+
+.dropdownItem:hover {
+  background: #f3f4f6;
+  color: #dc2626;
+}
+
+.dropdownItem svg {
+  width: 14px;
+  height: 14px;
+  color: #dc2626;
+}
+
 .surveyMetaGrid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -1341,3 +1398,177 @@
 }
 
 /* Survey Description with fixed height - moved to surveyCardContent section */
+
+/* Recent Responses Styles */
+.responsesList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.responseItem {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-sm);
+  padding: var(--space-md);
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: var(--radius-md);
+  transition: all var(--transition-fast);
+}
+
+.responseItem:hover {
+  background: rgba(255, 255, 255, 0.5);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.responseIcon {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--primary-gradient);
+  color: var(--text-white);
+  border-radius: var(--radius-md);
+  flex-shrink: 0;
+}
+
+.responseIcon svg {
+  width: 20px;
+  height: 20px;
+}
+
+.responseContent {
+  flex: 1;
+  min-width: 0;
+}
+
+.responseHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: var(--space-xs);
+  gap: var(--space-sm);
+}
+
+.responseSurvey {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--text-primary);
+  line-height: 1.3;
+  flex: 1;
+}
+
+.responseTime {
+  font-size: var(--font-size-xs);
+  color: var(--text-light);
+  white-space: nowrap;
+  cursor: help;
+}
+
+.responseDetails {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-md);
+}
+
+.responseUser {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+}
+
+.userIcon {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+}
+
+.responseCompletion {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  min-width: 80px;
+}
+
+.completionText {
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.completionBar {
+  width: 60px;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.completionFill {
+  height: 100%;
+  background: var(--success-gradient);
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
+
+.emptyResponsesState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-xl);
+  text-align: center;
+  gap: var(--space-md);
+}
+
+.emptyResponsesIcon {
+  width: 48px;
+  height: 48px;
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.emptyResponsesTitle {
+  font-size: var(--font-size-md);
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.emptyResponsesDescription {
+  font-size: var(--font-size-sm);
+  color: var(--text-light);
+  margin: 0;
+}
+
+/* Responsive adjustments for responses */
+@media (max-width: 768px) {
+  .responseDetails {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-xs);
+  }
+
+  .responseCompletion {
+    align-items: flex-start;
+    width: 100%;
+  }
+
+  .completionBar {
+    width: 100%;
+  }
+
+  .responseHeader {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .responseTime {
+    margin-top: 2px;
+  }
+}

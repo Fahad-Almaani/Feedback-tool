@@ -1,8 +1,9 @@
 import React, { useState, useCallback, useEffect, useRef } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { apiClient } from "../../utils/apiClient";
-import { useNavigate } from "react-router-dom";
-import styles from "./SurveyCreationPage.module.css";
+import { useNavigate, useParams } from "react-router-dom";
+import { SurveyService } from "../../services/apiServices";
+import styles from "./EditSurveyPage.module.css";
 
 const QUESTION_TYPES = {
     TEXT: { label: "Short Text", icon: "📝", description: "Brief text responses" },
@@ -11,54 +12,10 @@ const QUESTION_TYPES = {
     MULTIPLE_CHOICE: { label: "Multiple Choice", icon: "☑️", description: "Select from options" }
 };
 
-const SURVEY_TEMPLATES = [
-    {
-        name: "Customer Satisfaction",
-        description: "Standard customer feedback survey",
-        questions: [
-            { type: "RATING", text: "How satisfied are you with our service?", ratingScale: 5 },
-            { type: "MULTIPLE_CHOICE", text: "How likely are you to recommend us?", options: ["Very likely", "Likely", "Neutral", "Unlikely", "Very unlikely"] },
-            { type: "LONG_TEXT", text: "What can we improve?" }
-        ]
-    },
-    {
-        name: "Event Feedback",
-        description: "Gather feedback about events",
-        questions: [
-            { type: "RATING", text: "How would you rate the event overall?", ratingScale: 10 },
-            { type: "MULTIPLE_CHOICE", text: "Which session was most valuable?", options: ["Session 1", "Session 2", "Session 3", "Networking"] },
-            { type: "LONG_TEXT", text: "Additional comments" }
-        ]
-    },
-    {
-        name: "Employee Engagement",
-        description: "Internal team satisfaction survey",
-        questions: [
-            { type: "RATING", text: "How engaged do you feel at work?", ratingScale: 7 },
-            { type: "MULTIPLE_CHOICE", text: "What motivates you most?", options: ["Recognition", "Growth opportunities", "Compensation", "Work-life balance"] },
-            { type: "LONG_TEXT", text: "How can we improve your work experience?" }
-        ]
-    }
-];
-
-const RATING_SCALES = [
-    { value: 5, label: "1-5 Scale" },
-    { value: 7, label: "1-7 Scale" },
-    { value: 10, label: "1-10 Scale" }
-];
-
-const QUICK_QUESTION_PROMPTS = [
-    "How satisfied are you with...?",
-    "Rate your experience with...",
-    "How likely are you to recommend...?",
-    "What did you think of...?",
-    "How would you improve...?",
-    "What's your opinion on...?"
-];
-
-export default function SurveyCreationPage() {
+export default function EditSurveyPage() {
     const { user } = useAuth();
     const navigate = useNavigate();
+    const { surveyId } = useParams();
     const autoSaveIntervalRef = useRef(null);
     const lastSavedRef = useRef(null);
 
@@ -71,14 +28,63 @@ export default function SurveyCreationPage() {
 
     // Questions state
     const [questions, setQuestions] = useState([]);
+    const [hasResponses, setHasResponses] = useState(false);
+    const [isLoading, setIsLoading] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [errors, setErrors] = useState({});
     const [draggedIndex, setDraggedIndex] = useState(null);
-    const [showTemplates, setShowTemplates] = useState(false);
     const [autoSaveStatus, setAutoSaveStatus] = useState("");
     const [focusedQuestionIndex, setFocusedQuestionIndex] = useState(null);
     const [showKeyboardShortcuts, setShowKeyboardShortcuts] = useState(false);
     const [unsavedChanges, setUnsavedChanges] = useState(false);
+
+    // Load survey data on component mount
+    useEffect(() => {
+        const loadSurvey = async () => {
+            try {
+                setIsLoading(true);
+                const surveyData = await SurveyService.getSurvey(surveyId);
+
+                // Set survey basic info
+                setSurvey({
+                    title: surveyData.title,
+                    description: surveyData.description || "",
+                    status: surveyData.status
+                });
+
+                // Transform questions to match the creation form structure
+                const transformedQuestions = surveyData.questions.map((q, index) => ({
+                    id: q.id,
+                    type: q.type,
+                    questionText: q.questionText,
+                    optionsJson: q.optionsJson,
+                    orderNumber: q.orderNumber || index + 1
+                }));
+
+                setQuestions(transformedQuestions);
+
+                // Check if survey has responses
+                try {
+                    const responsesData = await SurveyService.getSurveyResponses(surveyId);
+                    setHasResponses(responsesData && responsesData.responses && responsesData.responses.length > 0);
+                } catch (responseError) {
+                    // If we can't check responses, assume it might have responses for safety
+                    console.warn("Could not check survey responses:", responseError);
+                    setHasResponses(false);
+                }
+
+                setIsLoading(false);
+            } catch (error) {
+                console.error("Failed to load survey:", error);
+                setErrors({ load: "Failed to load survey data" });
+                setIsLoading(false);
+            }
+        };
+
+        if (surveyId) {
+            loadSurvey();
+        }
+    }, [surveyId]);
 
     // Auto-save functionality
     useEffect(() => {
@@ -140,34 +146,10 @@ export default function SurveyCreationPage() {
         return () => document.removeEventListener('keydown', handleKeyDown);
     }, [showKeyboardShortcuts]);
 
-    // Apply template
-    const applyTemplate = useCallback((template) => {
-        const templateQuestions = template.questions.map((q, index) => ({
-            id: Date.now() + index,
-            type: q.type,
-            questionText: q.text,
-            optionsJson: q.type === "MULTIPLE_CHOICE"
-                ? JSON.stringify(q.options)
-                : q.type === "RATING"
-                    ? JSON.stringify({ scale: q.ratingScale, labels: { min: "Poor", max: "Excellent" } })
-                    : null,
-            orderNumber: index + 1
-        }));
-
-        setQuestions(templateQuestions);
-        setSurvey(prev => ({
-            ...prev,
-            title: template.name,
-            description: template.description
-        }));
-        setShowTemplates(false);
-        setUnsavedChanges(true);
-    }, []);
-
     // Add a new question
     const addQuestion = useCallback(() => {
         const newQuestion = {
-            id: Date.now(), // Temporary ID
+            id: Date.now(), // Temporary ID for new questions
             type: "TEXT",
             questionText: "",
             optionsJson: null,
@@ -204,7 +186,7 @@ export default function SurveyCreationPage() {
                 // Set default options for RATING
                 if (field === "type" && value === "RATING") {
                     updated.optionsJson = JSON.stringify({
-                        scale: 5,
+                        scale: 6,
                         labels: { min: "Poor", max: "Excellent" }
                     });
                 }
@@ -341,14 +323,27 @@ export default function SurveyCreationPage() {
                 }))
             };
 
-            const response = await apiClient.post("/surveys", surveyData);
-            const data = apiClient.extractData(response);
+            await SurveyService.updateSurvey(surveyId, surveyData);
 
-            // Survey created successfully, navigate to admin dashboard
+            // Survey updated successfully, navigate to admin dashboard
             navigate("/admin");
         } catch (error) {
             const errorDetails = apiClient.getErrorDetails(error);
-            setErrors({ submit: errorDetails.message || "Failed to create survey" });
+            const errorMessage = errorDetails.message || "Failed to update survey";
+
+            // Handle specific error cases
+            if (errorMessage.includes("Cannot modify questions") ||
+                errorMessage.includes("already has responses")) {
+                setErrors({
+                    submit: "⚠️ This survey already has responses. You can only update the title, description, and status. To make structural changes, create a new survey instead."
+                });
+            } else if (errorMessage.includes("Cannot reactivate")) {
+                setErrors({
+                    submit: "⚠️ Cannot reactivate a survey that already has responses. Create a new survey instead."
+                });
+            } else {
+                setErrors({ submit: errorMessage });
+            }
         } finally {
             setIsSubmitting(false);
         }
@@ -357,6 +352,15 @@ export default function SurveyCreationPage() {
     const getInitials = (name) => {
         return name ? name.split(' ').map(n => n[0]).join('').toUpperCase() : 'A';
     };
+
+    if (isLoading) {
+        return (
+            <div className={styles.loadingContainer}>
+                <div className={styles.spinner}></div>
+                <p>Loading survey...</p>
+            </div>
+        );
+    }
 
     return (
         <div className={styles.surveyCreationPage}>
@@ -384,19 +388,13 @@ export default function SurveyCreationPage() {
                         <div className={styles.titleSection}>
                             <h1 className={styles.pageTitle}>
                                 <svg className={styles.titleIcon} viewBox="0 0 24 24" fill="currentColor">
-                                    <path d="M12 4.5v15m7.5-7.5h-15" />
+                                    <path d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
                                 </svg>
-                                Create New Survey
+                                Edit Survey
                             </h1>
-                            <p className={styles.pageSubtitle}>Design and configure your feedback survey</p>
+                            <p className={styles.pageSubtitle}>Modify your feedback survey</p>
                         </div>
                         <div className={styles.quickActions}>
-                            <button
-                                onClick={() => setShowTemplates(!showTemplates)}
-                                className={`${styles.quickActionButton} ${showTemplates ? styles.active : ''}`}
-                            >
-                                🎯 Templates
-                            </button>
                             <button
                                 onClick={() => setShowKeyboardShortcuts(!showKeyboardShortcuts)}
                                 className={styles.quickActionButton}
@@ -453,38 +451,6 @@ export default function SurveyCreationPage() {
                 </div>
             </header>
 
-            {/* Template Selector */}
-            {showTemplates && (
-                <div className={styles.templateOverlay}>
-                    <div className={styles.templateModal}>
-                        <div className={styles.templateHeader}>
-                            <h3>Choose a Template</h3>
-                            <button
-                                onClick={() => setShowTemplates(false)}
-                                className={styles.closeButton}
-                            >
-                                ✕
-                            </button>
-                        </div>
-                        <div className={styles.templateGrid}>
-                            {SURVEY_TEMPLATES.map((template, index) => (
-                                <div
-                                    key={index}
-                                    className={styles.templateCard}
-                                    onClick={() => applyTemplate(template)}
-                                >
-                                    <h4>{template.name}</h4>
-                                    <p>{template.description}</p>
-                                    <div className={styles.templatePreview}>
-                                        {template.questions.length} questions
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                </div>
-            )}
-
             {/* Keyboard Shortcuts */}
             {showKeyboardShortcuts && (
                 <div className={styles.shortcutsTooltip}>
@@ -510,6 +476,21 @@ export default function SurveyCreationPage() {
 
             {/* Main Content */}
             <main className={styles.mainContent}>
+                {/* Warning Banner for surveys with responses */}
+                {hasResponses && (
+                    <div className={styles.warningBanner}>
+                        <div className={styles.warningContent}>
+                            <svg className={styles.warningIcon} viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+                            </svg>
+                            <div className={styles.warningText}>
+                                <h3>Survey Has Responses</h3>
+                                <p>This survey already has responses from users. You can only modify the title, description, and status. To make structural changes to questions, create a new survey instead.</p>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
                 <div className={styles.surveyBuilder}>
                     {/* Main Content Area */}
                     <div className={styles.mainContentArea}>
@@ -589,6 +570,8 @@ export default function SurveyCreationPage() {
                                     <button
                                         onClick={addQuestion}
                                         className={styles.addQuestionHeaderButton}
+                                        disabled={hasResponses}
+                                        title={hasResponses ? "Cannot add questions to surveys with responses" : "Add a new question"}
                                     >
                                         <svg className={styles.addIcon} viewBox="0 0 24 24" fill="currentColor">
                                             <path d="M12 4.5v15m7.5-7.5h-15" />
@@ -617,6 +600,7 @@ export default function SurveyCreationPage() {
                                             isDragging={draggedIndex === index}
                                             isFocused={focusedQuestionIndex === index}
                                             questionTypes={QUESTION_TYPES}
+                                            disabled={hasResponses}
                                         />
                                     ))}
 
@@ -636,12 +620,6 @@ export default function SurveyCreationPage() {
                                                 >
                                                     Add First Question
                                                 </button>
-                                                <button
-                                                    onClick={() => setShowTemplates(true)}
-                                                    className={styles.emptyActionButtonSecondary}
-                                                >
-                                                    Use Template
-                                                </button>
                                             </div>
                                         </div>
                                     )}
@@ -652,6 +630,8 @@ export default function SurveyCreationPage() {
                                         <button
                                             onClick={addQuestion}
                                             className={styles.addQuestionButton}
+                                            disabled={hasResponses}
+                                            title={hasResponses ? "Cannot add questions to surveys with responses" : "Add another question"}
                                         >
                                             <svg className={styles.addIcon} viewBox="0 0 24 24" fill="currentColor">
                                                 <path d="M12 4.5v15m7.5-7.5h-15" />
@@ -662,8 +642,6 @@ export default function SurveyCreationPage() {
                                 )}
                             </div>
                         </div>
-
-
                     </div>
 
                     {/* Progress Sidebar */}
@@ -715,7 +693,7 @@ export default function SurveyCreationPage() {
                                             <svg className={styles.saveIcon} viewBox="0 0 24 24" fill="currentColor">
                                                 <path d="M17.593 3.322c1.1.128 1.907 1.077 1.907 2.185V21L12 17.25 4.5 21V5.507c0-1.108.806-2.057 1.907-2.185a48.507 48.507 0 0111.186 0z" />
                                             </svg>
-                                            Save Draft
+                                            Update Survey
                                         </>
                                     )}
                                 </button>
@@ -774,7 +752,7 @@ export default function SurveyCreationPage() {
     );
 }
 
-// Question Editor Component
+// Question Editor Component (same as in SurveyCreationPage)
 function QuestionEditor({
     question,
     index,
@@ -788,7 +766,8 @@ function QuestionEditor({
     errors,
     isDragging,
     isFocused,
-    questionTypes
+    questionTypes,
+    disabled = false
 }) {
     const [multipleChoiceOptions, setMultipleChoiceOptions] = useState(() => {
         if (question.type === "MULTIPLE_CHOICE" && question.optionsJson) {
@@ -802,7 +781,13 @@ function QuestionEditor({
     });
 
     const [ratingConfig, setRatingConfig] = useState(() => {
-        // Fixed 0-5 star rating system
+        if (question.type === "RATING" && question.optionsJson) {
+            try {
+                return JSON.parse(question.optionsJson);
+            } catch {
+                return { scale: 6, labels: { min: "Poor", max: "Excellent" } };
+            }
+        }
         return { scale: 6, labels: { min: "Poor", max: "Excellent" } };
     });
 
@@ -863,11 +848,11 @@ function QuestionEditor({
 
     return (
         <div
-            className={`${styles.questionCard} ${isDragging ? styles.dragging : ''} ${isFocused ? styles.focused : ''} ${styles[validationState]}`}
-            draggable
-            onDragStart={(e) => onDragStart(e, index)}
-            onDragOver={onDragOver}
-            onDrop={(e) => onDrop(e, index)}
+            className={`${styles.questionCard} ${isDragging ? styles.dragging : ''} ${isFocused ? styles.focused : ''} ${styles[validationState]} ${disabled ? styles.disabled : ''}`}
+            draggable={!disabled}
+            onDragStart={!disabled ? (e) => onDragStart(e, index) : undefined}
+            onDragOver={!disabled ? onDragOver : undefined}
+            onDrop={!disabled ? (e) => onDrop(e, index) : undefined}
         >
             <div className={styles.questionHeader}>
                 <div className={styles.questionNumber}>
@@ -896,6 +881,7 @@ function QuestionEditor({
                         onClick={() => onRemove(index)}
                         className={styles.removeButton}
                         title="Remove question"
+                        disabled={disabled}
                     >
                         <svg className={styles.removeIcon} viewBox="0 0 24 24" fill="currentColor">
                             <path d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
@@ -928,6 +914,7 @@ function QuestionEditor({
                                     key={type}
                                     onClick={() => onUpdate(index, "type", type)}
                                     className={`${styles.typeButton} ${question.type === type ? styles.active : ''}`}
+                                    disabled={disabled}
                                 >
                                     <span className={styles.typeIcon}>{config.icon}</span>
                                     <span className={styles.typeLabel}>{config.label}</span>
@@ -947,6 +934,7 @@ function QuestionEditor({
                             onChange={(e) => onUpdate(index, "questionText", e.target.value)}
                             rows={3}
                             autoFocus={isFocused}
+                            disabled={disabled}
                         />
                         {errors[`question_${index}_text`] && (
                             <span className={styles.errorText}>{errors[`question_${index}_text`]}</span>
@@ -972,12 +960,14 @@ function QuestionEditor({
                                             placeholder={`Option ${optionIndex + 1}`}
                                             value={option}
                                             onChange={(e) => handleMultipleChoiceChange(optionIndex, e.target.value)}
+                                            disabled={disabled}
                                         />
                                         {multipleChoiceOptions.length > 2 && (
                                             <button
                                                 onClick={() => removeMultipleChoiceOption(optionIndex)}
                                                 className={styles.removeOptionButton}
                                                 title="Remove option"
+                                                disabled={disabled}
                                             >
                                                 <svg viewBox="0 0 24 24" fill="currentColor">
                                                     <path d="M6 18L18 6M6 6l12 12" />
@@ -990,7 +980,7 @@ function QuestionEditor({
                             <button
                                 onClick={addMultipleChoiceOption}
                                 className={styles.addOptionButton}
-                                disabled={multipleChoiceOptions.length >= 8}
+                                disabled={multipleChoiceOptions.length >= 8 || disabled}
                             >
                                 <svg className={styles.addIcon} viewBox="0 0 24 24" fill="currentColor">
                                     <path d="M12 4.5v15m7.5-7.5h-15" />
@@ -1017,6 +1007,7 @@ function QuestionEditor({
                                             placeholder="e.g., Poor"
                                             value={ratingConfig.labels.min}
                                             onChange={(e) => handleRatingChange("minLabel", e.target.value)}
+                                            disabled={disabled}
                                         />
                                     </div>
                                     <div className={styles.labelInput}>
@@ -1027,6 +1018,7 @@ function QuestionEditor({
                                             placeholder="e.g., Excellent"
                                             value={ratingConfig.labels.max}
                                             onChange={(e) => handleRatingChange("maxLabel", e.target.value)}
+                                            disabled={disabled}
                                         />
                                     </div>
                                 </div>
@@ -1054,7 +1046,7 @@ function QuestionEditor({
     );
 }
 
-// Question Preview Component
+// Question Preview Component (same as in SurveyCreationPage)
 function QuestionPreview({ question, ratingConfig, multipleChoiceOptions }) {
     if (!question.questionText) {
         return (

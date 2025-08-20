@@ -7,13 +7,16 @@ import com.training.feedbacktool.dto.CreateSurveyRequest;
 import com.training.feedbacktool.dto.SurveyResponse;
 import com.training.feedbacktool.dto.PublicSurveyResponse;
 import com.training.feedbacktool.dto.SurveyResultsResponse;
+import com.training.feedbacktool.dto.UpdateSurveyRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -94,6 +97,43 @@ public class SurveyController {
         }
     }
 
+    @GetMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')") // Admin only
+    public ResponseEntity<ApiResponse<PublicSurveyResponse>> getSurvey(@PathVariable Long id) {
+        try {
+            PublicSurveyResponse survey = service.findByIdWithQuestions(id);
+            ApiResponse<PublicSurveyResponse> response = ApiResponse.success(survey, "Survey retrieved successfully");
+            return ResponseEntity.ok(response);
+        } catch (IllegalArgumentException e) {
+            ApiResponse<PublicSurveyResponse> response = ApiResponse.error("Survey not found with ID: " + id,
+                    HttpStatus.NOT_FOUND);
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+        } catch (Exception e) {
+            ApiResponse<PublicSurveyResponse> response = ApiResponse
+                    .error("Failed to retrieve survey: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+            return ResponseEntity.internalServerError().body(response);
+        }
+    }
+
+    @PutMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')") // Admin only
+    public ResponseEntity<ApiResponse<SurveyResponse>> updateSurvey(
+            @PathVariable Long id,
+            @Valid @RequestBody UpdateSurveyRequest req) {
+        try {
+            SurveyResponse updated = service.updateSurvey(id, req);
+            ApiResponse<SurveyResponse> response = ApiResponse.success(updated, "Survey updated successfully");
+            return ResponseEntity.ok(response);
+        } catch (IllegalArgumentException e) {
+            ApiResponse<SurveyResponse> response = ApiResponse.error(e.getMessage(), HttpStatus.BAD_REQUEST);
+            return ResponseEntity.badRequest().body(response);
+        } catch (Exception e) {
+            ApiResponse<SurveyResponse> response = ApiResponse.error("Failed to update survey: " + e.getMessage(),
+                    HttpStatus.INTERNAL_SERVER_ERROR);
+            return ResponseEntity.internalServerError().body(response);
+        }
+    }
+
     @GetMapping("/{id}/public")
     // No authentication required for public survey access
     public ResponseEntity<ApiResponse<PublicSurveyResponse>> getPublicSurvey(@PathVariable Long id) {
@@ -127,6 +167,23 @@ public class SurveyController {
         } catch (Exception e) {
             ApiResponse<SurveyResultsResponse> response = ApiResponse
                     .error("Failed to retrieve survey results: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+            return ResponseEntity.internalServerError().body(response);
+        }
+    }
+
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')") // Admin only
+    public ResponseEntity<ApiResponse<Void>> deleteSurvey(@PathVariable Long id) {
+        try {
+            service.deleteSurvey(id);
+            ApiResponse<Void> response = ApiResponse.success(null, "Survey deleted successfully", HttpStatus.OK);
+            return ResponseEntity.ok(response);
+        } catch (IllegalArgumentException e) {
+            ApiResponse<Void> response = ApiResponse.error("Survey not found with ID: " + id, HttpStatus.NOT_FOUND);
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+        } catch (Exception e) {
+            ApiResponse<Void> response = ApiResponse.error("Failed to delete survey: " + e.getMessage(),
+                    HttpStatus.INTERNAL_SERVER_ERROR);
             return ResponseEntity.internalServerError().body(response);
         }
     }

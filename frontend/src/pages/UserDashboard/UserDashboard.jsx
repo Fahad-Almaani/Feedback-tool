@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
+import { UserService } from '../../services/apiServices';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import styles from './UserDashboard.module.css';
 
@@ -7,76 +8,103 @@ const UserDashboard = () => {
     const { user, logout } = useAuth();
     const [completedSurveys, setCompletedSurveys] = useState([]);
     const [pendingSurveys, setPendingSurveys] = useState([]);
+    const [dashboardStats, setDashboardStats] = useState({
+        completedSurveysCount: 0,
+        pendingSurveysCount: 0,
+        totalResponses: 0,
+        completionRate: 0
+    });
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
     const [isVisible, setIsVisible] = useState(false);
 
     useEffect(() => {
         // Trigger entrance animation
         setIsVisible(true);
 
-        // Mock data for now - replace with actual API call
-        const mockCompletedSurveys = [
-            {
-                id: 1,
-                title: "Employee Satisfaction Survey",
-                description: "Annual survey about workplace satisfaction and culture",
-                status: "COMPLETED",
-                completedDate: "2025-08-10",
-                deadline: "2025-08-15",
-                responses: 45
-            },
-            {
-                id: 2,
-                title: "Product Feedback Survey",
-                description: "Share your thoughts on our latest product features",
-                status: "COMPLETED",
-                completedDate: "2025-08-05",
-                deadline: "2025-08-12",
-                responses: 32
-            },
-            {
-                id: 3,
-                title: "Training Effectiveness Survey",
-                description: "Help us improve our training programs",
-                status: "COMPLETED",
-                completedDate: "2025-07-28",
-                deadline: "2025-08-01",
-                responses: 28
-            }
-        ];
+        const fetchDashboardData = async () => {
+            try {
+                setLoading(true);
+                setError(null);
 
-        const mockPendingSurveys = [
-            {
-                id: 4,
-                title: "Q3 Performance Review Survey",
-                description: "Quarterly performance and goal assessment survey",
-                status: "PENDING",
-                deadline: "2025-08-25",
-                estimatedTime: "10 minutes"
-            },
-            {
-                id: 5,
-                title: "Website User Experience Survey",
-                description: "Help us improve your website browsing experience",
-                status: "ACTIVE",
-                deadline: "2025-09-01",
-                estimatedTime: "5 minutes"
-            },
-            {
-                id: 6,
-                title: "Team Collaboration Survey",
-                description: "Share insights about team communication and collaboration",
-                status: "ACTIVE",
-                deadline: "2025-08-30",
-                estimatedTime: "8 minutes"
-            }
-        ];
+                const dashboardData = await UserService.getUserDashboard();
 
-        setTimeout(() => {
-            setCompletedSurveys(mockCompletedSurveys);
-            setPendingSurveys(mockPendingSurveys);
-            setLoading(false);
-        }, 1000);
+                // Update state with fetched data
+                setDashboardStats(dashboardData.stats);
+                setPendingSurveys(dashboardData.pendingSurveys);
+                setCompletedSurveys(dashboardData.completedSurveys);
+
+            } catch (err) {
+                console.error('Failed to fetch dashboard data:', err);
+                setError(err.message || 'Failed to load dashboard data');
+
+                // Keep mock data as fallback for now
+                const mockCompletedSurveys = [
+                    {
+                        id: 1,
+                        title: "Employee Satisfaction Survey",
+                        description: "Annual survey about workplace satisfaction and culture",
+                        status: "COMPLETED",
+                        completedDate: "2025-08-10",
+                        deadline: "2025-08-15",
+                        responses: 45
+                    },
+                    {
+                        id: 2,
+                        title: "Product Feedback Survey",
+                        description: "Share your thoughts on our latest product features",
+                        status: "COMPLETED",
+                        completedDate: "2025-08-05",
+                        deadline: "2025-08-12",
+                        responses: 32
+                    },
+                    {
+                        id: 3,
+                        title: "Training Effectiveness Survey",
+                        description: "Help us improve our training programs",
+                        status: "COMPLETED",
+                        completedDate: "2025-07-28",
+                        deadline: "2025-08-01",
+                        responses: 28
+                    }
+                ];
+
+                const mockPendingSurveys = [
+                    {
+                        id: 4,
+                        title: "Q3 Performance Review Survey",
+                        description: "Quarterly performance and goal assessment survey",
+                        status: "PENDING",
+                        deadline: "2025-08-25",
+                        estimatedTime: "10 minutes"
+                    },
+                    {
+                        id: 5,
+                        title: "Website User Experience Survey",
+                        description: "Help us improve your website browsing experience",
+                        status: "ACTIVE",
+                        deadline: "2025-09-01",
+                        estimatedTime: "5 minutes"
+                    },
+                    {
+                        id: 6,
+                        title: "Team Collaboration Survey",
+                        description: "Share insights about team communication and collaboration",
+                        status: "ACTIVE",
+                        deadline: "2025-08-30",
+                        estimatedTime: "8 minutes"
+                    }
+                ];
+
+                setCompletedSurveys(mockCompletedSurveys);
+                setPendingSurveys(mockPendingSurveys);
+
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchDashboardData();
     }, []);
 
     const handleLogout = () => {
@@ -98,7 +126,12 @@ const UserDashboard = () => {
     };
 
     const formatDate = (dateString) => {
-        return new Date(dateString).toLocaleDateString('en-US', {
+        if (!dateString) return 'N/A';
+        // Handle both ISO string and timestamp formats
+        const date = new Date(dateString);
+        if (isNaN(date.getTime())) return 'N/A';
+
+        return date.toLocaleDateString('en-US', {
             month: 'short',
             day: 'numeric',
             year: 'numeric'
@@ -106,8 +139,13 @@ const UserDashboard = () => {
     };
 
     const getDaysUntilDeadline = (deadline) => {
+        if (!deadline) return 'No deadline';
+
         const today = new Date();
         const deadlineDate = new Date(deadline);
+
+        if (isNaN(deadlineDate.getTime())) return 'Invalid date';
+
         const diffTime = deadlineDate - today;
         const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
@@ -125,6 +163,18 @@ const UserDashboard = () => {
                 size="large"
                 variant="primary"
             />
+        );
+    }
+
+    if (error) {
+        return (
+            <div className={styles.dashboardPage}>
+                <div className={styles.errorContainer}>
+                    <h2>Error Loading Dashboard</h2>
+                    <p>{error}</p>
+                    <button onClick={() => window.location.reload()}>Retry</button>
+                </div>
+            </div>
         );
     }
 
@@ -176,32 +226,28 @@ const UserDashboard = () => {
                         <svg className={styles.statIcon} viewBox="0 0 24 24" fill="currentColor">
                             <path d="M9 12l2 2 4-4M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
-                        <div className={styles.statValue}>{completedSurveys.length}</div>
+                        <div className={styles.statValue}>{dashboardStats.completedSurveysCount}</div>
                         <div className={styles.statLabel}>Completed Surveys</div>
                     </div>
                     <div className={styles.statCard}>
                         <svg className={styles.statIcon} viewBox="0 0 24 24" fill="currentColor">
                             <path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
-                        <div className={styles.statValue}>{pendingSurveys.length}</div>
+                        <div className={styles.statValue}>{dashboardStats.pendingSurveysCount}</div>
                         <div className={styles.statLabel}>Pending Surveys</div>
                     </div>
                     <div className={styles.statCard}>
                         <svg className={styles.statIcon} viewBox="0 0 24 24" fill="currentColor">
                             <path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                         </svg>
-                        <div className={styles.statValue}>
-                            {completedSurveys.reduce((total, survey) => total + (survey.responses || 0), 0)}
-                        </div>
+                        <div className={styles.statValue}>{dashboardStats.totalResponses}</div>
                         <div className={styles.statLabel}>Total Responses</div>
                     </div>
                     <div className={styles.statCard}>
                         <svg className={styles.statIcon} viewBox="0 0 24 24" fill="currentColor">
                             <path d="M13 10V3L4 14h7v7l9-11h-7z" />
                         </svg>
-                        <div className={styles.statValue}>
-                            {Math.round((completedSurveys.length / (completedSurveys.length + pendingSurveys.length)) * 100)}%
-                        </div>
+                        <div className={styles.statValue}>{dashboardStats.completionRate}%</div>
                         <div className={styles.statLabel}>Completion Rate</div>
                     </div>
                 </div>
@@ -242,7 +288,7 @@ const UserDashboard = () => {
                                             </div>
                                             <p className={styles.surveyDescription}>{survey.description}</p>
                                             <div className={styles.surveyMeta}>
-                                                <span>⏱️ {survey.estimatedTime}</span>
+                                                <span>⏱️ {survey.estimatedTime || '5 minutes'}</span>
                                                 <span>📅 {getDaysUntilDeadline(survey.deadline)}</span>
                                             </div>
                                             <div className={styles.surveyActions}>
@@ -298,7 +344,7 @@ const UserDashboard = () => {
                                             <p className={styles.surveyDescription}>{survey.description}</p>
                                             <div className={styles.surveyMeta}>
                                                 <span>✅ Completed: {formatDate(survey.completedDate)}</span>
-                                                <span>📊 {survey.responses} responses</span>
+                                                <span>📊 {survey.responses || 0} responses</span>
                                             </div>
                                             <div className={styles.surveyActions}>
                                                 <button
