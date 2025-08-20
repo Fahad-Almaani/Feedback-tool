@@ -415,3 +415,46 @@ export class UserService {
     return apiClient.extractData(response);
   }
 }
+
+/**
+ * Analytics service layer - encapsulates analytics-related API operations
+ */
+export class AnalyticsService {
+  static baseUrl = "/analytics";
+
+  /**
+   * Get response trends data
+   */
+  static async getResponseTrends(days = 30) {
+    const response = await apiClient.get(
+      `${this.baseUrl}/response-trends?days=${days}`
+    );
+    return apiClient.extractData(response);
+  }
+
+  /**
+   * Get recent activity
+   */
+  static async getRecentActivity(limit = 50) {
+    const response = await apiClient.get(
+      `${this.baseUrl}/recent-activity?limit=${limit}`
+    );
+    return apiClient.extractData(response);
+  }
+
+  /**
+   * Get dashboard overview
+   */
+  static async getDashboardOverview() {
+    const response = await apiClient.get(`${this.baseUrl}/overview`);
+    return apiClient.extractData(response);
+  }
+
+  /**
+   * Get survey performance metrics
+   */
+  static async getSurveyPerformance() {
+    const response = await apiClient.get(`${this.baseUrl}/survey-performance`);
+    return apiClient.extractData(response);
+  }
+}

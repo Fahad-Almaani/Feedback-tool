@@ -38,7 +38,7 @@ import styles from "./AdminDashboard.module.css";
 import { apiClient } from "../../utils/apiClient";
 import { Dialog } from "../../components";
 import { useDialog } from "../../hooks/useDialog";
-import { SurveyService } from "../../services/apiServices";
+import { SurveyService, AnalyticsService } from "../../services/apiServices";
 
 export default function AdminDashboard() {
   const [surveys, setSurveys] = useState([]);
@@ -59,6 +59,8 @@ export default function AdminDashboard() {
   const [isVisible, setIsVisible] = useState(false);
   const [error, setError] = useState(null);
   const [activeDropdown, setActiveDropdown] = useState(null);
+  const [responseTrends, setResponseTrends] = useState([]);
+  const [recentActivity, setRecentActivity] = useState([]);
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const {
@@ -70,95 +72,109 @@ export default function AdminDashboard() {
     setLoading: setDialogLoading
   } = useDialog();
 
-  // Mock data for charts (keeping these as they require more complex backend changes)
-  const mockChartData = {
-    responsesOverTime: [
-      { date: "Aug 1", responses: 42 },
-      { date: "Aug 2", responses: 35 },
-      { date: "Aug 3", responses: 58 },
-      { date: "Aug 4", responses: 48 },
-      { date: "Aug 5", responses: 62 },
-      { date: "Aug 6", responses: 39 },
-      { date: "Aug 7", responses: 71 },
-      { date: "Aug 8", responses: 55 },
-      { date: "Aug 9", responses: 67 },
-      { date: "Aug 10", responses: 44 }
-    ],
-    recentActivity: [
-      { id: 1, action: "New response", survey: "Customer Satisfaction Q4", time: "2 minutes ago" },
-      { id: 2, action: "Survey activated", survey: "Employee Engagement", time: "1 hour ago" },
-      { id: 3, action: "Survey created", survey: "Product Feedback", time: "3 hours ago" },
-      { id: 4, action: "Response milestone", survey: "Website UX", time: "1 day ago" }
-    ]
-  };
-
   useEffect(() => {
     // Trigger entrance animation
     setIsVisible(true);
 
-    // Fetch real survey data
-    const fetchSurveys = async () => {
+    // Fetch all required data
+    const fetchData = async () => {
       try {
         setLoading(true);
         setError(null);
 
-        const response = await apiClient.get('/surveys/admin');
+        // Fetch surveys and analytics data in parallel
+        const [surveysResponse, responseTrendsData, recentActivityData, overviewData] = await Promise.all([
+          apiClient.get('/surveys/admin'),
+          AnalyticsService.getResponseTrends(10), // Last 10 days for the chart
+          AnalyticsService.getRecentActivity(4), // Last 4 activities
+          AnalyticsService.getDashboardOverview()
+        ]);
 
-        console.log('Full API Response:', response);
-        console.log('Response type:', typeof response);
-        console.log('Is response an array?', Array.isArray(response));
+        console.log('Full API Response:', surveysResponse);
+        console.log('Response trends:', responseTrendsData);
+        console.log('Recent activity:', recentActivityData);
+        console.log('Overview data:', overviewData);
 
-        // Handle different response formats
+        // Handle surveys data
         let surveysArray = [];
-        if (Array.isArray(response)) {
-          // Direct array response (after apiClient processing)
-          surveysArray = response;
-        } else if (response && Array.isArray(response.data)) {
-          // Wrapped in data property
-          surveysArray = response.data;
+        if (Array.isArray(surveysResponse)) {
+          surveysArray = surveysResponse;
+        } else if (surveysResponse && Array.isArray(surveysResponse.data)) {
+          surveysArray = surveysResponse.data;
         } else {
-          console.warn('Unexpected response format:', response);
+          console.warn('Unexpected response format:', surveysResponse);
           surveysArray = [];
         }
 
         console.log('Final surveys array:', surveysArray);
         setSurveys(surveysArray);
 
-        // Calculate statistics from real data
-        const totalSurveys = surveysArray.length;
-        const activeSurveys = surveysArray.filter(s => s.status === 'ACTIVE').length;
-        const totalResponses = surveysArray.reduce((sum, s) => sum + s.totalResponses, 0);
+        // Set analytics data
+        setResponseTrends(responseTrendsData || []);
+        setRecentActivity(recentActivityData || []);
 
-        // Mock some additional stats (these would need more backend work to calculate accurately)
-        const responsesThisWeek = Math.floor(totalResponses * 0.2);
-        const responsesLastWeek = Math.floor(totalResponses * 0.15);
-        const newSurveysThisMonth = surveysArray.filter(s => {
-          const createdDate = new Date(s.createdAt);
-          const currentDate = new Date();
-          return createdDate.getMonth() === currentDate.getMonth() &&
-            createdDate.getFullYear() === currentDate.getFullYear();
-        }).length;
+        // Update statistics with overview data or calculate from surveys
+        if (overviewData) {
+          setStatistics({
+            totalSurveys: overviewData.totalSurveys || surveysArray.length,
+            activeSurveys: overviewData.activeSurveys || surveysArray.filter(s => s.status === 'ACTIVE').length,
+            totalResponses: overviewData.totalResponses || surveysArray.reduce((sum, s) => sum + s.totalResponses, 0),
+            responsesThisWeek: overviewData.responsesThisWeek || 0,
+            responsesLastWeek: overviewData.responsesLastWeek || 0,
+            newSurveysThisMonth: overviewData.newSurveysThisMonth || 0
+          });
+        } else {
+          // Fallback to calculated statistics
+          const totalSurveys = surveysArray.length;
+          const activeSurveys = surveysArray.filter(s => s.status === 'ACTIVE').length;
+          const totalResponses = surveysArray.reduce((sum, s) => sum + s.totalResponses, 0);
 
-        setStatistics({
-          totalSurveys,
-          activeSurveys,
-          totalResponses,
-          responsesThisWeek,
-          responsesLastWeek,
-          newSurveysThisMonth
-        });
+          setStatistics({
+            totalSurveys,
+            activeSurveys,
+            totalResponses,
+            responsesThisWeek: Math.floor(totalResponses * 0.2),
+            responsesLastWeek: Math.floor(totalResponses * 0.15),
+            newSurveysThisMonth: surveysArray.filter(s => {
+              const createdDate = new Date(s.createdAt);
+              const currentDate = new Date();
+              return createdDate.getMonth() === currentDate.getMonth() &&
+                createdDate.getFullYear() === currentDate.getFullYear();
+            }).length
+          });
+        }
 
       } catch (err) {
-        console.error('Error fetching surveys:', err);
+        console.error('Error fetching data:', err);
         const errorDetails = apiClient.getErrorDetails(err);
-        setError(errorDetails.message || 'Failed to load survey data. Please try again.');
+        setError(errorDetails.message || 'Failed to load dashboard data. Please try again.');
+
+        // Set fallback data for charts
+        setResponseTrends([
+          { date: "Today", responses: 0, fullDate: new Date().toISOString().split('T')[0] }
+        ]);
+        setRecentActivity([
+          { id: 1, action: "System initialized", survey: "Welcome", time: "just now", type: "system" }
+        ]);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchSurveys();
+    fetchData();
   }, []);
+
+  // Mock data for charts (keeping these as they require more complex backend changes)
+  const mockChartData = {
+    responsesOverTime: responseTrends.length > 0 ? responseTrends : [
+      { date: "Aug 1", responses: 0 },
+      { date: "Aug 2", responses: 0 },
+      { date: "Aug 3", responses: 0 }
+    ],
+    recentActivity: recentActivity.length > 0 ? recentActivity : [
+      { id: 1, action: "System ready", survey: "Dashboard loaded", time: "just now" }
+    ]
+  };
 
   const handleLogout = () => {
     logout();
@@ -662,7 +678,7 @@ export default function AdminDashboard() {
                 </svg>
                 Response Trends
               </h2>
-              <p className={styles.sectionSubtitle}>Daily response activity over the last 10 days</p>
+              <p className={styles.sectionSubtitle}>Real-time response activity trends</p>
             </div>
             <div className={styles.sectionContent}>
               <div className={styles.chartContainer}>
