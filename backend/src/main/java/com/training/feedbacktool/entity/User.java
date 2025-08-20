@@ -33,6 +33,14 @@ public class User {
     @Column(name = "created_at", updatable = false)
     private Instant createdAt;
 
+    // ---- Password reset support ----
+    @Column(name = "reset_token", length = 120)
+    private String resetToken;                 // one-time token (null when not in use)
+
+    @Column(name = "reset_token_expires_at")
+    private Instant resetTokenExpiresAt;       // token expiry time
+
+
     @PrePersist
     protected void onCreate() {
         this.createdAt = Instant.now();
