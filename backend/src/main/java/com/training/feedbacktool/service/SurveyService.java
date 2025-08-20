@@ -331,6 +331,7 @@ public class SurveyService {
                             answer.getQuestion().getId(),
                             answer.getQuestion().getQuestionText(),
                             answer.getAnswerText(),
+                            answer.getRatingValue(),
                             answer.getCreatedAt()))
                     .sorted((r1, r2) -> r1.questionId().compareTo(r2.questionId()))
                     .collect(Collectors.toList());
@@ -385,6 +386,7 @@ public class SurveyService {
                         return new SurveyResultsResponse.AnswerSummaryDTO(
                                 answer.getId(),
                                 answer.getAnswerText(),
+                                answer.getRatingValue(),
                                 answer.getCreatedAt(),
                                 respondentInfo);
                     })
@@ -456,18 +458,10 @@ public class SurveyService {
             case "RATING":
                 calculateRatingAnalytics(answers, ratingDistribution, customMetrics);
 
-                // Calculate rating statistics
+                // Calculate rating statistics using the new ratingValue field
                 List<Integer> ratings = answers.stream()
-                        .map(Answer::getAnswerText)
-                        .filter(text -> text != null && !text.trim().isEmpty())
-                        .map(text -> {
-                            try {
-                                return Integer.parseInt(text.trim());
-                            } catch (NumberFormatException e) {
-                                return null;
-                            }
-                        })
-                        .filter(Objects::nonNull)
+                        .map(Answer::getRatingValue)
+                        .filter(rating -> rating != null && rating >= 0 && rating <= 5)
                         .collect(Collectors.toList());
 
                 if (!ratings.isEmpty()) {
@@ -536,14 +530,9 @@ public class SurveyService {
     private void calculateRatingAnalytics(List<Answer> answers, Map<String, Integer> ratingDistribution,
             Map<String, Object> customMetrics) {
         for (Answer answer : answers) {
-            String ratingText = answer.getAnswerText();
-            if (ratingText != null && !ratingText.trim().isEmpty()) {
-                try {
-                    Integer.parseInt(ratingText.trim()); // Validate it's a number
-                    ratingDistribution.merge(ratingText.trim(), 1, Integer::sum);
-                } catch (NumberFormatException e) {
-                    // Invalid rating, skip
-                }
+            Integer ratingValue = answer.getRatingValue();
+            if (ratingValue != null && ratingValue >= 0 && ratingValue <= 5) {
+                ratingDistribution.merge(ratingValue.toString(), 1, Integer::sum);
             }
         }
 

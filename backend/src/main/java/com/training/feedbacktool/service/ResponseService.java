@@ -73,8 +73,29 @@ public class ResponseService {
                         "Question " + answerDto.questionId() + " is not part of survey " + surveyId);
             }
 
+            // Handle different question types
+            boolean isRatingQuestion = "RATING".equalsIgnoreCase(question.getType());
+            boolean hasAnswer = false;
+
+            if (isRatingQuestion) {
+                // For rating questions, check if ratingValue is provided
+                if (answerDto.ratingValue() != null) {
+                    // Validate rating range (0-5)
+                    if (answerDto.ratingValue() < 0 || answerDto.ratingValue() > 5) {
+                        throw new IllegalArgumentException(
+                                "Rating value must be between 0 and 5 for question: " + question.getQuestionText());
+                    }
+                    hasAnswer = true;
+                }
+            } else {
+                // For non-rating questions, check if answerValue is provided
+                if (answerDto.answerValue() != null && !answerDto.answerValue().trim().isEmpty()) {
+                    hasAnswer = true;
+                }
+            }
+
             // Skip empty answers for non-required questions
-            if (answerDto.answerValue() == null || answerDto.answerValue().trim().isEmpty()) {
+            if (!hasAnswer) {
                 if (Boolean.TRUE.equals(question.getRequired())) {
                     throw new IllegalArgumentException(
                             "Answer is required for question: " + question.getQuestionText());
@@ -84,8 +105,15 @@ public class ResponseService {
 
             Answer answer = new Answer();
             answer.setQuestion(question);
-            answer.setAnswerText(answerDto.answerValue().trim());
             answer.setUser(user); // null for anonymous responses
+
+            if (isRatingQuestion) {
+                answer.setRatingValue(answerDto.ratingValue());
+                // Set a placeholder text for rating questions until DB migration is applied
+                answer.setAnswerText("RATING:" + answerDto.ratingValue());
+            } else {
+                answer.setAnswerText(answerDto.answerValue().trim());
+            }
 
             answersRepository.save(answer);
         }
@@ -98,9 +126,20 @@ public class ResponseService {
                 .map(Question::getId)
                 .collect(Collectors.toSet());
 
-        // Get answered question IDs (with non-empty answers)
+        // Get answered question IDs (with valid answers)
         var answeredQuestionIds = request.answers().stream()
-                .filter(a -> a.answerValue() != null && !a.answerValue().trim().isEmpty())
+                .filter(a -> {
+                    Question question = questionsById.get(a.questionId());
+                    if (question == null)
+                        return false;
+
+                    boolean isRatingQuestion = "RATING".equalsIgnoreCase(question.getType());
+                    if (isRatingQuestion) {
+                        return a.ratingValue() != null && a.ratingValue() >= 0 && a.ratingValue() <= 5;
+                    } else {
+                        return a.answerValue() != null && !a.answerValue().trim().isEmpty();
+                    }
+                })
                 .map(SubmitResponseRequest.AnswerDTO::questionId)
                 .collect(Collectors.toSet());
 

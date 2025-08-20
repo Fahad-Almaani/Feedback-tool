@@ -54,6 +54,7 @@ public record SurveyResultsResponse(
         public record AnswerSummaryDTO(
                         Long answerId,
                         String answerText,
+                        Integer ratingValue, // For rating questions (0-5)
                         Instant submittedAt,
                         RespondentInfoDTO respondent) {
         }
@@ -72,6 +73,7 @@ public record SurveyResultsResponse(
                         Long questionId,
                         String questionText,
                         String answerText,
+                        Integer ratingValue, // For rating questions (0-5)
                         Instant submittedAt) {
         }
 

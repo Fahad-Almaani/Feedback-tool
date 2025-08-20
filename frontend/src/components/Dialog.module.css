@@ -1,0 +1,319 @@
+/* Dialog Overlay */
+.overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1rem;
+  animation: fadeIn 0.2s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Dialog Container */
+.dialog {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+  max-width: 100%;
+  max-height: 90vh;
+  overflow: hidden;
+  animation: slideIn 0.3s ease-out;
+  display: flex;
+  flex-direction: column;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateY(-50px) scale(0.95);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+}
+
+/* Dialog Sizes */
+.small {
+  width: 300px;
+  min-width: 300px;
+}
+
+.medium {
+  width: 450px;
+  min-width: 400px;
+}
+
+.large {
+  width: 600px;
+  min-width: 500px;
+}
+
+/* Dialog Header */
+.header {
+  display: flex;
+  align-items: center;
+  padding: 1.5rem 1.5rem 1rem 1.5rem;
+  border-bottom: 1px solid #e5e5e5;
+  gap: 0.75rem;
+}
+
+.icon {
+  font-size: 1.5rem;
+  line-height: 1;
+}
+
+.title {
+  flex: 1;
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #333;
+}
+
+.closeButton {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: #666;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+}
+
+.closeButton:hover {
+  background-color: #f0f0f0;
+  color: #333;
+}
+
+/* Dialog Content */
+.content {
+  padding: 1rem 1.5rem;
+  flex: 1;
+  overflow-y: auto;
+}
+
+.message {
+  margin: 0;
+  color: #555;
+  line-height: 1.5;
+  font-size: 1rem;
+}
+
+/* Dialog Footer */
+.footer {
+  padding: 1rem 1.5rem 1.5rem 1.5rem;
+  display: flex;
+  gap: 0.75rem;
+  justify-content: flex-end;
+  border-top: 1px solid #e5e5e5;
+}
+
+/* Buttons */
+.button {
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-width: 80px;
+}
+
+.button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.cancelButton {
+  background-color: #f8f9fa;
+  color: #6c757d;
+  border: 1px solid #dee2e6;
+}
+
+.cancelButton:hover:not(:disabled) {
+  background-color: #e9ecef;
+  color: #495057;
+}
+
+.confirmButton {
+  background-color: #007bff;
+  color: white;
+}
+
+.confirmButton:hover:not(:disabled) {
+  background-color: #0056b3;
+}
+
+/* Dialog Type Styles */
+.info .header {
+  border-bottom-color: #bee5eb;
+}
+
+.info .confirmButton {
+  background-color: #17a2b8;
+}
+
+.info .confirmButton:hover:not(:disabled) {
+  background-color: #138496;
+}
+
+.success .header {
+  border-bottom-color: #d4edda;
+}
+
+.success .title {
+  color: #155724;
+}
+
+.success .confirmButton {
+  background-color: #28a745;
+}
+
+.success .confirmButton:hover:not(:disabled) {
+  background-color: #1e7e34;
+}
+
+.warning .header {
+  border-bottom-color: #fff3cd;
+}
+
+.warning .title {
+  color: #856404;
+}
+
+.warning .confirmButton {
+  background-color: #ffc107;
+  color: #212529;
+}
+
+.warning .confirmButton:hover:not(:disabled) {
+  background-color: #e0a800;
+}
+
+.danger .header {
+  border-bottom-color: #f5c6cb;
+}
+
+.danger .title {
+  color: #721c24;
+}
+
+.danger .confirmButton {
+  background-color: #dc3545;
+}
+
+.danger .confirmButton:hover:not(:disabled) {
+  background-color: #c82333;
+}
+
+.confirmation .header {
+  border-bottom-color: #d6d8db;
+}
+
+.confirmation .title {
+  color: #495057;
+}
+
+.confirmation .confirmButton {
+  background-color: #6c757d;
+}
+
+.confirmation .confirmButton:hover:not(:disabled) {
+  background-color: #545b62;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .overlay {
+    padding: 0.5rem;
+  }
+
+  .dialog {
+    width: 100% !important;
+    min-width: auto !important;
+    max-width: 100%;
+    margin: 0;
+  }
+
+  .header {
+    padding: 1rem;
+  }
+
+  .content {
+    padding: 0.75rem 1rem;
+  }
+
+  .footer {
+    padding: 0.75rem 1rem 1rem 1rem;
+    flex-direction: column-reverse;
+  }
+
+  .button {
+    width: 100%;
+    margin: 0;
+  }
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .dialog {
+    background: #2d3748;
+    color: #e2e8f0;
+  }
+
+  .header {
+    border-bottom-color: #4a5568;
+  }
+
+  .title {
+    color: #e2e8f0;
+  }
+
+  .message {
+    color: #cbd5e0;
+  }
+
+  .footer {
+    border-top-color: #4a5568;
+  }
+
+  .closeButton {
+    color: #a0aec0;
+  }
+
+  .closeButton:hover {
+    background-color: #4a5568;
+    color: #e2e8f0;
+  }
+
+  .cancelButton {
+    background-color: #4a5568;
+    color: #e2e8f0;
+    border-color: #718096;
+  }
+
+  .cancelButton:hover:not(:disabled) {
+    background-color: #2d3748;
+  }
+}

@@ -143,11 +143,30 @@ export default function SurveyFormPage() {
         try {
             // Format answers according to the backend DTO format
             const formattedAnswers = Object.entries(answers)
-                .filter(([_, answer]) => answer && answer.toString().trim() !== "")
-                .map(([questionId, answer]) => ({
-                    questionId: parseInt(questionId),
-                    answerValue: answer.toString()
-                }));
+                .filter(([questionId, answer]) => {
+                    if (!answer || answer.toString().trim() === "") return false;
+
+                    // Find the question to check its type
+                    const question = survey.questions.find(q => q.id.toString() === questionId);
+                    return question; // Only include answers for valid questions
+                })
+                .map(([questionId, answer]) => {
+                    const question = survey.questions.find(q => q.id.toString() === questionId);
+                    const answerDto = { questionId: parseInt(questionId) };
+
+                    if (question && question.type === "RATING") {
+                        // For rating questions, send as numeric ratingValue (0-5)
+                        const ratingValue = parseInt(answer);
+                        if (ratingValue >= 0 && ratingValue <= 5) {
+                            answerDto.ratingValue = ratingValue;
+                        }
+                    } else {
+                        // For other question types, send as text answerValue
+                        answerDto.answerValue = answer.toString();
+                    }
+
+                    return answerDto;
+                });
 
             const submissionData = {
                 answers: formattedAnswers
@@ -500,8 +519,8 @@ export default function SurveyFormPage() {
 // Question Input Component
 function QuestionInput({ question, value, onChange }) {
     const handleRatingChange = (rating) => {
-        // Handle both string and number ratings
-        onChange(typeof rating === 'string' ? rating : rating.toString());
+        // Store rating as string for consistency with other input types
+        onChange(rating.toString());
     };
 
     switch (question.type) {
@@ -550,54 +569,33 @@ function QuestionInput({ question, value, onChange }) {
             );
 
         case "RATING":
-            const ratingOptions = question.optionsJson ? JSON.parse(question.optionsJson) : [];
-
-            // Handle different rating formats
-            let ratingConfig;
-            if (Array.isArray(ratingOptions)) {
-                // Handle array format like ["Very Dissatisfied", "Dissatisfied", "Neutral", "Satisfied", "Very Satisfied"]
-                ratingConfig = {
-                    scale: ratingOptions.length,
-                    labels: {
-                        min: ratingOptions[0] || "Poor",
-                        max: ratingOptions[ratingOptions.length - 1] || "Excellent"
-                    },
-                    options: ratingOptions
-                };
-            } else {
-                // Handle object format like { scale: 5, labels: { min: "Poor", max: "Excellent" } }
-                ratingConfig = ratingOptions.scale ? ratingOptions : { scale: 5, labels: { min: "Poor", max: "Excellent" } };
-            }
-
+            // Simple 0-5 numeric rating system
             return (
                 <div className={styles.ratingInput}>
                     <div className={styles.ratingScale}>
-                        <span className={styles.ratingLabel}>{ratingConfig.labels.min}</span>
+                        <span className={styles.ratingLabel}>Poor</span>
                         <div className={styles.ratingButtons}>
-                            {Array.from({ length: ratingConfig.scale }, (_, i) => {
-                                const buttonValue = ratingConfig.options ? ratingConfig.options[i] : (i + 1).toString();
-                                const isSelected = value === buttonValue;
+                            {Array.from({ length: 6 }, (_, i) => {
+                                const ratingValue = i; // 0 to 5
+                                const isSelected = value === ratingValue.toString();
 
                                 return (
                                     <button
                                         key={i}
                                         type="button"
                                         className={`${styles.ratingButton} ${isSelected ? styles.selected : ''}`}
-                                        onClick={() => handleRatingChange(buttonValue)}
-                                        title={ratingConfig.options ? ratingConfig.options[i] : `Rating ${i + 1}`}
+                                        onClick={() => handleRatingChange(ratingValue)}
+                                        title={`Rating: ${ratingValue} out of 5`}
                                     >
-                                        {i + 1}
+                                        {ratingValue}
                                     </button>
                                 );
                             })}
                         </div>
-                        <span className={styles.ratingLabel}>{ratingConfig.labels.max}</span>
+                        <span className={styles.ratingLabel}>Excellent</span>
                     </div>
                     <div className={styles.ratingHint}>
-                        {ratingConfig.options
-                            ? `Click a number to select your rating`
-                            : `Click a number to rate from ${ratingConfig.labels.min} to ${ratingConfig.labels.max}`
-                        }
+                        Click a number to rate from 0 (Poor) to 5 (Excellent)
                     </div>
                 </div>
             );

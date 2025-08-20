@@ -31,10 +31,14 @@ import {
   ClipboardList,
   ChevronLeft,
   ChevronRight,
-  FileText
+  FileText,
+  Trash2
 } from "lucide-react";
 import styles from "./AdminDashboard.module.css";
 import { apiClient } from "../../utils/apiClient";
+import { Dialog } from "../../components";
+import { useDialog } from "../../hooks/useDialog";
+import { SurveyService } from "../../services/apiServices";
 
 export default function AdminDashboard() {
   const [surveys, setSurveys] = useState([]);
@@ -54,8 +58,17 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [isVisible, setIsVisible] = useState(false);
   const [error, setError] = useState(null);
+  const [activeDropdown, setActiveDropdown] = useState(null);
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const {
+    dialogState,
+    closeDialog,
+    showDangerConfirmation,
+    showSuccess,
+    showDanger,
+    setLoading: setDialogLoading
+  } = useDialog();
 
   // Mock data for charts (keeping these as they require more complex backend changes)
   const mockChartData = {
@@ -150,6 +163,59 @@ export default function AdminDashboard() {
   const handleLogout = () => {
     logout();
   };
+
+  const handleDeleteSurvey = async (surveyId, surveyTitle) => {
+    showDangerConfirmation(
+      'Delete Survey',
+      `Are you sure you want to delete "${surveyTitle}"? This action cannot be undone and will permanently remove all associated responses.`,
+      async () => {
+        try {
+          setDialogLoading(true);
+          await SurveyService.deleteSurvey(surveyId);
+
+          // Remove the survey from the local state
+          setSurveys(prevSurveys => prevSurveys.filter(s => s.id !== surveyId));
+
+          // Update statistics
+          const updatedSurveys = surveys.filter(s => s.id !== surveyId);
+          const updatedStats = SurveyService.calculateStats(updatedSurveys);
+          setStatistics(updatedStats);
+
+          closeDialog();
+          showSuccess('Survey Deleted', 'The survey has been successfully deleted.');
+        } catch (error) {
+          console.error('Error deleting survey:', error);
+          showDanger('Delete Failed', 'Failed to delete the survey. Please try again.');
+        } finally {
+          setDialogLoading(false);
+        }
+      },
+      () => {
+        setActiveDropdown(null); // Close dropdown when cancelled
+      }
+    );
+  };
+
+  const toggleDropdown = (surveyId, event) => {
+    event.stopPropagation();
+    setActiveDropdown(activeDropdown === surveyId ? null : surveyId);
+  };
+
+  const closeDropdown = () => {
+    setActiveDropdown(null);
+  };
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = () => {
+      if (activeDropdown) {
+        setActiveDropdown(null);
+      }
+    };
+
+    document.addEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('click', handleClickOutside);
+  }, [activeDropdown]);
 
   const getInitials = (name) => {
     return name ? name.split(' ').map(n => n[0]).join('').toUpperCase() : 'A';
@@ -463,9 +529,30 @@ export default function AdminDashboard() {
                               >
                                 <Eye size={16} />
                               </button>
-                              <button className={styles.actionBtn} title="More Options">
-                                <MoreHorizontal size={16} />
-                              </button>
+                              <div className={styles.dropdownContainer}>
+                                <button
+                                  className={styles.actionBtn}
+                                  title="More Options"
+                                  onClick={(e) => toggleDropdown(survey.id, e)}
+                                >
+                                  <MoreHorizontal size={16} />
+                                </button>
+                                {activeDropdown === survey.id && (
+                                  <div className={styles.dropdown}>
+                                    <button
+                                      className={styles.dropdownItem}
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleDeleteSurvey(survey.id, survey.title);
+                                        setActiveDropdown(null);
+                                      }}
+                                    >
+                                      <Trash2 size={14} />
+                                      Delete Survey
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
                             </div>
                           </div>
 
@@ -673,6 +760,9 @@ export default function AdminDashboard() {
           </div>
         </div>
       </main>
+
+      {/* Dialog for confirmations and alerts */}
+      <Dialog {...dialogState} onClose={closeDialog} />
     </div>
   );
 }
