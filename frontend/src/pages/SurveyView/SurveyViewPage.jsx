@@ -57,6 +57,12 @@ import styles from "./SurveyViewPage.module.css";
 import { SurveyService, ResponseService } from "../../services/apiServices";
 import { useDialog } from "../../hooks/useDialog";
 import Dialog from "../../components/Dialog";
+import LoadingSpinner from "../../components/LoadingSpinner";
+import {
+    exportSurveyResponses,
+    exportSurveyAnalytics,
+    exportSurveySummary
+} from "../../utils/csvExporter";
 
 const COLORS = {
     primary: "#667eea",
@@ -84,12 +90,14 @@ export default function SurveyViewPage() {
     const [surveyResults, setSurveyResults] = useState(null);
     const [surveyResponses, setSurveyResponses] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [exportLoading, setExportLoading] = useState(false);
     const [error, setError] = useState(null);
     const [activeTab, setActiveTab] = useState("overview");
     const [searchTerm, setSearchTerm] = useState("");
     const [filterType, setFilterType] = useState("ALL");
     const [expandedQuestions, setExpandedQuestions] = useState(new Set());
     const [showShareModal, setShowShareModal] = useState(false);
+    const [showExportDropdown, setShowExportDropdown] = useState(false);
 
     // Helper functions (moved before useMemo to avoid hoisting issues)
     const generateResponseTrendData = (responses) => {
@@ -192,7 +200,7 @@ export default function SurveyViewPage() {
                 setSurveyDetails(details);
                 setSurveyResults(results);
                 setSurveyResponses(responses);
-
+                setLoading(false);
             } catch (err) {
                 console.error("Error fetching survey data:", err);
                 setError(err.message || "Failed to load survey data");
@@ -205,6 +213,20 @@ export default function SurveyViewPage() {
             fetchSurveyData();
         }
     }, [surveyId]);
+
+    // Close export dropdown when clicking outside
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (showExportDropdown && !event.target.closest(`.${styles.exportDropdownContainer}`)) {
+                setShowExportDropdown(false);
+            }
+        };
+
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, [showExportDropdown]);
 
     // Processed analytics data
     const analyticsData = useMemo(() => {
@@ -280,12 +302,77 @@ export default function SurveyViewPage() {
         // Show toast notification
     };
 
-    const exportData = async (format = 'csv') => {
+    const exportData = async (format = 'csv', type = 'responses') => {
         try {
-            // Implement export functionality
-            console.log(`Exporting data as ${format}`);
+            console.log(`Starting export of type: ${type}`);
+            setExportLoading(true);
+
+            // Add a small delay to ensure loading state is visible
+            await new Promise(resolve => setTimeout(resolve, 500));
+
+            if (type === 'responses') {
+                console.log('Exporting responses...');
+                await exportSurveyResponses(
+                    surveyDetails,
+                    surveyResponses,
+                    surveyDetails?.title
+                );
+
+                // Show success message
+                await showDialog({
+                    title: "Export Successful",
+                    message: "Survey responses have been exported successfully.",
+                    type: "success",
+                    confirmText: "OK"
+                });
+            } else if (type === 'analytics') {
+                console.log('Exporting analytics...');
+                await exportSurveyAnalytics(
+                    surveyDetails,
+                    analyticsData,
+                    surveyDetails?.title
+                );
+
+                // Show success message
+                await showDialog({
+                    title: "Export Successful",
+                    message: "Survey analytics have been exported successfully.",
+                    type: "success",
+                    confirmText: "OK"
+                });
+            } else if (type === 'summary') {
+                console.log('Exporting summary...');
+                await exportSurveySummary(
+                    surveyDetails,
+                    surveyResponses,
+                    analyticsData,
+                    surveyDetails?.title
+                );
+
+                // Show success message
+                await showDialog({
+                    title: "Export Successful",
+                    message: "Survey summary has been exported successfully.",
+                    type: "success",
+                    confirmText: "OK"
+                });
+            }
+
+            setShowExportDropdown(false);
+            console.log('Export completed successfully');
+
         } catch (error) {
             console.error("Export failed:", error);
+            await showDialog({
+                title: "Export Failed",
+                message: error.message || "Failed to export data. Please try again.",
+                type: "error",
+                confirmText: "OK"
+            });
+        } finally {
+            setExportLoading(false);
+            setLoading(false);
+            console.log('Export process finished');
         }
     };
 
@@ -375,6 +462,16 @@ export default function SurveyViewPage() {
 
     return (
         <div className={styles.surveyViewPage}>
+            {/* Export Loading Overlay */}
+            {exportLoading && (
+                <LoadingSpinner
+                    text="Preparing your export..."
+                    size="large"
+                    variant="primary"
+                    fullScreen={true}
+                />
+            )}
+
             {/* Animated Background */}
             <div className={styles.backgroundElements}>
                 <div className={styles.floatingShape1}></div>
@@ -436,13 +533,65 @@ export default function SurveyViewPage() {
                             <Share2 size={16} />
                             Share
                         </button>
-                        <button
-                            onClick={() => exportData('csv')}
-                            className={styles.actionButton}
-                        >
-                            <Download size={16} />
-                            Export
-                        </button>
+
+                        {/* Export Dropdown */}
+                        <div className={styles.exportDropdownContainer}>
+                            <button
+                                onClick={() => setShowExportDropdown(!showExportDropdown)}
+                                className={styles.actionButton}
+                                disabled={exportLoading}
+                            >
+                                <Download size={16} />
+                                {exportLoading ? 'Exporting...' : 'Export'}
+                                <ChevronDown size={14} className={styles.dropdownIcon} />
+                            </button>
+
+                            {showExportDropdown && (
+                                <div className={styles.exportDropdown}>
+                                    <button
+                                        onClick={() => exportData('csv', 'responses')}
+                                        className={styles.exportOption}
+                                        disabled={!surveyResponses?.responses?.length || exportLoading}
+                                    >
+                                        <FileText size={14} />
+                                        <span>
+                                            <div>Export Responses</div>
+                                            <div className={styles.exportOptionDesc}>
+                                                Detailed response data (CSV)
+                                            </div>
+                                        </span>
+                                    </button>
+
+                                    <button
+                                        onClick={() => exportData('csv', 'analytics')}
+                                        className={styles.exportOption}
+                                        disabled={!analyticsData?.questionCompletionData?.length || exportLoading}
+                                    >
+                                        <BarChart3 size={14} />
+                                        <span>
+                                            <div>Export Analytics</div>
+                                            <div className={styles.exportOptionDesc}>
+                                                Question analytics data (CSV)
+                                            </div>
+                                        </span>
+                                    </button>
+
+                                    <button
+                                        onClick={() => exportData('csv', 'summary')}
+                                        className={styles.exportOption}
+                                        disabled={exportLoading}
+                                    >
+                                        <Eye size={14} />
+                                        <span>
+                                            <div>Export Summary</div>
+                                            <div className={styles.exportOptionDesc}>
+                                                Survey overview metrics (CSV)
+                                            </div>
+                                        </span>
+                                    </button>
+                                </div>
+                            )}
+                        </div>
                         <button
                             onClick={() => window.open(`/survey/${surveyId}`, '_blank')}
                             className={styles.primaryButton}
