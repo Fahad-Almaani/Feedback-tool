@@ -5,13 +5,30 @@ import { useNavigate } from "react-router-dom";
 import InputWithAI from "../../components/Input/InputWithAI";
 import { improveSurveyTitle, improveSurveyDescription } from "../../utils/TextPhrasing";
 import { improveQuestionPhrasing } from "../../utils/QuestionPhrasing";
+import { Type, FileText, Star, CheckSquare, ChevronDown } from "lucide-react";
 import styles from "./SurveyCreationPage.module.css";
 
 const QUESTION_TYPES = {
-    TEXT: { label: "Short Text", icon: "📝", description: "Brief text responses" },
-    LONG_TEXT: { label: "Long Text", icon: "📄", description: "Detailed text responses" },
-    RATING: { label: "Rating Scale", icon: "⭐", description: "Numerical rating scale" },
-    MULTIPLE_CHOICE: { label: "Multiple Choice", icon: "☑️", description: "Select from options" }
+    TEXT: {
+        label: "Short Text",
+        icon: Type,
+        description: "Brief text responses"
+    },
+    LONG_TEXT: {
+        label: "Long Text",
+        icon: FileText,
+        description: "Detailed text responses"
+    },
+    RATING: {
+        label: "Rating Scale",
+        icon: Star,
+        description: "Numerical rating scale"
+    },
+    MULTIPLE_CHOICE: {
+        label: "Multiple Choice",
+        icon: CheckSquare,
+        description: "Select from options"
+    }
 };
 
 const SURVEY_TEMPLATES = [
@@ -76,7 +93,6 @@ export default function SurveyCreationPage() {
     const [questions, setQuestions] = useState([]);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [errors, setErrors] = useState({});
-    const [draggedIndex, setDraggedIndex] = useState(null);
     const [showTemplates, setShowTemplates] = useState(false);
     const [autoSaveStatus, setAutoSaveStatus] = useState("");
     const [focusedQuestionIndex, setFocusedQuestionIndex] = useState(null);
@@ -328,43 +344,6 @@ export default function SurveyCreationPage() {
             throw error; // Re-throw to maintain error handling
         }
     }, [questions, updateQuestion]);
-
-    // Drag and drop handlers
-    const handleDragStart = (e, index) => {
-        setDraggedIndex(index);
-        e.dataTransfer.effectAllowed = "move";
-    };
-
-    const handleDragOver = (e) => {
-        e.preventDefault();
-        e.dataTransfer.dropEffect = "move";
-    };
-
-    const handleDrop = (e, dropIndex) => {
-        e.preventDefault();
-
-        if (draggedIndex === null || draggedIndex === dropIndex) {
-            setDraggedIndex(null);
-            return;
-        }
-
-        setQuestions(prev => {
-            const updated = [...prev];
-            const draggedItem = updated[draggedIndex];
-
-            // Remove dragged item
-            updated.splice(draggedIndex, 1);
-
-            // Insert at new position
-            const finalDropIndex = draggedIndex < dropIndex ? dropIndex - 1 : dropIndex;
-            updated.splice(finalDropIndex, 0, draggedItem);
-
-            // Update order numbers
-            return updated.map((q, i) => ({ ...q, orderNumber: i + 1 }));
-        });
-
-        setDraggedIndex(null);
-    };
 
     // Validation
     const validateForm = () => {
@@ -699,14 +678,10 @@ export default function SurveyCreationPage() {
                                             index={index}
                                             onUpdate={updateQuestion}
                                             onRemove={removeQuestion}
-                                            onDragStart={handleDragStart}
-                                            onDragOver={handleDragOver}
-                                            onDrop={handleDrop}
                                             onUpdateMultipleChoice={updateMultipleChoiceOptions}
                                             onUpdateRating={updateRatingOptions}
                                             onQuestionImprovement={handleQuestionImprovement}
                                             errors={errors}
-                                            isDragging={draggedIndex === index}
                                             isFocused={focusedQuestionIndex === index}
                                             questionTypes={QUESTION_TYPES}
                                         />
@@ -872,14 +847,10 @@ function QuestionEditor({
     index,
     onUpdate,
     onRemove,
-    onDragStart,
-    onDragOver,
-    onDrop,
     onUpdateMultipleChoice,
     onUpdateRating,
     onQuestionImprovement,
     errors,
-    isDragging,
     isFocused,
     questionTypes
 }) {
@@ -956,17 +927,10 @@ function QuestionEditor({
 
     return (
         <div
-            className={`${styles.questionCard} ${isDragging ? styles.dragging : ''} ${isFocused ? styles.focused : ''} ${styles[validationState]}`}
-            draggable
-            onDragStart={(e) => onDragStart(e, index)}
-            onDragOver={onDragOver}
-            onDrop={(e) => onDrop(e, index)}
+            className={`${styles.questionCard} ${isFocused ? styles.focused : ''} ${styles[validationState]}`}
         >
             <div className={styles.questionHeader}>
                 <div className={styles.questionNumber}>
-                    <svg className={styles.dragIcon} viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M8 9h8M8 15h8" />
-                    </svg>
                     <span>Question {index + 1}</span>
                     {validationState === "valid" && <span className={styles.validIcon}>✓</span>}
                     {validationState === "warning" && <span className={styles.warningIcon}>⚠</span>}
@@ -1001,7 +965,10 @@ function QuestionEditor({
             {!isExpanded && (
                 <div className={styles.questionSummary} onClick={() => setIsExpanded(true)}>
                     <div className={styles.summaryType}>
-                        <span className={styles.typeIcon}>{questionTypes[question.type]?.icon}</span>
+                        {React.createElement(questionTypes[question.type]?.icon, {
+                            className: styles.typeIcon,
+                            size: 16
+                        })}
                         <span className={styles.typeLabel}>{questionTypes[question.type]?.label}</span>
                     </div>
                     <div className={styles.summaryText}>
@@ -1015,17 +982,28 @@ function QuestionEditor({
                 <div className={styles.questionContent}>
                     <div className={styles.formGroup}>
                         <label className={styles.label}>Question Type</label>
-                        <div className={styles.typeSelector}>
-                            {Object.entries(questionTypes).map(([type, config]) => (
-                                <button
-                                    key={type}
-                                    onClick={() => onUpdate(index, "type", type)}
-                                    className={`${styles.typeButton} ${question.type === type ? styles.active : ''}`}
-                                >
-                                    <span className={styles.typeIcon}>{config.icon}</span>
-                                    <span className={styles.typeLabel}>{config.label}</span>
-                                </button>
-                            ))}
+                        <div className={styles.selectWrapper}>
+                            <select
+                                value={question.type}
+                                onChange={(e) => onUpdate(index, "type", e.target.value)}
+                                className={styles.select}
+                            >
+                                {Object.entries(questionTypes).map(([type, config]) => (
+                                    <option key={type} value={type}>
+                                        {config.label}
+                                    </option>
+                                ))}
+                            </select>
+                            <ChevronDown className={styles.selectIcon} size={16} />
+                        </div>
+                        <div className={styles.selectedTypeInfo}>
+                            {React.createElement(questionTypes[question.type]?.icon, {
+                                className: styles.selectedTypeIcon,
+                                size: 16
+                            })}
+                            <span className={styles.selectedTypeDescription}>
+                                {questionTypes[question.type]?.description}
+                            </span>
                         </div>
                     </div>
 

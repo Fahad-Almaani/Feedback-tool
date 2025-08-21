@@ -1132,7 +1132,6 @@
   border: 2px solid rgba(255, 255, 255, 0.3);
   box-shadow: var(--shadow-md);
   transition: all var(--transition-normal);
-  cursor: grab;
   position: relative;
   overflow: hidden;
 }
@@ -1141,12 +1140,6 @@
   transform: translateY(-2px);
   box-shadow: var(--shadow-lg);
   border-color: rgba(102, 126, 234, 0.3);
-}
-
-.questionCard.dragging {
-  opacity: 0.5;
-  transform: scale(0.95);
-  cursor: grabbing;
 }
 
 .questionCard.focused {
@@ -1213,13 +1206,6 @@
   font-size: var(--font-size-sm);
   font-weight: 600;
   color: var(--text-primary);
-}
-
-.dragIcon {
-  width: 16px;
-  height: 16px;
-  color: var(--text-light);
-  cursor: grab;
 }
 
 .validIcon {
@@ -1349,54 +1335,6 @@
 
 .questionContent {
   padding: var(--space-md) var(--space-lg);
-}
-
-/* Type Selector */
-.typeSelector {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-  gap: var(--space-xs);
-  margin-top: var(--space-xs);
-}
-
-.typeButton {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.25rem;
-  padding: var(--space-sm);
-  background: rgba(255, 255, 255, 0.5);
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  border-radius: var(--radius-md);
-  cursor: pointer;
-  transition: all var(--transition-normal);
-  text-align: center;
-}
-
-.typeButton:hover {
-  background: rgba(102, 126, 234, 0.1);
-  border-color: rgba(102, 126, 234, 0.3);
-  transform: translateY(-1px);
-}
-
-.typeButton.active {
-  background: var(--primary-gradient);
-  border-color: transparent;
-  color: var(--text-white);
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-md);
-}
-
-.typeButton .typeIcon {
-  font-size: var(--font-size-base);
-}
-
-.typeButton .typeLabel {
-  font-size: var(--font-size-xs);
-  font-weight: 500;
-  background: none;
-  padding: 0;
-  color: inherit;
 }
 
 /* Multiple Choice Options */
@@ -1971,10 +1909,6 @@
     min-width: auto;
   }
 
-  .typeSelector {
-    grid-template-columns: repeat(2, 1fr);
-  }
-
   .sectionHeader {
     flex-direction: column;
     align-items: stretch;
@@ -2046,10 +1980,6 @@
     flex-wrap: wrap;
   }
 
-  .typeSelector {
-    grid-template-columns: 1fr;
-  }
-
   .quickActionButton {
     font-size: var(--font-size-xs);
     padding: var(--space-xs);
@@ -2093,7 +2023,6 @@
   }
 
   .toggleIcon,
-  .dragIcon,
   .removeIcon {
     opacity: 1;
   }
@@ -2103,4 +2032,55 @@
   .readyBadge {
     border-width: 2px;
   }
+}
+
+/* New Select Dropdown Styles */
+.selectWrapper {
+  position: relative;
+  display: inline-block;
+  width: 100%;
+}
+
+.selectWrapper .select {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background: rgba(255, 255, 255, 0.8);
+  padding-right: 3rem;
+  cursor: pointer;
+}
+
+.selectIcon {
+  position: absolute;
+  right: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-secondary);
+  pointer-events: none;
+}
+
+.selectedTypeInfo {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  margin-top: var(--space-xs);
+  padding: var(--space-xs) var(--space-sm);
+  background: rgba(102, 126, 234, 0.1);
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(102, 126, 234, 0.2);
+}
+
+.selectedTypeIcon {
+  color: var(--primary-color);
+  flex-shrink: 0;
+}
+
+.selectedTypeDescription {
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+  font-style: italic;
+}
+
+.typeIcon {
+  color: var(--primary-color);
 }
