@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Sparkles } from 'lucide-react';
 import { generateFromAI } from '../../utils/AIservice';
 
@@ -72,6 +72,17 @@ const InputWithAI = ({
     aiConfig = {}
 }) => {
     const [isAILoading, setIsAILoading] = useState(false);
+    const [aiError, setAiError] = useState(null);
+
+    // Auto-dismiss error after 8 seconds
+    useEffect(() => {
+        if (aiError) {
+            const timer = setTimeout(() => {
+                setAiError(null);
+            }, 8000);
+            return () => clearTimeout(timer);
+        }
+    }, [aiError]);
 
     // Function to handle the AI button click
     const handleAIClick = async () => {
@@ -83,12 +94,14 @@ const InputWithAI = ({
 
         if (!value.trim()) {
             console.warn("⚠️ InputWithAI - No text entered");
-            alert('Please enter some text first to get AI assistance.');
+            setAiError('Please enter some text first to get AI assistance.');
+            setTimeout(() => setAiError(null), 3000);
             return;
         }
 
         console.log("🔄 InputWithAI - Setting loading state to true");
         setIsAILoading(true);
+        setAiError(null); // Clear any previous errors
 
         try {
             // If an onAIClick handler is provided as a prop, use it.
@@ -117,6 +130,7 @@ const InputWithAI = ({
                     }
                 } else {
                     console.warn("⚠️ InputWithAI - No valid result returned from onAIClick");
+                    setAiError('AI processing failed. Please try again.');
                 }
                 return;
             }
@@ -134,8 +148,18 @@ const InputWithAI = ({
                 length: aiResponse?.length
             });
 
+            // Check if the response indicates an error
+            if (aiResponse && (
+                aiResponse.includes("API key is not configured") ||
+                aiResponse.includes("An error occurred while generating content") ||
+                aiResponse.includes("No text generated from AI")
+            )) {
+                setAiError(aiResponse);
+                return;
+            }
+
             // Update the input value with AI-enhanced content
-            if (onChange) {
+            if (onChange && aiResponse) {
                 console.log("✏️ InputWithAI - Updating input with AI response");
                 const event = {
                     target: {
@@ -144,7 +168,8 @@ const InputWithAI = ({
                 };
                 onChange(event);
             } else {
-                console.warn("⚠️ InputWithAI - No onChange handler for default AI");
+                console.warn("⚠️ InputWithAI - No onChange handler for default AI or no response");
+                setAiError('No AI response received. Please try again.');
             }
         } catch (error) {
             console.error('❌ InputWithAI - AI generation failed:', error);
@@ -152,7 +177,16 @@ const InputWithAI = ({
                 message: error.message,
                 stack: error.stack
             });
-            alert('Failed to generate AI content. Please try again.');
+
+            // Set user-friendly error message based on error type
+            let errorMessage = 'Failed to generate AI content. Please try again.';
+            if (error.message?.includes('API key')) {
+                errorMessage = 'AI service is not properly configured. Please contact support.';
+            } else if (error.message?.includes('network') || error.message?.includes('fetch')) {
+                errorMessage = 'Network error. Please check your connection and try again.';
+            }
+
+            setAiError(errorMessage);
         } finally {
             console.log("🔄 InputWithAI - Setting loading state to false");
             setIsAILoading(false);
@@ -250,6 +284,32 @@ const InputWithAI = ({
                     )}
                 </div>
             </div>
+
+            {/* Error message display */}
+            {aiError && (
+                <div className="mt-2 px-3 py-2 bg-red-50 border border-red-200 rounded-md">
+                    <div className="flex items-start">
+                        <div className="flex-shrink-0">
+                            <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                            </svg>
+                        </div>
+                        <div className="ml-2">
+                            <p className="text-sm text-red-600">{aiError}</p>
+                        </div>
+                        <div className="ml-auto pl-3">
+                            <button
+                                onClick={() => setAiError(null)}
+                                className="inline-flex text-red-400 hover:text-red-600 focus:outline-none"
+                            >
+                                <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
