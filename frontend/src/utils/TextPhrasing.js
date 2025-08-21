@@ -58,8 +58,10 @@ Focus on being informative, clear, and well-structured.`,
       maxLength: maxLength || 200,
       systemPrompt: `You are an expert at creating clear, unbiased survey questions. 
 Your task is to improve the user's question while ensuring it's clear, neutral, and easy to understand.
-Focus on clarity, neutrality, and avoiding leading questions.`,
-      instructions: "Make it clear, neutral, and easy to understand",
+Focus on clarity, neutrality, and avoiding leading questions.
+CRITICAL: Preserve the original question type and format. Do not change a text question into a rating question, or a rating question into multiple choice, etc.`,
+      instructions:
+        "Make it clear, neutral, and easy to understand while preserving the question type",
     },
     option: {
       maxLength: maxLength || 100,
@@ -82,6 +84,11 @@ Focus on clarity, flow, and readability.`,
   // Build the improvement prompt
   let prompt = `Please improve the following ${type}:\n\n"${text}"\n\n`;
 
+  // Add context first if provided (especially important for questions)
+  if (context) {
+    prompt += `IMPORTANT CONTEXT: ${context}\n\n`;
+  }
+
   // Add specific instructions based on type
   prompt += `Instructions: ${config.instructions}. `;
 
@@ -94,11 +101,6 @@ Focus on clarity, flow, and readability.`,
 
   // Add tone specification
   prompt += `Use a ${tone} tone. `;
-
-  // Add context if provided
-  if (context) {
-    prompt += `Context: ${context}. `;
-  }
 
   // Add final instructions
   prompt += `\n\nReturn only the improved text without any additional explanation or formatting.`;

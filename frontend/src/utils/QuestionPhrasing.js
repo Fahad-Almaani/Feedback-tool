@@ -30,23 +30,26 @@ export const improveQuestionPhrasing = async (
   let context =
     "This is a survey question that should be clear, neutral, and unbiased.";
 
-  switch (questionType.toLowerCase()) {
-    case "rating":
+  switch (questionType.toUpperCase()) {
+    case "RATING":
       context +=
-        " This is a rating question that asks users to rate something on a scale.";
+        " This is a RATING question that asks users to rate something on a numerical scale (e.g., 1-5, 1-10). The question should prompt users to assign a numerical value. Avoid turning this into a multiple choice or open-ended question.";
       break;
-    case "multiple_choice":
-      context += " This is a multiple choice question with predefined options.";
-      break;
-    case "text":
+    case "MULTIPLE_CHOICE":
       context +=
-        " This is a text input question that allows open-ended responses.";
+        " This is a MULTIPLE CHOICE question with predefined options that users can select from. The question should be designed to work with specific answer choices. Avoid turning this into a rating scale or open-ended question.";
       break;
-    case "long_text":
-      context += " This is a long text question for detailed responses.";
+    case "TEXT":
+      context +=
+        " This is a SHORT TEXT input question that allows brief, open-ended responses (typically 1-2 sentences). The question should encourage concise written answers. Avoid turning this into a rating scale or multiple choice question.";
+      break;
+    case "LONG_TEXT":
+      context +=
+        " This is a LONG TEXT question for detailed, open-ended responses (paragraphs or essays). The question should encourage comprehensive written explanations. Avoid turning this into a rating scale or multiple choice question.";
       break;
     default:
-      context += " Make it engaging but neutral.";
+      context +=
+        " Make it engaging but neutral while preserving the original question format.";
   }
 
   return improveQuestionText(questionText, {
