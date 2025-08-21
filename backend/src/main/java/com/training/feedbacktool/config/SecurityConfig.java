@@ -46,6 +46,8 @@ public class SecurityConfig {
                         .requestMatchers("/actuator/**").permitAll()
                         .requestMatchers("/api/users/create").permitAll()
                         .requestMatchers("/api/auth/login").permitAll()
+                        .requestMatchers("/api/auth/forgot-password").permitAll()
+                        .requestMatchers("/api/auth/reset-password").permitAll()
                         .requestMatchers("/api/auth/**").permitAll() // Allow all auth endpoints
                         .requestMatchers("/users/create").permitAll() // Legacy support
                         .requestMatchers("/auth/login").permitAll() // Legacy support

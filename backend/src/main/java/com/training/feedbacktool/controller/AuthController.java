@@ -8,6 +8,11 @@ import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import com.training.feedbacktool.dto.ForgotPasswordRequest;
+import com.training.feedbacktool.dto.ResetPasswordRequest;
+
+import java.util.Optional;
+
 
 @RestController
 @RequestMapping("/api/auth")
@@ -35,5 +40,18 @@ public class AuthController {
                     HttpStatus.INTERNAL_SERVER_ERROR);
             return ResponseEntity.internalServerError().body(response);
         }
+    }// Start password reset flow (always 204 to avoid user enumeration)
+    @PostMapping("/forgot-password")
+    public ResponseEntity<Void> forgotPassword(@Valid @RequestBody ForgotPasswordRequest body) {
+        // This delegates to your service layer (added in earlier steps)
+        authService.requestPasswordReset(body);
+        return ResponseEntity.noContent().build(); // 204
+    }
+
+    // Complete password reset using the token
+    @PostMapping("/reset-password")
+    public ResponseEntity<Void> resetPassword(@Valid @RequestBody ResetPasswordRequest body) {
+        authService.resetPassword(body);
+        return ResponseEntity.noContent().build(); // 204
     }
 }
