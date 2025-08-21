@@ -3,13 +3,51 @@ import { useAuth } from "../../context/AuthContext";
 import { apiClient } from "../../utils/apiClient";
 import { useNavigate, useParams } from "react-router-dom";
 import { SurveyService } from "../../services/apiServices";
+import InputWithAI from "../../components/Input/InputWithAI";
+import { improveSurveyTitle, improveSurveyDescription } from "../../utils/TextPhrasing";
+import { improveQuestionPhrasing } from "../../utils/QuestionPhrasing";
+import { Type, FileText, Star, CheckSquare, ChevronDown, GripVertical, Move3D, List } from "lucide-react";
 import styles from "./EditSurveyPage.module.css";
+import {
+    DndContext,
+    closestCenter,
+    KeyboardSensor,
+    PointerSensor,
+    useSensor,
+    useSensors,
+} from '@dnd-kit/core';
+import {
+    arrayMove,
+    SortableContext,
+    sortableKeyboardCoordinates,
+    verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import {
+    useSortable,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 const QUESTION_TYPES = {
-    TEXT: { label: "Short Text", icon: "📝", description: "Brief text responses" },
-    LONG_TEXT: { label: "Long Text", icon: "📄", description: "Detailed text responses" },
-    RATING: { label: "Rating Scale", icon: "⭐", description: "Numerical rating scale" },
-    MULTIPLE_CHOICE: { label: "Multiple Choice", icon: "☑️", description: "Select from options" }
+    TEXT: {
+        label: "Short Text",
+        icon: Type,
+        description: "Brief text responses"
+    },
+    LONG_TEXT: {
+        label: "Long Text",
+        icon: FileText,
+        description: "Detailed text responses"
+    },
+    RATING: {
+        label: "Rating Scale",
+        icon: Star,
+        description: "Numerical rating scale"
+    },
+    MULTIPLE_CHOICE: {
+        label: "Multiple Choice",
+        icon: CheckSquare,
+        description: "Select from options"
+    }
 };
 
 export default function EditSurveyPage() {
@@ -32,7 +70,6 @@ export default function EditSurveyPage() {
     const [isLoading, setIsLoading] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [errors, setErrors] = useState({});
-    const [draggedIndex, setDraggedIndex] = useState(null);
     const [autoSaveStatus, setAutoSaveStatus] = useState("");
     const [focusedQuestionIndex, setFocusedQuestionIndex] = useState(null);
     const [showKeyboardShortcuts, setShowKeyboardShortcuts] = useState(false);
@@ -118,6 +155,76 @@ export default function EditSurveyPage() {
             }
         };
     }, [unsavedChanges, survey.title]);
+
+    // AI improvement handlers
+    const handleTitleImprovement = useCallback(async (currentTitle) => {
+        console.log("📋 EditSurvey - Title improvement started:", {
+            currentTitle: currentTitle?.substring(0, 100) + (currentTitle?.length > 100 ? "..." : ""),
+            length: currentTitle?.length
+        });
+
+        if (!currentTitle.trim()) {
+            console.warn("⚠️ EditSurvey - Empty title provided");
+            alert('Please enter some text first to get AI assistance.');
+            return;
+        }
+
+        try {
+            console.log("🚀 EditSurvey - Calling improveSurveyTitle...");
+            const improvedTitle = await improveSurveyTitle(currentTitle);
+
+            console.log("✅ EditSurvey - Title improved:", {
+                original: currentTitle,
+                improved: improvedTitle,
+                originalLength: currentTitle.length,
+                improvedLength: improvedTitle?.length
+            });
+
+            setSurvey(prev => ({ ...prev, title: improvedTitle }));
+            setUnsavedChanges(true);
+            if (errors.title) {
+                setErrors(prev => ({ ...prev, title: null }));
+            }
+            return improvedTitle; // Return the improved text
+        } catch (error) {
+            console.error('❌ EditSurvey - Error improving title:', error);
+            alert('Failed to improve title. Please try again.');
+            throw error; // Re-throw to maintain error handling
+        }
+    }, [errors.title]);
+
+    const handleDescriptionImprovement = useCallback(async (currentDescription) => {
+        console.log("📝 EditSurvey - Description improvement started:", {
+            currentDescription: currentDescription?.substring(0, 100) + (currentDescription?.length > 100 ? "..." : ""),
+            length: currentDescription?.length
+        });
+
+        if (!currentDescription.trim()) {
+            console.warn("⚠️ EditSurvey - Empty description provided");
+            alert('Please enter some text first to get AI assistance.');
+            return;
+        }
+
+        try {
+            console.log("🚀 EditSurvey - Calling improveSurveyDescription...");
+            const improvedDescription = await improveSurveyDescription(currentDescription);
+
+            console.log("✅ EditSurvey - Description improved:", {
+                original: currentDescription,
+                improved: improvedDescription,
+                originalLength: currentDescription.length,
+                improvedLength: improvedDescription?.length
+            });
+
+            setSurvey(prev => ({ ...prev, description: improvedDescription }));
+            setUnsavedChanges(true);
+            return improvedDescription; // Return the improved text
+        } catch (error) {
+            console.error('❌ EditSurvey - Error improving description:', error);
+            alert('Failed to improve description. Please try again.');
+            throw error; // Re-throw to maintain error handling
+        }
+    }, []);
 
     // Keyboard shortcuts
     useEffect(() => {
@@ -219,42 +326,54 @@ export default function EditSurveyPage() {
         setUnsavedChanges(true);
     }, [updateQuestion]);
 
-    // Drag and drop handlers
-    const handleDragStart = (e, index) => {
-        setDraggedIndex(index);
-        e.dataTransfer.effectAllowed = "move";
-    };
-
-    const handleDragOver = (e) => {
-        e.preventDefault();
-        e.dataTransfer.dropEffect = "move";
-    };
-
-    const handleDrop = (e, dropIndex) => {
-        e.preventDefault();
-
-        if (draggedIndex === null || draggedIndex === dropIndex) {
-            setDraggedIndex(null);
+    // Handle question text improvement
+    const handleQuestionImprovement = useCallback(async (questionIndex, currentQuestionText) => {
+        if (!currentQuestionText.trim()) {
+            alert('Please enter some text first to get AI assistance.');
             return;
         }
 
-        setQuestions(prev => {
-            const updated = [...prev];
-            const draggedItem = updated[draggedIndex];
+        try {
+            const questionType = questions[questionIndex]?.type || '';
+            const improvedQuestion = await improveQuestionPhrasing(currentQuestionText, questionType);
+            updateQuestion(questionIndex, 'questionText', improvedQuestion);
+            return improvedQuestion; // Return the improved text
+        } catch (error) {
+            console.error('Error improving question:', error);
+            alert('Failed to improve question. Please try again.');
+            throw error; // Re-throw to maintain error handling
+        }
+    }, [questions, updateQuestion]);
 
-            // Remove dragged item
-            updated.splice(draggedIndex, 1);
+    // Drag and drop sensors
+    const sensors = useSensors(
+        useSensor(PointerSensor),
+        useSensor(KeyboardSensor, {
+            coordinateGetter: sortableKeyboardCoordinates,
+        })
+    );
 
-            // Insert at new position
-            const finalDropIndex = draggedIndex < dropIndex ? dropIndex - 1 : dropIndex;
-            updated.splice(finalDropIndex, 0, draggedItem);
+    // Handle drag end
+    const handleDragEnd = useCallback((event) => {
+        const { active, over } = event;
 
-            // Update order numbers
-            return updated.map((q, i) => ({ ...q, orderNumber: i + 1 }));
-        });
+        if (active.id !== over?.id) {
+            setQuestions((items) => {
+                const oldIndex = items.findIndex((item) => item.id === active.id);
+                const newIndex = items.findIndex((item) => item.id === over.id);
 
-        setDraggedIndex(null);
-    };
+                const reorderedItems = arrayMove(items, oldIndex, newIndex);
+                // Update order numbers
+                const updatedItems = reorderedItems.map((item, index) => ({
+                    ...item,
+                    orderNumber: index + 1
+                }));
+
+                setUnsavedChanges(true);
+                return updatedItems;
+            });
+        }
+    }, []);
 
     // Validation
     const validateForm = () => {
@@ -476,162 +595,106 @@ export default function EditSurveyPage() {
 
             {/* Main Content */}
             <main className={styles.mainContent}>
-                {/* Warning Banner for surveys with responses */}
-                {hasResponses && (
-                    <div className={styles.warningBanner}>
-                        <div className={styles.warningContent}>
-                            <svg className={styles.warningIcon} viewBox="0 0 24 24" fill="currentColor">
-                                <path d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
-                            </svg>
-                            <div className={styles.warningText}>
-                                <h3>Survey Has Responses</h3>
-                                <p>This survey already has responses from users. You can only modify the title, description, and status. To make structural changes to questions, create a new survey instead.</p>
+                <DndContext
+                    sensors={sensors}
+                    collisionDetection={closestCenter}
+                    onDragEnd={handleDragEnd}
+                >
+                    {/* Warning Banner for surveys with responses */}
+                    {hasResponses && (
+                        <div className={styles.warningBanner}>
+                            <div className={styles.warningContent}>
+                                <svg className={styles.warningIcon} viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+                                </svg>
+                                <div className={styles.warningText}>
+                                    <h3>Survey Has Responses</h3>
+                                    <p>This survey already has responses from users. You can only modify the title, description, and status. To make structural changes to questions, create a new survey instead.</p>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                )}
+                    )}
 
-                <div className={styles.surveyBuilder}>
-                    {/* Main Content Area */}
-                    <div className={styles.mainContentArea}>
-                        {/* Survey Information */}
-                        <div className={styles.section}>
-                            <div className={styles.sectionHeader}>
-                                <h2 className={styles.sectionTitle}>
-                                    <svg className={styles.sectionIcon} viewBox="0 0 24 24" fill="currentColor">
-                                        <path d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25zM6.75 12h.008v.008H6.75V12zm0 3h.008v.008H6.75V15zm0 3h.008v.008H6.75V18z" />
-                                    </svg>
-                                    Survey Information
-                                    {survey.title && <span className={styles.completedBadge}>✓</span>}
-                                </h2>
-                                <p className={styles.sectionSubtitle}>Basic details about your survey</p>
-                            </div>
-                            <div className={styles.sectionContent}>
-                                <div className={styles.formGroup}>
-                                    <label className={styles.label}>
-                                        Survey Title <span className={styles.required}>*</span>
-                                    </label>
-                                    <input
-                                        type="text"
-                                        className={`${styles.input} ${errors.title ? styles.error : ''} ${survey.title ? styles.valid : ''}`}
-                                        placeholder="Enter survey title..."
-                                        value={survey.title}
-                                        onChange={(e) => {
-                                            setSurvey(prev => ({ ...prev, title: e.target.value }));
-                                            setUnsavedChanges(true);
-                                            if (errors.title) {
-                                                setErrors(prev => ({ ...prev, title: null }));
-                                            }
-                                        }}
-                                    />
-                                    {errors.title && <span className={styles.errorText}>{errors.title}</span>}
-                                    {survey.title && !errors.title && (
-                                        <span className={styles.validText}>✓ Title looks good</span>
-                                    )}
+                    <div className={styles.surveyBuilder}>
+                        {/* Main Content Area */}
+                        <div className={styles.mainContentArea}>
+                            {/* Survey Information */}
+                            <div className={styles.section}>
+                                <div className={styles.sectionHeader}>
+                                    <h2 className={styles.sectionTitle}>
+                                        <svg className={styles.sectionIcon} viewBox="0 0 24 24" fill="currentColor">
+                                            <path d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25zM6.75 12h.008v.008H6.75V12zm0 3h.008v.008H6.75V15zm0 3h.008v.008H6.75V18z" />
+                                        </svg>
+                                        Survey Information
+                                        {survey.title && <span className={styles.completedBadge}>✓</span>}
+                                    </h2>
+                                    <p className={styles.sectionSubtitle}>Basic details about your survey</p>
                                 </div>
+                                <div className={styles.sectionContent}>
+                                    <div className={styles.formGroup}>
+                                        <label className={styles.label}>
+                                            Survey Title <span className={styles.required}>*</span>
+                                        </label>
+                                        <InputWithAI
+                                            type="input"
+                                            value={survey.title}
+                                            onChange={(e) => {
+                                                setSurvey(prev => ({ ...prev, title: e.target.value }));
+                                                setUnsavedChanges(true);
+                                                if (errors.title) {
+                                                    setErrors(prev => ({ ...prev, title: null }));
+                                                }
+                                            }}
+                                            placeholder="Enter survey title..."
+                                            error={!!errors.title}
+                                            onAIClick={handleTitleImprovement}
+                                        />
+                                        {errors.title && <span className={styles.errorText}>{errors.title}</span>}
+                                    </div>
 
-                                <div className={styles.formGroup}>
-                                    <label className={styles.label}>
-                                        Description
-                                        <span className={styles.optional}>(optional)</span>
-                                    </label>
-                                    <textarea
-                                        className={styles.textarea}
-                                        placeholder="Describe your survey's purpose and instructions..."
-                                        value={survey.description}
-                                        onChange={(e) => {
-                                            setSurvey(prev => ({ ...prev, description: e.target.value }));
-                                            setUnsavedChanges(true);
-                                        }}
-                                        rows={3}
-                                    />
-                                    <div className={styles.characterCount}>
-                                        {survey.description.length}/500
+                                    <div className={styles.formGroup}>
+                                        <label className={styles.label}>
+                                            Description
+                                            <span className={styles.optional}>(optional)</span>
+                                        </label>
+                                        <InputWithAI
+                                            type="textarea"
+                                            value={survey.description}
+                                            onChange={(e) => {
+                                                setSurvey(prev => ({ ...prev, description: e.target.value }));
+                                                setUnsavedChanges(true);
+                                            }}
+                                            placeholder="Describe your survey's purpose and instructions..."
+                                            rows={3}
+                                            onAIClick={handleDescriptionImprovement}
+                                        />
+                                        <div className={styles.characterCount}>
+                                            {survey.description.length}/500
+                                        </div>
                                     </div>
                                 </div>
                             </div>
-                        </div>
 
-                        {/* Questions Section */}
-                        <div className={styles.section}>
-                            <div className={styles.sectionHeader}>
-                                <div className={styles.sectionTitleWrapper}>
-                                    <h2 className={styles.sectionTitle}>
-                                        <svg className={styles.sectionIcon} viewBox="0 0 24 24" fill="currentColor">
-                                            <path d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9 5.25h.008v.008H12v-.008z" />
-                                        </svg>
-                                        Survey Questions
-                                        <span className={styles.questionCount}>({questions.length})</span>
-                                        {questions.length > 0 && <span className={styles.completedBadge}>✓</span>}
-                                    </h2>
-                                    <p className={styles.sectionSubtitle}>Add and configure your survey questions</p>
-                                </div>
-                                <div className={styles.sectionActions}>
-                                    <button
-                                        onClick={addQuestion}
-                                        className={styles.addQuestionHeaderButton}
-                                        disabled={hasResponses}
-                                        title={hasResponses ? "Cannot add questions to surveys with responses" : "Add a new question"}
-                                    >
-                                        <svg className={styles.addIcon} viewBox="0 0 24 24" fill="currentColor">
-                                            <path d="M12 4.5v15m7.5-7.5h-15" />
-                                        </svg>
-                                        Add Question
-                                    </button>
-                                </div>
-                            </div>
-                            <div className={styles.sectionContent}>
-                                {errors.questions && <div className={styles.errorBanner}>{errors.questions}</div>}
-
-                                <div className={styles.questionsList}>
-                                    {questions.map((question, index) => (
-                                        <QuestionEditor
-                                            key={question.id}
-                                            question={question}
-                                            index={index}
-                                            onUpdate={updateQuestion}
-                                            onRemove={removeQuestion}
-                                            onDragStart={handleDragStart}
-                                            onDragOver={handleDragOver}
-                                            onDrop={handleDrop}
-                                            onUpdateMultipleChoice={updateMultipleChoiceOptions}
-                                            onUpdateRating={updateRatingOptions}
-                                            errors={errors}
-                                            isDragging={draggedIndex === index}
-                                            isFocused={focusedQuestionIndex === index}
-                                            questionTypes={QUESTION_TYPES}
-                                            disabled={hasResponses}
-                                        />
-                                    ))}
-
-                                    {questions.length === 0 && (
-                                        <div className={styles.emptyQuestions}>
-                                            <svg className={styles.emptyIcon} viewBox="0 0 24 24" fill="currentColor">
+                            {/* Questions Section */}
+                            <div className={styles.section}>
+                                <div className={styles.sectionHeader}>
+                                    <div className={styles.sectionTitleWrapper}>
+                                        <h2 className={styles.sectionTitle}>
+                                            <svg className={styles.sectionIcon} viewBox="0 0 24 24" fill="currentColor">
                                                 <path d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9 5.25h.008v.008H12v-.008z" />
                                             </svg>
-                                            <h3 className={styles.emptyTitle}>No questions yet</h3>
-                                            <p className={styles.emptyDescription}>
-                                                Start building your survey by adding your first question
-                                            </p>
-                                            <div className={styles.emptyActions}>
-                                                <button
-                                                    onClick={addQuestion}
-                                                    className={styles.emptyActionButton}
-                                                >
-                                                    Add First Question
-                                                </button>
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
-
-                                {questions.length > 0 && (
-                                    <div className={styles.addQuestionSection}>
+                                            Survey Questions
+                                            <span className={styles.questionCount}>({questions.length})</span>
+                                            {questions.length > 0 && <span className={styles.completedBadge}>✓</span>}
+                                        </h2>
+                                        <p className={styles.sectionSubtitle}>Add and configure your survey questions</p>
+                                    </div>
+                                    <div className={styles.sectionActions}>
                                         <button
                                             onClick={addQuestion}
-                                            className={styles.addQuestionButton}
+                                            className={styles.addQuestionHeaderButton}
                                             disabled={hasResponses}
-                                            title={hasResponses ? "Cannot add questions to surveys with responses" : "Add another question"}
+                                            title={hasResponses ? "Cannot add questions to surveys with responses" : "Add a new question"}
                                         >
                                             <svg className={styles.addIcon} viewBox="0 0 24 24" fill="currentColor">
                                                 <path d="M12 4.5v15m7.5-7.5h-15" />
@@ -639,132 +702,224 @@ export default function EditSurveyPage() {
                                             Add Question
                                         </button>
                                     </div>
-                                )}
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Progress Sidebar */}
-                    <div className={styles.progressSection}>
-                        <div className={styles.progressHeader}>
-                            <h3 className={styles.progressTitle}>Survey Progress</h3>
-                        </div>
-
-                        <div className={styles.progressChecklist}>
-                            <div className={`${styles.progressItem} ${survey.title ? styles.completed : styles.active}`}>
-                                <div className={styles.progressIcon}>
-                                    {survey.title ? '✓' : '1'}
                                 </div>
-                                <span className={styles.progressText}>Survey Information</span>
-                            </div>
-                            <div className={`${styles.progressItem} ${questions.length > 0 ? styles.completed : questions.length === 0 && survey.title ? styles.active : ''}`}>
-                                <div className={styles.progressIcon}>
-                                    {questions.length > 0 ? '✓' : '2'}
-                                </div>
-                                <span className={styles.progressText}>Add Questions ({questions.length})</span>
-                            </div>
-                        </div>
+                                <div className={styles.sectionContent}>
+                                    {errors.questions && <div className={styles.errorBanner}>{errors.questions}</div>}
 
-                        {/* Action Buttons */}
-                        <div className={styles.actionSection}>
-                            {errors.submit && <div className={styles.errorBanner}>{errors.submit}</div>}
+                                    <SortableContext
+                                        items={questions.map(q => q.id)}
+                                        strategy={verticalListSortingStrategy}
+                                    >
+                                        <div className={styles.questionsList}>
+                                            {questions.map((question, index) => (
+                                                <QuestionEditor
+                                                    key={question.id}
+                                                    question={question}
+                                                    index={index}
+                                                    onUpdate={updateQuestion}
+                                                    onRemove={removeQuestion}
+                                                    onUpdateMultipleChoice={updateMultipleChoiceOptions}
+                                                    onUpdateRating={updateRatingOptions}
+                                                    onQuestionImprovement={handleQuestionImprovement}
+                                                    errors={errors}
+                                                    isFocused={focusedQuestionIndex === index}
+                                                    questionTypes={QUESTION_TYPES}
+                                                    disabled={hasResponses}
+                                                />
+                                            ))}
 
-                            <div className={styles.actionButtons}>
-                                <button
-                                    onClick={() => navigate("/admin")}
-                                    className={styles.cancelButton}
-                                    disabled={isSubmitting}
-                                >
-                                    Cancel
-                                </button>
-
-                                <button
-                                    onClick={() => handleSubmit("DRAFT")}
-                                    className={styles.saveDraftButton}
-                                    disabled={isSubmitting || (!survey.title.trim() && questions.length === 0)}
-                                >
-                                    {isSubmitting ? (
-                                        <>
-                                            <div className={styles.spinner}></div>
-                                            Saving...
-                                        </>
-                                    ) : (
-                                        <>
-                                            <svg className={styles.saveIcon} viewBox="0 0 24 24" fill="currentColor">
-                                                <path d="M17.593 3.322c1.1.128 1.907 1.077 1.907 2.185V21L12 17.25 4.5 21V5.507c0-1.108.806-2.057 1.907-2.185a48.507 48.507 0 0111.186 0z" />
-                                            </svg>
-                                            Update Survey
-                                        </>
-                                    )}
-                                </button>
-
-                                <button
-                                    onClick={() => handleSubmit("ACTIVE")}
-                                    className={styles.publishButton}
-                                    disabled={isSubmitting || !survey.title.trim() || questions.length === 0}
-                                >
-                                    {isSubmitting ? (
-                                        <>
-                                            <div className={styles.spinner}></div>
-                                            Publishing...
-                                        </>
-                                    ) : (
-                                        <>
-                                            <svg className={styles.publishIcon} viewBox="0 0 24 24" fill="currentColor">
-                                                <path d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
-                                            </svg>
-                                            Publish Survey
-                                            {survey.title.trim() && questions.length > 0 && (
-                                                <span className={styles.readyBadge}>Ready!</span>
+                                            {questions.length === 0 && (
+                                                <div className={styles.emptyQuestions}>
+                                                    <svg className={styles.emptyIcon} viewBox="0 0 24 24" fill="currentColor">
+                                                        <path d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9 5.25h.008v.008H12v-.008z" />
+                                                    </svg>
+                                                    <h3 className={styles.emptyTitle}>No questions yet</h3>
+                                                    <p className={styles.emptyDescription}>
+                                                        Start building your survey by adding your first question
+                                                    </p>
+                                                    <div className={styles.emptyActions}>
+                                                        <button
+                                                            onClick={addQuestion}
+                                                            className={styles.emptyActionButton}
+                                                        >
+                                                            Add First Question
+                                                        </button>
+                                                    </div>
+                                                </div>
                                             )}
-                                        </>
+                                        </div>
+                                    </SortableContext>
+
+                                    {questions.length > 0 && (
+                                        <div className={styles.addQuestionSection}>
+                                            <button
+                                                onClick={addQuestion}
+                                                className={styles.addQuestionButton}
+                                                disabled={hasResponses}
+                                                title={hasResponses ? "Cannot add questions to surveys with responses" : "Add another question"}
+                                            >
+                                                <svg className={styles.addIcon} viewBox="0 0 24 24" fill="currentColor">
+                                                    <path d="M12 4.5v15m7.5-7.5h-15" />
+                                                </svg>
+                                                Add Question
+                                            </button>
+                                        </div>
                                     )}
-                                </button>
+                                </div>
                             </div>
                         </div>
 
-                        {/* Survey Preview in Sidebar */}
-                        {questions.length > 0 && survey.title && (
-                            <div className={styles.sidebarPreview}>
-                                <h4>Quick Preview</h4>
-                                <div className={styles.miniPreview}>
-                                    <h5>{survey.title}</h5>
-                                    {survey.description && <p>{survey.description.slice(0, 100)}...</p>}
-                                    <div className={styles.miniQuestions}>
-                                        {questions.slice(0, 3).map((q, i) => (
-                                            <div key={q.id} className={styles.miniQuestion}>
-                                                {i + 1}. {q.questionText || "Question text"}
-                                            </div>
-                                        ))}
-                                        {questions.length > 3 && (
-                                            <div className={styles.moreQuestions}>
-                                                +{questions.length - 3} more questions
-                                            </div>
+                        {/* Progress Sidebar */}
+                        <div className={styles.progressSection}>
+                            <div className={styles.progressHeader}>
+                                <h3 className={styles.progressTitle}>Survey Progress</h3>
+                            </div>
+
+                            <div className={styles.progressChecklist}>
+                                <div className={`${styles.progressItem} ${survey.title ? styles.completed : styles.active}`}>
+                                    <div className={styles.progressIcon}>
+                                        {survey.title ? '✓' : '1'}
+                                    </div>
+                                    <span className={styles.progressText}>Survey Information</span>
+                                </div>
+                                <div className={`${styles.progressItem} ${questions.length > 0 ? styles.completed : questions.length === 0 && survey.title ? styles.active : ''}`}>
+                                    <div className={styles.progressIcon}>
+                                        {questions.length > 0 ? '✓' : '2'}
+                                    </div>
+                                    <span className={styles.progressText}>Add Questions ({questions.length})</span>
+                                </div>
+                            </div>
+
+                            {/* Action Buttons */}
+                            <div className={styles.actionSection}>
+                                {errors.submit && <div className={styles.errorBanner}>{errors.submit}</div>}
+
+                                <div className={styles.actionButtons}>
+                                    <button
+                                        onClick={() => navigate("/admin")}
+                                        className={styles.cancelButton}
+                                        disabled={isSubmitting}
+                                    >
+                                        Cancel
+                                    </button>
+
+                                    <button
+                                        onClick={() => handleSubmit("DRAFT")}
+                                        className={styles.saveDraftButton}
+                                        disabled={isSubmitting || (!survey.title.trim() && questions.length === 0)}
+                                    >
+                                        {isSubmitting ? (
+                                            <>
+                                                <div className={styles.spinner}></div>
+                                                Saving...
+                                            </>
+                                        ) : (
+                                            <>
+                                                <svg className={styles.saveIcon} viewBox="0 0 24 24" fill="currentColor">
+                                                    <path d="M17.593 3.322c1.1.128 1.907 1.077 1.907 2.185V21L12 17.25 4.5 21V5.507c0-1.108.806-2.057 1.907-2.185a48.507 48.507 0 0111.186 0z" />
+                                                </svg>
+                                                Update Survey
+                                            </>
                                         )}
+                                    </button>
+
+                                    <button
+                                        onClick={() => handleSubmit("ACTIVE")}
+                                        className={styles.publishButton}
+                                        disabled={isSubmitting || !survey.title.trim() || questions.length === 0}
+                                    >
+                                        {isSubmitting ? (
+                                            <>
+                                                <div className={styles.spinner}></div>
+                                                Publishing...
+                                            </>
+                                        ) : (
+                                            <>
+                                                <svg className={styles.publishIcon} viewBox="0 0 24 24" fill="currentColor">
+                                                    <path d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
+                                                </svg>
+                                                Publish Survey
+                                                {survey.title.trim() && questions.length > 0 && (
+                                                    <span className={styles.readyBadge}>Ready!</span>
+                                                )}
+                                            </>
+                                        )}
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Survey Preview in Sidebar */}
+                            {questions.length > 0 && survey.title && (
+                                <div className={styles.sidebarPreview}>
+                                    <h4>Quick Preview</h4>
+                                    <div className={styles.miniPreview}>
+                                        <h5>{survey.title}</h5>
+                                        {survey.description && <p>{survey.description.slice(0, 100)}...</p>}
+                                        <div className={styles.miniQuestions}>
+                                            {questions.slice(0, 3).map((q, i) => (
+                                                <div key={q.id} className={styles.miniQuestion}>
+                                                    {i + 1}. {q.questionText || "Question text"}
+                                                </div>
+                                            ))}
+                                            {questions.length > 3 && (
+                                                <div className={styles.moreQuestions}>
+                                                    +{questions.length - 3} more questions
+                                                </div>
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                        )}
+                            )}
+
+                            {/* Questions Organizer */}
+                            {questions.length > 0 && (
+                                <div className={styles.questionsOrganizer}>
+                                    <div className={styles.organizerHeader}>
+                                        <h4 className={styles.organizerTitle}>
+                                            <List size={16} />
+                                            Question Order
+                                        </h4>
+                                        <p className={styles.organizerSubtitle}>
+                                            {hasResponses ? "View question order" : "Drag to reorder questions"}
+                                        </p>
+                                    </div>
+
+                                    <SortableContext
+                                        items={questions.map(q => q.id)}
+                                        strategy={verticalListSortingStrategy}
+                                    >
+                                        <div className={styles.organizerList}>
+                                            {questions.map((question, index) => (
+                                                <SortableQuestionItem
+                                                    key={question.id}
+                                                    question={question}
+                                                    index={index}
+                                                    questionTypes={QUESTION_TYPES}
+                                                    disabled={hasResponses}
+                                                />
+                                            ))}
+                                        </div>
+                                    </SortableContext>
+                                </div>
+                            )}
+                        </div>
                     </div>
-                </div>
+                </DndContext>
             </main>
         </div>
     );
 }
 
-// Question Editor Component (same as in SurveyCreationPage)
+// Question Editor Component
 function QuestionEditor({
     question,
     index,
     onUpdate,
     onRemove,
-    onDragStart,
-    onDragOver,
-    onDrop,
     onUpdateMultipleChoice,
     onUpdateRating,
+    onQuestionImprovement,
     errors,
-    isDragging,
     isFocused,
     questionTypes,
     disabled = false
@@ -848,17 +1003,10 @@ function QuestionEditor({
 
     return (
         <div
-            className={`${styles.questionCard} ${isDragging ? styles.dragging : ''} ${isFocused ? styles.focused : ''} ${styles[validationState]} ${disabled ? styles.disabled : ''}`}
-            draggable={!disabled}
-            onDragStart={!disabled ? (e) => onDragStart(e, index) : undefined}
-            onDragOver={!disabled ? onDragOver : undefined}
-            onDrop={!disabled ? (e) => onDrop(e, index) : undefined}
+            className={`${styles.questionCard} ${isFocused ? styles.focused : ''} ${styles[validationState]} ${disabled ? styles.disabled : ''}`}
         >
             <div className={styles.questionHeader}>
                 <div className={styles.questionNumber}>
-                    <svg className={styles.dragIcon} viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M8 9h8M8 15h8" />
-                    </svg>
                     <span>Question {index + 1}</span>
                     {validationState === "valid" && <span className={styles.validIcon}>✓</span>}
                     {validationState === "warning" && <span className={styles.warningIcon}>⚠</span>}
@@ -894,7 +1042,10 @@ function QuestionEditor({
             {!isExpanded && (
                 <div className={styles.questionSummary} onClick={() => setIsExpanded(true)}>
                     <div className={styles.summaryType}>
-                        <span className={styles.typeIcon}>{questionTypes[question.type]?.icon}</span>
+                        {React.createElement(questionTypes[question.type]?.icon, {
+                            className: styles.typeIcon,
+                            size: 16
+                        })}
                         <span className={styles.typeLabel}>{questionTypes[question.type]?.label}</span>
                     </div>
                     <div className={styles.summaryText}>
@@ -908,18 +1059,29 @@ function QuestionEditor({
                 <div className={styles.questionContent}>
                     <div className={styles.formGroup}>
                         <label className={styles.label}>Question Type</label>
-                        <div className={styles.typeSelector}>
-                            {Object.entries(questionTypes).map(([type, config]) => (
-                                <button
-                                    key={type}
-                                    onClick={() => onUpdate(index, "type", type)}
-                                    className={`${styles.typeButton} ${question.type === type ? styles.active : ''}`}
-                                    disabled={disabled}
-                                >
-                                    <span className={styles.typeIcon}>{config.icon}</span>
-                                    <span className={styles.typeLabel}>{config.label}</span>
-                                </button>
-                            ))}
+                        <div className={styles.selectWrapper}>
+                            <select
+                                value={question.type}
+                                onChange={(e) => onUpdate(index, "type", e.target.value)}
+                                className={styles.select}
+                                disabled={disabled}
+                            >
+                                {Object.entries(questionTypes).map(([type, config]) => (
+                                    <option key={type} value={type}>
+                                        {config.label}
+                                    </option>
+                                ))}
+                            </select>
+                            <ChevronDown className={styles.selectIcon} size={16} />
+                        </div>
+                        <div className={styles.selectedTypeInfo}>
+                            {React.createElement(questionTypes[question.type]?.icon, {
+                                className: styles.selectedTypeIcon,
+                                size: 16
+                            })}
+                            <span className={styles.selectedTypeDescription}>
+                                {questionTypes[question.type]?.description}
+                            </span>
                         </div>
                     </div>
 
@@ -927,13 +1089,15 @@ function QuestionEditor({
                         <label className={styles.label}>
                             Question Text <span className={styles.required}>*</span>
                         </label>
-                        <textarea
-                            className={`${styles.textarea} ${errors[`question_${index}_text`] ? styles.error : ''}`}
-                            placeholder="Enter your question..."
+                        <InputWithAI
+                            type="textarea"
                             value={question.questionText}
                             onChange={(e) => onUpdate(index, "questionText", e.target.value)}
+                            placeholder="Enter your question..."
                             rows={3}
-                            autoFocus={isFocused}
+                            error={!!errors[`question_${index}_text`]}
+                            onAIClick={(currentText) => onQuestionImprovement && onQuestionImprovement(index, currentText)}
+                            className={errors[`question_${index}_text`] ? styles.error : ''}
                             disabled={disabled}
                         />
                         {errors[`question_${index}_text`] && (
@@ -1028,25 +1192,13 @@ function QuestionEditor({
                             )}
                         </div>
                     )}
-
-                    {/* Preview */}
-                    <div className={styles.preview}>
-                        <label className={styles.label}>Preview</label>
-                        <div className={styles.previewContent}>
-                            <QuestionPreview
-                                question={question}
-                                ratingConfig={ratingConfig}
-                                multipleChoiceOptions={multipleChoiceOptions}
-                            />
-                        </div>
-                    </div>
                 </div>
             )}
         </div>
     );
 }
 
-// Question Preview Component (same as in SurveyCreationPage)
+// Question Preview Component
 function QuestionPreview({ question, ratingConfig, multipleChoiceOptions }) {
     if (!question.questionText) {
         return (
@@ -1120,6 +1272,66 @@ function QuestionPreview({ question, ratingConfig, multipleChoiceOptions }) {
                     </div>
                 </div>
             )}
+        </div>
+    );
+}
+
+// Sortable Question Item for Sidebar
+function SortableQuestionItem({ question, index, questionTypes, disabled = false }) {
+    const {
+        attributes,
+        listeners,
+        setNodeRef,
+        transform,
+        transition,
+        isDragging,
+    } = useSortable({
+        id: question.id,
+        disabled: disabled
+    });
+
+    const style = {
+        transform: CSS.Transform.toString(transform),
+        transition,
+        opacity: isDragging ? 0.8 : 1,
+    };
+
+    const getQuestionPreview = (questionText) => {
+        if (!questionText.trim()) return "New question...";
+        return questionText.length > 40
+            ? questionText.substring(0, 40) + "..."
+            : questionText;
+    };
+
+    return (
+        <div
+            ref={setNodeRef}
+            style={style}
+            className={`${styles.sortableQuestionItem} ${isDragging ? styles.dragging : ''} ${disabled ? styles.disabled : ''}`}
+            {...attributes}
+        >
+            <div className={styles.questionItemContent}>
+                <div className={styles.questionItemHeader}>
+                    <span className={styles.questionNumber}>{index + 1}</span>
+                    <div className={styles.questionTypeIcon}>
+                        {React.createElement(questionTypes[question.type]?.icon, {
+                            size: 14
+                        })}
+                    </div>
+                </div>
+                <div className={styles.questionItemText}>
+                    {getQuestionPreview(question.questionText)}
+                </div>
+                <div className={styles.questionItemType}>
+                    {questionTypes[question.type]?.label}
+                </div>
+            </div>
+            <div
+                className={`${styles.dragHandle} ${disabled ? styles.disabled : ''}`}
+                {...listeners}
+            >
+                <GripVertical size={16} />
+            </div>
         </div>
     );
 }
