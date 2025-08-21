@@ -1131,18 +1131,6 @@ function QuestionEditor({
                             )}
                         </div>
                     )}
-
-                    {/* Preview */}
-                    {/* <div className={styles.preview}>
-                        <label className={styles.label}>Preview</label>
-                        <div className={styles.previewContent}>
-                            <QuestionPreview
-                                question={question}
-                                ratingConfig={ratingConfig}
-                                multipleChoiceOptions={multipleChoiceOptions}
-                            />
-                        </div>
-                    </div> */}
                 </div>
             )}
         </div>
