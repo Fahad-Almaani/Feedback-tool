@@ -70,7 +70,16 @@ public class ResponsesController {
         try {
             System.out.println("Getting responses for survey ID: " + surveyId);
             List<Answer> answers = answersRepository.findBySurveyId(surveyId);
-            System.out.println("Found " + answers.size() + " answers for survey " + surveyId);
+            List<Response> surveyResponses = responsesRepository.findBySurveyId(surveyId);
+            System.out.println("Found " + answers.size() + " answers and " + surveyResponses.size()
+                    + " responses for survey " + surveyId);
+
+            // Create a map of responses by user for completion time lookup
+            Map<String, Response> responseByUser = new HashMap<>();
+            for (Response resp : surveyResponses) {
+                String userKey = resp.getUser() != null ? resp.getUser().getEmail() : "anonymous_" + resp.getId();
+                responseByUser.put(userKey, resp);
+            }
 
             // Group answers by respondent
             Map<String, List<Answer>> answersByRespondent = new HashMap<>();
@@ -127,6 +136,21 @@ public class ResponsesController {
                         .orElse(firstAnswer.getCreatedAt()));
                 response.put("totalAnswers", respondentAnswers.size());
 
+                // Add completion time from Response entity
+                String userKey = user != null ? user.getEmail() : "anonymous_" + firstAnswer.getId();
+                Response matchingResponse = responseByUser.get(userKey);
+                if (matchingResponse == null && user == null) {
+                    // For anonymous users, try to find response by time proximity
+                    matchingResponse = surveyResponses.stream()
+                            .filter(r -> r.getUser() == null)
+                            .filter(r -> Math.abs(r.getCreatedAt().getEpochSecond()
+                                    - firstAnswer.getCreatedAt().getEpochSecond()) < 300) // Within 5 minutes
+                            .findFirst()
+                            .orElse(null);
+                }
+                response.put("completionTimeSeconds",
+                        matchingResponse != null ? matchingResponse.getCompletionTimeSeconds() : null);
+
                 // Convert answers to DTOs and sort by question order
                 List<SimpleAnswerDTO> answerDTOs = respondentAnswers.stream()
                         .map(answer -> new SimpleAnswerDTO(
@@ -153,10 +177,20 @@ public class ResponsesController {
                 return time1.compareTo(time2);
             });
 
+            // Calculate average completion time
+            List<Integer> completionTimes = responses.stream()
+                    .map(r -> (Integer) r.get("completionTimeSeconds"))
+                    .filter(time -> time != null && time > 0)
+                    .collect(Collectors.toList());
+
+            Double averageCompletionTime = completionTimes.isEmpty() ? null
+                    : completionTimes.stream().mapToInt(Integer::intValue).average().orElse(0.0);
+
             Map<String, Object> result = new HashMap<>();
             result.put("surveyId", surveyId);
             result.put("totalResponses", responses.size());
             result.put("totalAnswers", answers.size());
+            result.put("averageCompletionTimeSeconds", averageCompletionTime);
             result.put("responses", responses);
 
             String message = responses.isEmpty() ? "No responses found for survey ID: " + surveyId

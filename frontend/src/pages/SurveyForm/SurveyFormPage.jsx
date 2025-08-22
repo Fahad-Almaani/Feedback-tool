@@ -19,6 +19,33 @@ export default function SurveyFormPage() {
     const [submitted, setSubmitted] = useState(false);
     const [showStickyProgress, setShowStickyProgress] = useState(false);
 
+    // Timer states for completion time tracking
+    const [startTime, setStartTime] = useState(null);
+    const [completionTimeSeconds, setCompletionTimeSeconds] = useState(0);
+    const [currentTime, setCurrentTime] = useState(Date.now());
+
+    // Update current time every second for timer display
+    useEffect(() => {
+        const timer = setInterval(() => {
+            setCurrentTime(Date.now());
+        }, 1000);
+
+        return () => clearInterval(timer);
+    }, []);
+
+    // Function to format time display
+    const formatTime = (seconds) => {
+        const minutes = Math.floor(seconds / 60);
+        const remainingSeconds = seconds % 60;
+        return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+    };
+
+    // Get current elapsed time
+    const getElapsedTime = () => {
+        if (!startTime) return 0;
+        return Math.floor((currentTime - startTime) / 1000);
+    };
+
     // Load survey data
     useEffect(() => {
         const loadSurvey = async () => {
@@ -36,6 +63,9 @@ export default function SurveyFormPage() {
                     initialAnswers[question.id] = "";
                 });
                 setAnswers(initialAnswers);
+
+                // Start the timer when survey is loaded
+                setStartTime(Date.now());
 
             } catch (error) {
                 console.error('Error loading survey:', error);
@@ -131,6 +161,11 @@ export default function SurveyFormPage() {
         setError("");
 
         try {
+            // Calculate completion time
+            const endTime = Date.now();
+            const completionTime = startTime ? Math.round((endTime - startTime) / 1000) : 0;
+            setCompletionTimeSeconds(completionTime);
+
             // Format answers according to the backend DTO format
             const formattedAnswers = Object.entries(answers)
                 .filter(([questionId, answer]) => {
@@ -159,7 +194,8 @@ export default function SurveyFormPage() {
                 });
 
             const submissionData = {
-                answers: formattedAnswers
+                answers: formattedAnswers,
+                completionTimeSeconds: completionTime
             };
 
             // Use apiClient for consistent error handling and response structure
@@ -248,6 +284,7 @@ export default function SurveyFormPage() {
                                 {survey.title} • {Object.values(answers).filter(answer => answer && answer.toString().trim() !== "").length}/{survey.questions.length}
                             </span>
                             <span className={styles.stickyProgressPercentage}>{calculateProgress()}%</span>
+                            <span className={styles.stickyProgressTime}>⏱️ {formatTime(getElapsedTime())}</span>
                         </div>
                         <div className={styles.stickyProgressBarTrack}>
                             <div
@@ -380,6 +417,7 @@ export default function SurveyFormPage() {
                                 Progress: {Object.values(answers).filter(answer => answer && answer.toString().trim() !== "").length} of {survey.questions.length} questions answered
                             </span>
                             <span className={styles.progressPercentage}>{calculateProgress()}%</span>
+                            <span className={styles.progressTime}>⏱️ {formatTime(getElapsedTime())}</span>
                         </div>
                         <div className={styles.progressBar}>
                             <div
