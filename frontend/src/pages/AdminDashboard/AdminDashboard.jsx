@@ -361,6 +361,24 @@ export default function AdminDashboard() {
     });
   };
 
+  const formatCompletionTime = (seconds) => {
+    if (!seconds || seconds <= 0) {
+      return "N/A";
+    }
+
+    if (seconds < 60) {
+      return `${Math.round(seconds)}s`;
+    } else if (seconds < 3600) {
+      const minutes = Math.floor(seconds / 60);
+      const remainingSeconds = Math.round(seconds % 60);
+      return remainingSeconds > 0 ? `${minutes}m ${remainingSeconds}s` : `${minutes}m`;
+    } else {
+      const hours = Math.floor(seconds / 3600);
+      const minutes = Math.round((seconds % 3600) / 60);
+      return minutes > 0 ? `${hours}h ${minutes}m` : `${hours}h`;
+    }
+  };
+
   const getTimeAgo = (dateString) => {
     const now = new Date();
     const date = new Date(dateString);
@@ -905,6 +923,11 @@ export default function AdminDashboard() {
                               style={{ width: `${response.completionPercentage}%` }}
                             ></div>
                           </div>
+                          {response.completionTimeSeconds && (
+                            <div className={styles.completionTime}>
+                              ⏱️ {formatCompletionTime(response.completionTimeSeconds)}
+                            </div>
+                          )}
                         </div>
                       </div>
                     </div>

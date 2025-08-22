@@ -81,6 +81,7 @@ public class ResponseService {
                 .survey(survey)
                 .user(user) // null for anonymous responses
                 .responseText("Survey response submitted") // Generic text for now
+                .completionTimeSeconds(request.completionTimeSeconds()) // Store completion time
                 .createdAt(Instant.now())
                 .build();
 

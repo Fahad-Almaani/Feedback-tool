@@ -287,6 +287,7 @@ public class AnalyticsService {
                 responseData.put("totalQuestions", totalQuestions);
                 responseData.put("answeredQuestions", answeredQuestions);
                 responseData.put("completionPercentage", Math.round(completionPercentage));
+                responseData.put("completionTimeSeconds", response.getCompletionTimeSeconds());
 
                 // Format time
                 responseData.put("formattedTime", formatTimeAgo(response.getCreatedAt()));
@@ -355,6 +356,52 @@ public class AnalyticsService {
         } else {
             long weeks = days / 7;
             return weeks + " week" + (weeks == 1 ? "" : "s") + " ago";
+        }
+    }
+
+    /**
+     * Calculate average completion time for a survey in seconds
+     */
+    public Double getAverageCompletionTime(Long surveyId) {
+        try {
+            List<Response> responses = responsesRepository.findBySurveyId(surveyId);
+
+            List<Integer> completionTimes = responses.stream()
+                    .map(Response::getCompletionTimeSeconds)
+                    .filter(time -> time != null && time > 0)
+                    .collect(Collectors.toList());
+
+            if (completionTimes.isEmpty()) {
+                return null;
+            }
+
+            return completionTimes.stream()
+                    .mapToInt(Integer::intValue)
+                    .average()
+                    .orElse(0.0);
+        } catch (Exception e) {
+            System.err.println("Error calculating average completion time: " + e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Format completion time in a human-readable format
+     */
+    public String formatCompletionTime(Double seconds) {
+        if (seconds == null || seconds <= 0) {
+            return "N/A";
+        }
+
+        if (seconds < 60) {
+            return Math.round(seconds) + "s";
+        } else if (seconds < 3600) {
+            int minutes = (int) Math.round(seconds / 60);
+            return minutes + "m " + Math.round(seconds % 60) + "s";
+        } else {
+            int hours = (int) (seconds / 3600);
+            int minutes = (int) Math.round((seconds % 3600) / 60);
+            return hours + "h " + minutes + "m";
         }
     }
 

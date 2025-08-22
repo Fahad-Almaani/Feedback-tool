@@ -174,9 +174,54 @@ export default function SurveyViewPage() {
         return typeMap[type] || type;
     };
 
-    const calculateAverageCompletionTime = (respondents) => {
-        // Mock calculation - in real app, you'd track start/end times
-        return "3.5 min";
+    const formatCompletionTimeFromSeconds = (seconds) => {
+        if (!seconds || seconds <= 0) {
+            return "N/A";
+        }
+
+        // Format the time
+        if (seconds < 60) {
+            return `${Math.round(seconds)}s`;
+        } else if (seconds < 3600) {
+            const minutes = Math.floor(seconds / 60);
+            const remainingSeconds = Math.round(seconds % 60);
+            return remainingSeconds > 0 ? `${minutes}m ${remainingSeconds}s` : `${minutes}m`;
+        } else {
+            const hours = Math.floor(seconds / 3600);
+            const minutes = Math.round((seconds % 3600) / 60);
+            return minutes > 0 ? `${hours}h ${minutes}m` : `${hours}h`;
+        }
+    };
+
+    const calculateAverageCompletionTime = (responses) => {
+        if (!responses || !responses.responses) {
+            return "N/A";
+        }
+
+        // Extract completion times from responses
+        const completionTimes = responses.responses
+            .map(response => response.completionTimeSeconds)
+            .filter(time => time && time > 0);
+
+        if (completionTimes.length === 0) {
+            return "N/A";
+        }
+
+        // Calculate average
+        const averageSeconds = completionTimes.reduce((sum, time) => sum + time, 0) / completionTimes.length;
+
+        // Format the time
+        if (averageSeconds < 60) {
+            return `${Math.round(averageSeconds)}s`;
+        } else if (averageSeconds < 3600) {
+            const minutes = Math.floor(averageSeconds / 60);
+            const seconds = Math.round(averageSeconds % 60);
+            return seconds > 0 ? `${minutes}m ${seconds}s` : `${minutes}m`;
+        } else {
+            const hours = Math.floor(averageSeconds / 3600);
+            const minutes = Math.round((averageSeconds % 3600) / 60);
+            return minutes > 0 ? `${hours}h ${minutes}m` : `${hours}h`;
+        }
     };
 
     // Fetch survey data
@@ -274,7 +319,7 @@ export default function SurveyViewPage() {
             totalRespondents: respondents.length,
             authenticatedUsers: respondents.filter(r => !r.isAnonymous).length,
             anonymousUsers: respondents.filter(r => r.isAnonymous).length,
-            averageCompletionTime: calculateAverageCompletionTime(respondents),
+            averageCompletionTime: formatCompletionTimeFromSeconds(surveyResponses?.averageCompletionTimeSeconds),
             completionRateByQuestion: questionCompletionData
         };
 

@@ -31,6 +31,9 @@ public class Response {
     @Column(name = "updated_at")
     private Instant updatedAt;
 
+    @Column(name = "completion_time_seconds")
+    private Integer completionTimeSeconds; // Time taken to complete the survey in seconds
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "survey_id", nullable = false)
     private Survey survey;
