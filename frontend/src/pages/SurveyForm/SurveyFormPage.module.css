@@ -931,6 +931,180 @@
   opacity: 0.9;
 }
 
+/* Expired Survey Styles */
+.expiredNotice {
+  background: linear-gradient(135deg, #ffeaa7, #fdcb6e);
+  border: 2px solid #fdcb6e;
+  border-radius: var(--radius-lg);
+  padding: var(--space-lg);
+  margin-bottom: var(--space-lg);
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  color: #d63031;
+  font-weight: 600;
+  animation: slideDown 0.3s ease-out;
+}
+
+.expiredIcon {
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+}
+
+.expiredMessage {
+  flex: 1;
+}
+
+.expiredText {
+  font-size: var(--font-size-base);
+  margin: 0 0 var(--space-xs) 0;
+}
+
+.expiredSubtext {
+  font-size: var(--font-size-sm);
+  margin: 0;
+  opacity: 0.8;
+  font-weight: 500;
+}
+
+.expiredFormMessage {
+  text-align: center;
+  padding: var(--space-2xl);
+  color: var(--text-secondary);
+  background: var(--bg-secondary);
+  border-radius: var(--radius-lg);
+  border: 2px solid var(--border-color);
+  margin: var(--space-xl) 0;
+}
+
+.expiredFormMessage .expiredIcon {
+  width: 64px;
+  height: 64px;
+  margin: 0 auto var(--space-lg);
+  color: var(--warning-color);
+}
+
+.expiredFormMessage h3 {
+  font-size: var(--font-size-xl);
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0 0 var(--space-md) 0;
+}
+
+.expiredFormMessage p {
+  font-size: var(--font-size-base);
+  color: var(--text-secondary);
+  margin: 0 0 var(--space-xl) 0;
+  line-height: 1.6;
+}
+
+.expiredFormMessage .homeButton {
+  background: var(--primary-gradient);
+  color: var(--text-white);
+  border: none;
+  box-shadow: var(--shadow-md);
+}
+
+.expiredFormMessage .homeButton:hover {
+  background: var(--primary-gradient);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+}
+
+/* Survey End Date Info */
+.endDateInfo {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  margin-top: var(--space-md);
+  padding: var(--space-sm) var(--space-md);
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(10px);
+}
+
+.clockIcon {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  opacity: 0.8;
+}
+
+.endDateText {
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  opacity: 0.9;
+  line-height: 1.4;
+}
+
+.endDateText.expired {
+  color: #ff6b6b;
+  font-weight: 600;
+}
+
+/* Expired Survey Warning */
+.expiredWarning {
+  margin-top: var(--space-md);
+  padding: var(--space-md);
+  background: rgba(255, 107, 107, 0.1);
+  border: 1px solid rgba(255, 107, 107, 0.2);
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-sm);
+  backdrop-filter: blur(10px);
+}
+
+.warningIcon {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  color: #ff6b6b;
+  margin-top: 2px;
+}
+
+.warningContent h3 {
+  font-size: var(--font-size-base);
+  font-weight: 600;
+  color: #ff6b6b;
+  margin: 0 0 var(--space-xs) 0;
+}
+
+.warningContent p {
+  font-size: var(--font-size-sm);
+  color: rgba(255, 107, 107, 0.9);
+  margin: 0;
+  line-height: 1.4;
+}
+
+.surveyEndInfo {
+  background: linear-gradient(135deg, #e3f2fd, #bbdefb);
+  border: 2px solid #90caf9;
+  border-radius: var(--radius-lg);
+  padding: var(--space-md);
+  margin-bottom: var(--space-lg);
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  color: #1565c0;
+  font-weight: 500;
+}
+
+.surveyEndInfo .expiredIcon {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  color: #1976d2;
+}
+
+.surveyEndInfo p {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  line-height: 1.4;
+}
+
 /* Home Button */
 .homeButton {
   padding: var(--space-md) var(--space-xl);
@@ -1294,5 +1468,42 @@
   .welcomeText {
     font-size: var(--font-size-sm);
     text-align: center;
+  }
+
+  .endDateInfo {
+    flex-direction: column;
+    text-align: center;
+    gap: var(--space-xs);
+    padding: var(--space-sm);
+  }
+
+  .clockIcon {
+    width: 14px;
+    height: 14px;
+  }
+
+  .endDateText {
+    font-size: var(--font-size-xs);
+  }
+
+  .expiredWarning {
+    flex-direction: column;
+    text-align: center;
+    gap: var(--space-xs);
+    padding: var(--space-sm);
+  }
+
+  .warningIcon {
+    width: 18px;
+    height: 18px;
+    margin-top: 0;
+  }
+
+  .warningContent h3 {
+    font-size: var(--font-size-sm);
+  }
+
+  .warningContent p {
+    font-size: var(--font-size-xs);
   }
 }

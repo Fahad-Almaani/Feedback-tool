@@ -91,6 +91,12 @@ export default function SurveyFormPage() {
         return Math.round((answeredQuestions / totalQuestions) * 100);
     };
 
+    // Check if survey has expired
+    const isSurveyExpired = () => {
+        if (!survey?.endDate) return false;
+        return new Date() > new Date(survey.endDate);
+    };
+
     // Check if survey is private and handle authentication
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -337,6 +343,34 @@ export default function SurveyFormPage() {
                         {survey.description && (
                             <p className={styles.surveyDescription}>{survey.description}</p>
                         )}
+
+                        {/* Survey End Date Info */}
+                        {survey.endDate && (
+                            <div className={styles.endDateInfo}>
+                                <svg className={styles.clockIcon} viewBox="0 0 24 24" fill="currentColor">
+                                    <path fillRule="evenodd" d="M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75 9.75-4.365 9.75-9.75S17.385 2.25 12 2.25zM12.75 6a.75.75 0 00-1.5 0v6c0 .414.336.75.75.75h4.5a.75.75 0 000-1.5h-3.75V6z" clipRule="evenodd" />
+                                </svg>
+                                <span className={`${styles.endDateText} ${isSurveyExpired() ? styles.expired : ''}`}>
+                                    {isSurveyExpired()
+                                        ? `Survey closed on ${new Date(survey.endDate).toLocaleDateString()}`
+                                        : `Survey closes on ${new Date(survey.endDate).toLocaleDateString()}`
+                                    }
+                                </span>
+                            </div>
+                        )}
+
+                        {/* Expired Survey Warning */}
+                        {isSurveyExpired() && (
+                            <div className={styles.expiredWarning}>
+                                <svg className={styles.warningIcon} viewBox="0 0 24 24" fill="currentColor">
+                                    <path fillRule="evenodd" d="M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75 9.75-4.365 9.75-9.75S17.385 2.25 12 2.25zm-1.72 6.97a.75.75 0 10-1.06 1.06L10.94 12l-1.72 1.72a.75.75 0 101.06 1.06L12 13.06l1.72 1.72a.75.75 0 101.06-1.06L13.06 12l1.72-1.72a.75.75 0 10-1.06-1.06L12 10.94l-1.72-1.72z" clipRule="evenodd" />
+                                </svg>
+                                <div className={styles.warningContent}>
+                                    <h3>Survey Closed</h3>
+                                    <p>This survey is no longer accepting responses. The deadline has passed.</p>
+                                </div>
+                            </div>
+                        )}
                     </div>
 
                     {/* Progress Bar */}
@@ -358,57 +392,70 @@ export default function SurveyFormPage() {
 
                 {/* Survey Form */}
                 <div className={styles.formContainer}>
-                    <form onSubmit={handleSubmit} className={styles.surveyForm}>
-                        {error && (
-                            <div className={styles.errorMessage}>
-                                <svg className={styles.errorIcon} viewBox="0 0 20 20" fill="currentColor">
-                                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                                </svg>
-                                {error}
-                            </div>
-                        )}
-
-                        {survey.questions.map((question, index) => (
-                            <div key={question.id} className={styles.questionCard}>
-                                <div className={styles.questionHeader}>
-                                    <span className={styles.questionNumber}>{index + 1}</span>
-                                    <h3 className={styles.questionText}>{question.questionText}</h3>
-                                    {question.required && <span className={styles.required}>*</span>}
+                    {!isSurveyExpired() ? (
+                        <form onSubmit={handleSubmit} className={styles.surveyForm}>
+                            {error && (
+                                <div className={styles.errorMessage}>
+                                    <svg className={styles.errorIcon} viewBox="0 0 20 20" fill="currentColor">
+                                        <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                                    </svg>
+                                    {error}
                                 </div>
+                            )}
 
-                                <div className={styles.answerSection}>
-                                    <QuestionInput
-                                        question={question}
-                                        value={answers[question.id] || ""}
-                                        onChange={(value) => handleAnswerChange(question.id, value)}
-                                    />
+                            {survey.questions.map((question, index) => (
+                                <div key={question.id} className={styles.questionCard}>
+                                    <div className={styles.questionHeader}>
+                                        <span className={styles.questionNumber}>{index + 1}</span>
+                                        <h3 className={styles.questionText}>{question.questionText}</h3>
+                                        {question.required && <span className={styles.required}>*</span>}
+                                    </div>
+
+                                    <div className={styles.answerSection}>
+                                        <QuestionInput
+                                            question={question}
+                                            value={answers[question.id] || ""}
+                                            onChange={(value) => handleAnswerChange(question.id, value)}
+                                        />
+                                    </div>
                                 </div>
-                            </div>
-                        ))}
+                            ))}
 
-                        {/* Submit Button */}
-                        <div className={styles.submitSection}>
-                            <button
-                                type="submit"
-                                className={`${styles.submitButton} ${submitting ? styles.loading : ''}`}
-                                disabled={submitting}
-                            >
-                                {submitting ? (
-                                    <>
-                                        <div className={styles.spinner}></div>
-                                        Submitting...
-                                    </>
-                                ) : (
-                                    <>
-                                        Submit Survey
-                                        <svg className={styles.submitIcon} viewBox="0 0 20 20" fill="currentColor">
-                                            <path fillRule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clipRule="evenodd" />
-                                        </svg>
-                                    </>
-                                )}
+                            {/* Submit Button */}
+                            <div className={styles.submitSection}>
+                                <button
+                                    type="submit"
+                                    className={`${styles.submitButton} ${submitting ? styles.loading : ''}`}
+                                    disabled={submitting}
+                                >
+                                    {submitting ? (
+                                        <>
+                                            <div className={styles.spinner}></div>
+                                            Submitting...
+                                        </>
+                                    ) : (
+                                        <>
+                                            Submit Survey
+                                            <svg className={styles.submitIcon} viewBox="0 0 20 20" fill="currentColor">
+                                                <path fillRule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clipRule="evenodd" />
+                                            </svg>
+                                        </>
+                                    )}
+                                </button>
+                            </div>
+                        </form>
+                    ) : (
+                        <div className={styles.expiredFormMessage}>
+                            <svg className={styles.expiredIcon} viewBox="0 0 24 24" fill="currentColor">
+                                <path fillRule="evenodd" d="M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75 9.75-4.365 9.75-9.75S17.385 2.25 12 2.25zm-1.72 6.97a.75.75 0 10-1.06 1.06L10.94 12l-1.72 1.72a.75.75 0 101.06 1.06L12 13.06l1.72 1.72a.75.75 0 101.06-1.06L13.06 12l1.72-1.72a.75.75 0 10-1.06-1.06L12 10.94l-1.72-1.72z" clipRule="evenodd" />
+                            </svg>
+                            <h3>Survey No Longer Available</h3>
+                            <p>This survey has closed and is no longer accepting new responses.</p>
+                            <button onClick={() => navigate('/')} className={styles.homeButton}>
+                                Return to Home
                             </button>
                         </div>
-                    </form>
+                    )}
                 </div>
             </div>
 
