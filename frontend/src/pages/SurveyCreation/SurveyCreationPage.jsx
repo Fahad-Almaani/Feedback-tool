@@ -467,8 +467,8 @@ export default function SurveyCreationPage() {
             const response = await apiClient.post("/surveys", surveyData);
             const data = apiClient.extractData(response);
 
-            // Survey created successfully, navigate to admin dashboard
-            navigate("/admin");
+            // Survey created successfully, navigate to survey view page
+            navigate(`/admin/surveys/${data.id}`);
         } catch (error) {
             const errorDetails = apiClient.getErrorDetails(error);
             setErrors({ submit: errorDetails.message || "Failed to create survey" });
