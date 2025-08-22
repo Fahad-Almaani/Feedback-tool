@@ -1,8 +1,10 @@
 package com.training.feedbacktool.service;
 
 import com.training.feedbacktool.entity.Answer;
+import com.training.feedbacktool.entity.Response;
 import com.training.feedbacktool.entity.Survey;
 import com.training.feedbacktool.repository.AnswersRepository;
+import com.training.feedbacktool.repository.ResponsesRepository;
 import com.training.feedbacktool.repository.SurveyRepository;
 import org.springframework.stereotype.Service;
 
@@ -19,11 +21,14 @@ public class AnalyticsService {
 
     private final AnswersRepository answersRepository;
     private final SurveyRepository surveyRepository;
+    private final ResponsesRepository responsesRepository;
 
     public AnalyticsService(AnswersRepository answersRepository,
-            SurveyRepository surveyRepository) {
+            SurveyRepository surveyRepository,
+            ResponsesRepository responsesRepository) {
         this.answersRepository = answersRepository;
         this.surveyRepository = surveyRepository;
+        this.responsesRepository = responsesRepository;
     }
 
     /**
@@ -231,8 +236,66 @@ public class AnalyticsService {
         System.out.println("Starting getRecentResponses with limit: " + limit);
 
         try {
-            // Always return fallback data for now to test
-            return createFallbackRecentResponses();
+            // Get recent responses from the database
+            List<Response> recentResponses = responsesRepository.findAll().stream()
+                    .sorted((r1, r2) -> r2.getCreatedAt().compareTo(r1.getCreatedAt()))
+                    .limit(limit)
+                    .collect(Collectors.toList());
+
+            System.out.println("Found " + recentResponses.size() + " responses in database");
+
+            if (recentResponses.isEmpty()) {
+                return createFallbackRecentResponses();
+            }
+
+            List<Map<String, Object>> result = new ArrayList<>();
+
+            for (Response response : recentResponses) {
+                Map<String, Object> responseData = new HashMap<>();
+
+                // Basic response info
+                responseData.put("responseId", response.getId());
+                responseData.put("surveyId", response.getSurvey().getId());
+                responseData.put("surveyName", response.getSurvey().getTitle());
+                responseData.put("submittedAt", response.getCreatedAt());
+
+                // User info (handle anonymous case)
+                if (response.getUser() != null) {
+                    responseData.put("userName", response.getUser().getName());
+                    responseData.put("isAnonymous", false);
+                } else {
+                    responseData.put("userName", "Anonymous User");
+                    responseData.put("isAnonymous", true);
+                }
+
+                // Get answers for this response to calculate completion
+                List<Answer> answers = answersRepository.findBySurveyId(response.getSurvey().getId());
+
+                // Filter answers by this response (if there's a way to link them)
+                // For now, we'll estimate based on survey questions
+                Survey survey = response.getSurvey();
+                long totalQuestions = survey.getQuestions() != null ? survey.getQuestions().size() : 0;
+
+                // Count answers from the user for this survey
+                // This is a simplified calculation - you might need to adjust based on your
+                // data model
+                long answeredQuestions = answers.size() > 0 ? Math.min(answers.size(), totalQuestions) : 0;
+
+                double completionPercentage = totalQuestions > 0 ? (double) answeredQuestions / totalQuestions * 100
+                        : 0;
+
+                responseData.put("totalQuestions", totalQuestions);
+                responseData.put("answeredQuestions", answeredQuestions);
+                responseData.put("completionPercentage", Math.round(completionPercentage));
+
+                // Format time
+                responseData.put("formattedTime", formatTimeAgo(response.getCreatedAt()));
+                responseData.put("formattedDate", formatDate(response.getCreatedAt()));
+
+                result.add(responseData);
+            }
+
+            return result;
 
         } catch (Exception e) {
             System.err.println("Error in getRecentResponses: " + e.getMessage());
