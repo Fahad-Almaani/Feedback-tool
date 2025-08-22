@@ -607,8 +607,7 @@ export default function SurveyViewPage() {
             <nav className={styles.tabNavigation}>
                 <div className={styles.tabContainer}>
                     {[
-                        { id: "overview", label: "Overview", icon: Eye },
-                        { id: "analytics", label: "Analytics", icon: BarChart3 },
+                        { id: "overview", label: "Overview & Analytics", icon: BarChart3 },
                         { id: "responses", label: "Responses", icon: MessageSquare },
                         { id: "questions", label: "Response Analytics", icon: FileText }
                     ].map(({ id, label, icon: Icon }) => (
@@ -691,7 +690,7 @@ export default function SurveyViewPage() {
                             </div>
                         </div>
 
-                        {/* Charts Grid */}
+                        {/* Charts Grid - Combined Overview and Analytics */}
                         <div className={styles.chartsGrid}>
                             {/* Response Trend */}
                             <div className={styles.chartCard}>
@@ -766,79 +765,6 @@ export default function SurveyViewPage() {
                                     </ResponsiveContainer>
                                 </div>
                             </div>
-                        </div>
-
-                        {/* Respondent Analysis */}
-                        <div className={styles.analysisCard}>
-                            <div className={styles.cardHeader}>
-                                <h3 className={styles.cardTitle}>Respondent Analysis</h3>
-                                <p className={styles.cardSubtitle}>Breakdown of survey participants</p>
-                            </div>
-                            <div className={styles.respondentStats}>
-                                <div className={styles.statItem}>
-                                    <UserCheck className={styles.statIcon} size={20} />
-                                    <div className={styles.statContent}>
-                                        <div className={styles.statValue}>{analyticsData?.respondentAnalysis.authenticatedUsers || 0}</div>
-                                        <div className={styles.statLabel}>Authenticated Users</div>
-                                    </div>
-                                </div>
-                                <div className={styles.statItem}>
-                                    <UserX className={styles.statIcon} size={20} />
-                                    <div className={styles.statContent}>
-                                        <div className={styles.statValue}>{analyticsData?.respondentAnalysis.anonymousUsers || 0}</div>
-                                        <div className={styles.statLabel}>Anonymous Users</div>
-                                    </div>
-                                </div>
-                                <div className={styles.statItem}>
-                                    <Globe className={styles.statIcon} size={20} />
-                                    <div className={styles.statContent}>
-                                        <div className={styles.statValue}>
-                                            {analyticsData?.respondentAnalysis.authenticatedUsers && analyticsData?.respondentAnalysis.totalRespondents
-                                                ? Math.round((analyticsData.respondentAnalysis.authenticatedUsers / analyticsData.respondentAnalysis.totalRespondents) * 100)
-                                                : 0}%
-                                        </div>
-                                        <div className={styles.statLabel}>Authentication Rate</div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                )}
-
-                {activeTab === "analytics" && (
-                    <div className={styles.tabContent}>
-                        {/* Advanced Analytics Charts */}
-                        <div className={styles.chartsGrid}>
-                            {/* Question Completion Rates */}
-                            <div className={styles.chartCard}>
-                                <div className={styles.chartHeader}>
-                                    <h3 className={styles.chartTitle}>Question Completion Rates</h3>
-                                    <p className={styles.chartSubtitle}>Completion percentage by question</p>
-                                </div>
-                                <div className={styles.chartContainer}>
-                                    <ResponsiveContainer width="100%" height={400}>
-                                        <BarChart data={analyticsData?.questionCompletionData || []} layout="horizontal">
-                                            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.2)" />
-                                            <XAxis type="number" domain={[0, 100]} stroke="#718096" fontSize={12} />
-                                            <YAxis dataKey="question" type="category" stroke="#718096" fontSize={12} width={60} />
-                                            <Tooltip
-                                                contentStyle={{
-                                                    backgroundColor: 'rgba(255,255,255,0.95)',
-                                                    border: 'none',
-                                                    borderRadius: '12px',
-                                                    boxShadow: '0 10px 25px rgba(0,0,0,0.1)'
-                                                }}
-                                                formatter={(value, name) => [`${value}%`, 'Completion Rate']}
-                                                labelFormatter={(label) => {
-                                                    const item = analyticsData?.questionCompletionData?.find(q => q.question === label);
-                                                    return item ? item.questionText : label;
-                                                }}
-                                            />
-                                            <Bar dataKey="completion" fill={COLORS.primary} radius={[0, 4, 4, 0]} />
-                                        </BarChart>
-                                    </ResponsiveContainer>
-                                </div>
-                            </div>
 
                             {/* Response Time Analysis */}
                             {analyticsData?.timeAnalytics?.hourlyData && (
@@ -901,41 +827,39 @@ export default function SurveyViewPage() {
                                     </div>
                                 </div>
                             )}
+                        </div>
 
-                            {/* Completion Radar Chart */}
-                            <div className={styles.chartCard}>
-                                <div className={styles.chartHeader}>
-                                    <h3 className={styles.chartTitle}>Question Performance Radar</h3>
-                                    <p className={styles.chartSubtitle}>Multi-dimensional question analysis</p>
+                        {/* Respondent Analysis */}
+                        <div className={styles.analysisCard}>
+                            <div className={styles.cardHeader}>
+                                <h3 className={styles.cardTitle}>Respondent Analysis</h3>
+                                <p className={styles.cardSubtitle}>Breakdown of survey participants</p>
+                            </div>
+                            <div className={styles.respondentStats}>
+                                <div className={styles.statItem}>
+                                    <UserCheck className={styles.statIcon} size={20} />
+                                    <div className={styles.statContent}>
+                                        <div className={styles.statValue}>{analyticsData?.respondentAnalysis.authenticatedUsers || 0}</div>
+                                        <div className={styles.statLabel}>Authenticated Users</div>
+                                    </div>
                                 </div>
-                                <div className={styles.chartContainer}>
-                                    <ResponsiveContainer width="100%" height={300}>
-                                        <RadarChart data={analyticsData?.questionCompletionData?.slice(0, 6) || []}>
-                                            <PolarGrid stroke="rgba(255,255,255,0.2)" />
-                                            <PolarAngleAxis dataKey="question" tick={{ fontSize: 12, fill: '#718096' }} />
-                                            <PolarRadiusAxis
-                                                angle={0}
-                                                domain={[0, 100]}
-                                                tick={{ fontSize: 10, fill: '#718096' }}
-                                            />
-                                            <Radar
-                                                name="Completion Rate"
-                                                dataKey="completion"
-                                                stroke={COLORS.warning}
-                                                fill={COLORS.warning}
-                                                fillOpacity={0.3}
-                                                strokeWidth={2}
-                                            />
-                                            <Tooltip
-                                                contentStyle={{
-                                                    backgroundColor: 'rgba(255,255,255,0.95)',
-                                                    border: 'none',
-                                                    borderRadius: '12px',
-                                                    boxShadow: '0 10px 25px rgba(0,0,0,0.1)'
-                                                }}
-                                            />
-                                        </RadarChart>
-                                    </ResponsiveContainer>
+                                <div className={styles.statItem}>
+                                    <UserX className={styles.statIcon} size={20} />
+                                    <div className={styles.statContent}>
+                                        <div className={styles.statValue}>{analyticsData?.respondentAnalysis.anonymousUsers || 0}</div>
+                                        <div className={styles.statLabel}>Anonymous Users</div>
+                                    </div>
+                                </div>
+                                <div className={styles.statItem}>
+                                    <Globe className={styles.statIcon} size={20} />
+                                    <div className={styles.statContent}>
+                                        <div className={styles.statValue}>
+                                            {analyticsData?.respondentAnalysis.authenticatedUsers && analyticsData?.respondentAnalysis.totalRespondents
+                                                ? Math.round((analyticsData.respondentAnalysis.authenticatedUsers / analyticsData.respondentAnalysis.totalRespondents) * 100)
+                                                : 0}%
+                                        </div>
+                                        <div className={styles.statLabel}>Authentication Rate</div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
