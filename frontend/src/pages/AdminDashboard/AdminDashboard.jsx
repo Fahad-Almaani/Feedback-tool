@@ -135,6 +135,8 @@ export default function AdminDashboard() {
           }));
         }
         setRecentResponses(processedResponses);
+        console.log('Processed recent responses:', processedResponses);
+        console.log('Recent responses data:', recentResponsesData);
 
         // Update statistics with overview data or calculate from surveys
         if (overviewData) {
@@ -205,12 +207,12 @@ export default function AdminDashboard() {
         }))
       );
     }
-    console.log("responseTrends", responseTrends);
+    // console.log("responseTrends", responseTrends);
   }, [responseTrends]);
 
 
 
-  console.log('loading state:', loading); const handleLogout = () => {
+  const handleLogout = () => {
     logout();
   };
 
