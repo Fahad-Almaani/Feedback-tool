@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState, useMemo, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import {
@@ -51,8 +51,10 @@ import {
     Copy,
     RefreshCw,
     Edit3,
-    Trash2
+    Trash2,
+    QrCode
 } from "lucide-react";
+import QRCode from "qrcode";
 import styles from "./SurveyViewPage.module.css";
 import { SurveyService, ResponseService } from "../../services/apiServices";
 import { useDialog } from "../../hooks/useDialog";
@@ -98,6 +100,8 @@ export default function SurveyViewPage() {
     const [expandedQuestions, setExpandedQuestions] = useState(new Set());
     const [showShareModal, setShowShareModal] = useState(false);
     const [showExportDropdown, setShowExportDropdown] = useState(false);
+    const [qrCodeDataUrl, setQrCodeDataUrl] = useState(null);
+    const qrCanvasRef = useRef(null);
 
     // Helper functions (moved before useMemo to avoid hoisting issues)
     const generateResponseTrendData = (responses) => {
@@ -301,6 +305,56 @@ export default function SurveyViewPage() {
         navigator.clipboard.writeText(shareUrl);
         // Show toast notification
     };
+
+    const generateQRCode = async () => {
+        const shareUrl = `${window.location.origin}/survey/${surveyId}`;
+
+        try {
+            // Generate QR code as data URL
+            const dataUrl = await QRCode.toDataURL(shareUrl, {
+                width: 256,
+                margin: 2,
+                color: {
+                    dark: '#000000',
+                    light: '#ffffff'
+                },
+                errorCorrectionLevel: 'H'
+            });
+
+            setQrCodeDataUrl(dataUrl);
+            return dataUrl;
+        } catch (error) {
+            console.error('Error generating QR code:', error);
+            return null;
+        }
+    };
+
+    const downloadQRCode = async () => {
+        let dataUrl = qrCodeDataUrl;
+
+        if (!dataUrl) {
+            dataUrl = await generateQRCode();
+            if (!dataUrl) {
+                console.error('Failed to generate QR code for download');
+                return;
+            }
+        }
+
+        // Create download link
+        const link = document.createElement('a');
+        link.download = `survey-${surveyId}-qr-code.png`;
+        link.href = dataUrl;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
+    // Generate QR code when share modal opens
+    useEffect(() => {
+        if (showShareModal && !qrCodeDataUrl) {
+            generateQRCode();
+        }
+    }, [showShareModal, surveyId, qrCodeDataUrl]);
 
     const exportData = async (format = 'csv', type = 'responses') => {
         try {
@@ -1343,22 +1397,61 @@ export default function SurveyViewPage() {
                             </button>
                         </div>
                         <div className={styles.modalContent}>
-                            <div className={styles.shareUrlContainer}>
-                                <label className={styles.shareLabel}>Survey URL:</label>
-                                <div className={styles.shareInputGroup}>
-                                    <input
-                                        type="text"
-                                        value={`${window.location.origin}/survey/${surveyId}`}
-                                        readOnly
-                                        className={styles.shareInput}
-                                    />
-                                    <button
-                                        onClick={copyShareLink}
-                                        className={styles.copyButton}
-                                    >
-                                        <Copy size={16} />
-                                        Copy
-                                    </button>
+                            <div className={styles.shareContainer}>
+                                {/* URL Section */}
+                                <div className={styles.shareSection}>
+                                    <div className={styles.shareUrlContainer}>
+                                        <label className={styles.shareLabel}>Survey URL:</label>
+                                        <div className={styles.shareInputGroup}>
+                                            <input
+                                                type="text"
+                                                value={`${window.location.origin}/survey/${surveyId}`}
+                                                readOnly
+                                                className={styles.shareInput}
+                                            />
+                                            <button
+                                                onClick={copyShareLink}
+                                                className={styles.copyButton}
+                                            >
+                                                <Copy size={16} />
+                                                Copy
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* QR Code Section */}
+                                <div className={styles.shareSection}>
+                                    <div className={styles.qrCodeContainer}>
+                                        <label className={styles.shareLabel}>QR Code:</label>
+                                        <div className={styles.qrCodeWrapper}>
+                                            {qrCodeDataUrl ? (
+                                                <div className={styles.qrCodeDisplay}>
+                                                    <img
+                                                        src={qrCodeDataUrl}
+                                                        alt="Survey QR Code"
+                                                        className={styles.qrCodeImage}
+                                                    />
+                                                    <p className={styles.qrCodeDescription}>
+                                                        Scan this QR code to access the survey
+                                                    </p>
+                                                </div>
+                                            ) : (
+                                                <div className={styles.qrCodeLoading}>
+                                                    <QrCode size={64} className={styles.qrCodeIcon} />
+                                                    <p>Generating QR code...</p>
+                                                </div>
+                                            )}
+                                        </div>
+                                        <button
+                                            onClick={downloadQRCode}
+                                            className={styles.downloadQrButton}
+                                            disabled={!qrCodeDataUrl}
+                                        >
+                                            <Download size={16} />
+                                            Download QR Code
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         </div>
