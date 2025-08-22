@@ -3,9 +3,11 @@ package com.training.feedbacktool.service;
 import com.training.feedbacktool.dto.SubmitResponseRequest;
 import com.training.feedbacktool.entity.Answer;
 import com.training.feedbacktool.entity.Question;
+import com.training.feedbacktool.entity.Response;
 import com.training.feedbacktool.entity.Survey;
 import com.training.feedbacktool.entity.User;
 import com.training.feedbacktool.repository.AnswersRepository;
+import com.training.feedbacktool.repository.ResponsesRepository;
 import com.training.feedbacktool.repository.SurveyRepository;
 import com.training.feedbacktool.repository.UserRepository;
 import com.training.feedbacktool.util.JwtUtil;
@@ -21,15 +23,18 @@ public class ResponseService {
 
     private final SurveyRepository surveyRepository;
     private final AnswersRepository answersRepository;
+    private final ResponsesRepository responsesRepository;
     private final UserRepository userRepository;
     private final JwtUtil jwtUtil;
 
     public ResponseService(SurveyRepository surveyRepository,
             AnswersRepository answersRepository,
+            ResponsesRepository responsesRepository,
             UserRepository userRepository,
             JwtUtil jwtUtil) {
         this.surveyRepository = surveyRepository;
         this.answersRepository = answersRepository;
+        this.responsesRepository = responsesRepository;
         this.userRepository = userRepository;
         this.jwtUtil = jwtUtil;
     }
@@ -70,6 +75,16 @@ public class ResponseService {
 
         // Validate required questions
         validateRequiredQuestions(questionsById, request);
+
+        // Create a Response entity for this survey submission
+        Response surveyResponse = Response.builder()
+                .survey(survey)
+                .user(user) // null for anonymous responses
+                .responseText("Survey response submitted") // Generic text for now
+                .createdAt(Instant.now())
+                .build();
+
+        responsesRepository.save(surveyResponse);
 
         // Save answers
         for (SubmitResponseRequest.AnswerDTO answerDto : request.answers()) {

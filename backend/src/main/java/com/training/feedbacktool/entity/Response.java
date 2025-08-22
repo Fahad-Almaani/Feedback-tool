@@ -36,7 +36,7 @@ public class Response {
     private Survey survey;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", nullable = false)
+    @JoinColumn(name = "user_id", nullable = true) // Allow null for anonymous responses
     private User user;
 
     @PreUpdate
