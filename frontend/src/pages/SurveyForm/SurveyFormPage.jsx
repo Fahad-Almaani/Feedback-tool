@@ -24,25 +24,9 @@ export default function SurveyFormPage() {
         const loadSurvey = async () => {
             try {
                 setLoading(true);
-                const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8080';
-                const response = await fetch(`${backendUrl}/surveys/${surveyId}/public`);
 
-                if (!response.ok) {
-                    throw new Error('Survey not found or not available');
-                }
-
-                const responseData = await response.json();
-
-                // Handle the new API response structure
-                let surveyData;
-                if (responseData.success && responseData.data) {
-                    surveyData = responseData.data;
-                } else if (responseData.title) {
-                    // Fallback for old format
-                    surveyData = responseData;
-                } else {
-                    throw new Error(responseData.message || 'Invalid survey data');
-                }
+                // Use apiClient for consistent error handling
+                const surveyData = await apiClient.get(`/public/surveys/${surveyId}`);
 
                 setSurvey(surveyData);
 
@@ -55,7 +39,7 @@ export default function SurveyFormPage() {
 
             } catch (error) {
                 console.error('Error loading survey:', error);
-                setError('Survey not found or not available');
+                setError(apiClient.getErrorMessage(error));
             } finally {
                 setLoading(false);
             }
@@ -105,6 +89,12 @@ export default function SurveyFormPage() {
         ).length;
 
         return Math.round((answeredQuestions / totalQuestions) * 100);
+    };
+
+    // Check if survey has expired
+    const isSurveyExpired = () => {
+        if (!survey?.endDate) return false;
+        return new Date() > new Date(survey.endDate);
     };
 
     // Check if survey is private and handle authentication
@@ -172,55 +162,13 @@ export default function SurveyFormPage() {
                 answers: formattedAnswers
             };
 
-            const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8080';
-            let success = false;
-            let errorMessage = null;
+            // Use apiClient for consistent error handling and response structure
+            await apiClient.post(`/public/surveys/${surveyId}/responses`, submissionData);
+            setSubmitted(true);
 
-            if (isAuthenticated()) {
-                // Use authenticated request with JWT token
-                try {
-                    const response = await apiClient.post(`/public/surveys/${surveyId}/responses`, submissionData);
-                    const data = apiClient.extractData(response);
-                    success = true;
-                } catch (apiError) {
-                    const errorDetails = apiClient.getErrorDetails(apiError);
-                    errorMessage = errorDetails.message || 'Failed to submit survey';
-                }
-            } else {
-                // Anonymous submission
-                try {
-                    const response = await fetch(`${backendUrl}/api/public/surveys/${surveyId}/responses`, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify(submissionData),
-                    });
-
-                    if (response.ok) {
-                        const responseData = await response.json();
-                        if (responseData.success) {
-                            success = true;
-                        } else {
-                            errorMessage = responseData.message || 'Failed to submit survey';
-                        }
-                    } else {
-                        const errorData = await response.text().catch(() => 'Failed to submit survey');
-                        errorMessage = errorData || 'Failed to submit survey';
-                    }
-                } catch (fetchError) {
-                    errorMessage = 'Failed to submit survey. Please check your connection.';
-                }
-            }
-
-            if (success) {
-                setSubmitted(true);
-            } else {
-                setError(errorMessage);
-            }
         } catch (error) {
             console.error('Error submitting survey:', error);
-            setError('Failed to submit survey. Please try again.');
+            setError(apiClient.getErrorMessage(error));
         } finally {
             setSubmitting(false);
         }
@@ -395,6 +343,34 @@ export default function SurveyFormPage() {
                         {survey.description && (
                             <p className={styles.surveyDescription}>{survey.description}</p>
                         )}
+
+                        {/* Survey End Date Info */}
+                        {survey.endDate && (
+                            <div className={styles.endDateInfo}>
+                                <svg className={styles.clockIcon} viewBox="0 0 24 24" fill="currentColor">
+                                    <path fillRule="evenodd" d="M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75 9.75-4.365 9.75-9.75S17.385 2.25 12 2.25zM12.75 6a.75.75 0 00-1.5 0v6c0 .414.336.75.75.75h4.5a.75.75 0 000-1.5h-3.75V6z" clipRule="evenodd" />
+                                </svg>
+                                <span className={`${styles.endDateText} ${isSurveyExpired() ? styles.expired : ''}`}>
+                                    {isSurveyExpired()
+                                        ? `Survey closed on ${new Date(survey.endDate).toLocaleDateString()}`
+                                        : `Survey closes on ${new Date(survey.endDate).toLocaleDateString()}`
+                                    }
+                                </span>
+                            </div>
+                        )}
+
+                        {/* Expired Survey Warning */}
+                        {isSurveyExpired() && (
+                            <div className={styles.expiredWarning}>
+                                <svg className={styles.warningIcon} viewBox="0 0 24 24" fill="currentColor">
+                                    <path fillRule="evenodd" d="M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75 9.75-4.365 9.75-9.75S17.385 2.25 12 2.25zm-1.72 6.97a.75.75 0 10-1.06 1.06L10.94 12l-1.72 1.72a.75.75 0 101.06 1.06L12 13.06l1.72 1.72a.75.75 0 101.06-1.06L13.06 12l1.72-1.72a.75.75 0 10-1.06-1.06L12 10.94l-1.72-1.72z" clipRule="evenodd" />
+                                </svg>
+                                <div className={styles.warningContent}>
+                                    <h3>Survey Closed</h3>
+                                    <p>This survey is no longer accepting responses. The deadline has passed.</p>
+                                </div>
+                            </div>
+                        )}
                     </div>
 
                     {/* Progress Bar */}
@@ -416,57 +392,70 @@ export default function SurveyFormPage() {
 
                 {/* Survey Form */}
                 <div className={styles.formContainer}>
-                    <form onSubmit={handleSubmit} className={styles.surveyForm}>
-                        {error && (
-                            <div className={styles.errorMessage}>
-                                <svg className={styles.errorIcon} viewBox="0 0 20 20" fill="currentColor">
-                                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                                </svg>
-                                {error}
-                            </div>
-                        )}
-
-                        {survey.questions.map((question, index) => (
-                            <div key={question.id} className={styles.questionCard}>
-                                <div className={styles.questionHeader}>
-                                    <span className={styles.questionNumber}>{index + 1}</span>
-                                    <h3 className={styles.questionText}>{question.questionText}</h3>
-                                    {question.required && <span className={styles.required}>*</span>}
+                    {!isSurveyExpired() ? (
+                        <form onSubmit={handleSubmit} className={styles.surveyForm}>
+                            {error && (
+                                <div className={styles.errorMessage}>
+                                    <svg className={styles.errorIcon} viewBox="0 0 20 20" fill="currentColor">
+                                        <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                                    </svg>
+                                    {error}
                                 </div>
+                            )}
 
-                                <div className={styles.answerSection}>
-                                    <QuestionInput
-                                        question={question}
-                                        value={answers[question.id] || ""}
-                                        onChange={(value) => handleAnswerChange(question.id, value)}
-                                    />
+                            {survey.questions.map((question, index) => (
+                                <div key={question.id} className={styles.questionCard}>
+                                    <div className={styles.questionHeader}>
+                                        <span className={styles.questionNumber}>{index + 1}</span>
+                                        <h3 className={styles.questionText}>{question.questionText}</h3>
+                                        {question.required && <span className={styles.required}>*</span>}
+                                    </div>
+
+                                    <div className={styles.answerSection}>
+                                        <QuestionInput
+                                            question={question}
+                                            value={answers[question.id] || ""}
+                                            onChange={(value) => handleAnswerChange(question.id, value)}
+                                        />
+                                    </div>
                                 </div>
-                            </div>
-                        ))}
+                            ))}
 
-                        {/* Submit Button */}
-                        <div className={styles.submitSection}>
-                            <button
-                                type="submit"
-                                className={`${styles.submitButton} ${submitting ? styles.loading : ''}`}
-                                disabled={submitting}
-                            >
-                                {submitting ? (
-                                    <>
-                                        <div className={styles.spinner}></div>
-                                        Submitting...
-                                    </>
-                                ) : (
-                                    <>
-                                        Submit Survey
-                                        <svg className={styles.submitIcon} viewBox="0 0 20 20" fill="currentColor">
-                                            <path fillRule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clipRule="evenodd" />
-                                        </svg>
-                                    </>
-                                )}
+                            {/* Submit Button */}
+                            <div className={styles.submitSection}>
+                                <button
+                                    type="submit"
+                                    className={`${styles.submitButton} ${submitting ? styles.loading : ''}`}
+                                    disabled={submitting}
+                                >
+                                    {submitting ? (
+                                        <>
+                                            <div className={styles.spinner}></div>
+                                            Submitting...
+                                        </>
+                                    ) : (
+                                        <>
+                                            Submit Survey
+                                            <svg className={styles.submitIcon} viewBox="0 0 20 20" fill="currentColor">
+                                                <path fillRule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clipRule="evenodd" />
+                                            </svg>
+                                        </>
+                                    )}
+                                </button>
+                            </div>
+                        </form>
+                    ) : (
+                        <div className={styles.expiredFormMessage}>
+                            <svg className={styles.expiredIcon} viewBox="0 0 24 24" fill="currentColor">
+                                <path fillRule="evenodd" d="M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75 9.75-4.365 9.75-9.75S17.385 2.25 12 2.25zm-1.72 6.97a.75.75 0 10-1.06 1.06L10.94 12l-1.72 1.72a.75.75 0 101.06 1.06L12 13.06l1.72 1.72a.75.75 0 101.06-1.06L13.06 12l1.72-1.72a.75.75 0 10-1.06-1.06L12 10.94l-1.72-1.72z" clipRule="evenodd" />
+                            </svg>
+                            <h3>Survey No Longer Available</h3>
+                            <p>This survey has closed and is no longer accepting new responses.</p>
+                            <button onClick={() => navigate('/')} className={styles.homeButton}>
+                                Return to Home
                             </button>
                         </div>
-                    </form>
+                    )}
                 </div>
             </div>
 

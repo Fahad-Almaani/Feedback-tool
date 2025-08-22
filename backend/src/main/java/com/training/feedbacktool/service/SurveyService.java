@@ -49,6 +49,7 @@ public class SurveyService {
         s.setTitle(req.title().trim());
         s.setDescription(req.description());
         s.setStatus(Boolean.TRUE.equals(req.active()) ? "ACTIVE" : "DRAFT");
+        s.setEndDate(req.endDate());
 
         if (req.questions() != null && !req.questions().isEmpty()) {
             List<Question> questions = new ArrayList<>();
@@ -58,6 +59,7 @@ public class SurveyService {
                 q.setQuestionText(qReq.questionText());
                 q.setOptionsJson(qReq.optionsJson());
                 q.setOrderNumber(qReq.orderNumber());
+                q.setRequired(qReq.required());
                 q.setSurvey(s);
                 questions.add(q);
             }
@@ -71,7 +73,8 @@ public class SurveyService {
                 saved.getDescription(),
                 saved.getStatus(),
                 saved.getCreatedAt(),
-                saved.getUpdatedAt());
+                saved.getUpdatedAt(),
+                saved.getEndDate());
     }
 
     public List<SurveyResponse> listAll() {
@@ -82,7 +85,8 @@ public class SurveyService {
                         s.getDescription(),
                         s.getStatus(),
                         s.getCreatedAt(),
-                        s.getUpdatedAt()))
+                        s.getUpdatedAt(),
+                        s.getEndDate()))
                 .collect(Collectors.toList());
     }
 
@@ -129,6 +133,7 @@ public class SurveyService {
                             survey.getStatus(),
                             survey.getCreatedAt(),
                             survey.getUpdatedAt(),
+                            survey.getEndDate(),
                             questionCount != null ? questionCount.intValue() : 0,
                             totalResponses,
                             completionRate);
@@ -157,6 +162,7 @@ public class SurveyService {
                 survey.getStatus(),
                 survey.getCreatedAt(),
                 survey.getUpdatedAt(),
+                survey.getEndDate(),
                 questionResponses);
     }
 
@@ -210,6 +216,7 @@ public class SurveyService {
             existingSurvey.setTitle(req.title().trim());
             existingSurvey.setDescription(req.description());
             existingSurvey.setStatus(Boolean.TRUE.equals(req.active()) ? "ACTIVE" : "DRAFT");
+            existingSurvey.setEndDate(req.endDate());
 
             // Handle questions update - clear existing questions and add new ones
             existingSurvey.getQuestions().clear();
@@ -222,6 +229,7 @@ public class SurveyService {
                     q.setQuestionText(qReq.questionText());
                     q.setOptionsJson(qReq.optionsJson());
                     q.setOrderNumber(qReq.orderNumber());
+                    q.setRequired(qReq.required());
                     q.setSurvey(existingSurvey);
                     questions.add(q);
                 }
@@ -236,7 +244,8 @@ public class SurveyService {
                 saved.getDescription(),
                 saved.getStatus(),
                 saved.getCreatedAt(),
-                saved.getUpdatedAt());
+                saved.getUpdatedAt(),
+                saved.getEndDate());
     }
 
     @Transactional
@@ -394,7 +403,10 @@ public class SurveyService {
                 respondentId = "anonymous_" + answer.getId();
             }
 
-            answersByRespondent.computeIfAbsent(respondentId, unused -> new ArrayList<>()).add(answer);
+            if (!answersByRespondent.containsKey(respondentId)) {
+                answersByRespondent.put(respondentId, new ArrayList<>());
+            }
+            answersByRespondent.get(respondentId).add(answer);
         }
 
         // Create respondent DTOs

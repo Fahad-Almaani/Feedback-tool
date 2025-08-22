@@ -296,7 +296,7 @@
   border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: var(--radius-xl);
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
-  z-index: 1000;
+  z-index: 9999;
   min-width: 260px;
   padding: var(--space-sm);
   animation: dropdownFadeIn 0.2s ease-out;
@@ -357,7 +357,7 @@
 /* Tab Navigation */
 .tabNavigation {
   position: relative;
-  z-index: 10;
+  z-index: 5;
   background: var(--bg-overlay);
   backdrop-filter: blur(20px);
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);

@@ -104,7 +104,8 @@ export default function SurveyCreationPage() {
     const [survey, setSurvey] = useState({
         title: "",
         description: "",
-        status: "DRAFT"
+        status: "DRAFT",
+        endDate: ""
     });
 
     // Questions state
@@ -278,7 +279,8 @@ export default function SurveyCreationPage() {
             type: "TEXT",
             questionText: "",
             optionsJson: null,
-            orderNumber: questions.length + 1
+            orderNumber: questions.length + 1,
+            required: false
         };
         setQuestions(prev => [...prev, newQuestion]);
         setFocusedQuestionIndex(questions.length);
@@ -452,19 +454,21 @@ export default function SurveyCreationPage() {
                 title: survey.title,
                 description: survey.description,
                 active: status === "ACTIVE",
+                endDate: survey.endDate ? new Date(survey.endDate).toISOString() : null,
                 questions: questions.map(q => ({
                     type: q.type,
                     questionText: q.questionText,
                     optionsJson: q.optionsJson,
-                    orderNumber: q.orderNumber
+                    orderNumber: q.orderNumber,
+                    required: q.required || false
                 }))
             };
 
             const response = await apiClient.post("/surveys", surveyData);
             const data = apiClient.extractData(response);
 
-            // Survey created successfully, navigate to admin dashboard
-            navigate("/admin");
+            // Survey created successfully, navigate to survey view page
+            navigate(`/admin/surveys/${data.id}`);
         } catch (error) {
             const errorDetails = apiClient.getErrorDetails(error);
             setErrors({ submit: errorDetails.message || "Failed to create survey" });
@@ -689,6 +693,26 @@ export default function SurveyCreationPage() {
                                         />
                                         <div className={styles.characterCount}>
                                             {survey.description.length}/500
+                                        </div>
+                                    </div>
+
+                                    <div className={styles.formGroup}>
+                                        <label className={styles.label}>
+                                            Survey End Date
+                                            <span className={styles.optional}>(optional)</span>
+                                        </label>
+                                        <input
+                                            type="datetime-local"
+                                            value={survey.endDate}
+                                            onChange={(e) => {
+                                                setSurvey(prev => ({ ...prev, endDate: e.target.value }));
+                                                setUnsavedChanges(true);
+                                            }}
+                                            className={styles.input}
+                                            placeholder="Set when the survey should stop accepting responses"
+                                        />
+                                        <div className={styles.helpText}>
+                                            If set, the survey will automatically stop accepting responses after this date and time.
                                         </div>
                                     </div>
                                 </div>
@@ -1176,6 +1200,25 @@ function QuestionEditor({
                             )}
                         </div>
                     )}
+
+                    {/* Required Question Toggle */}
+                    <div className={styles.formGroup}>
+                        <label className={styles.checkboxLabel}>
+                            <input
+                                type="checkbox"
+                                checked={question.required || false}
+                                onChange={(e) => onUpdate(index, "required", e.target.checked)}
+                                className={styles.checkbox}
+                            />
+                            <span className={styles.checkboxText}>
+                                Make this question required
+                                <span className={styles.requiredBadge}>*</span>
+                            </span>
+                        </label>
+                        <div className={styles.helpText}>
+                            Required questions must be answered before submitting the survey
+                        </div>
+                    </div>
                 </div>
             )}
         </div>

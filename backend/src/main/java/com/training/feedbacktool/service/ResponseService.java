@@ -12,6 +12,7 @@ import com.training.feedbacktool.util.JwtUtil;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.util.Map;
 import java.util.stream.Collectors;
 
@@ -42,6 +43,11 @@ public class ResponseService {
         // Check if survey is active
         if (!"ACTIVE".equalsIgnoreCase(survey.getStatus())) {
             throw new IllegalStateException("Survey is not accepting responses");
+        }
+
+        // Check if survey has expired
+        if (survey.getEndDate() != null && Instant.now().isAfter(survey.getEndDate())) {
+            throw new IllegalStateException("Survey has expired and is no longer accepting responses");
         }
 
         // Extract user from token if authenticated

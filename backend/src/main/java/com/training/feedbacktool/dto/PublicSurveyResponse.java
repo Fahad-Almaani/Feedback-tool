@@ -4,11 +4,12 @@ import java.time.Instant;
 import java.util.List;
 
 public record PublicSurveyResponse(
-        Long id,
-        String title,
-        String description,
-        String status,
-        Instant createdAt,
-        Instant updatedAt,
-        List<QuestionResponse> questions) {
+                Long id,
+                String title,
+                String description,
+                String status,
+                Instant createdAt,
+                Instant updatedAt,
+                Instant endDate,
+                List<QuestionResponse> questions) {
 }
