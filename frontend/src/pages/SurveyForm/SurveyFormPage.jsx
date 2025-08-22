@@ -24,25 +24,9 @@ export default function SurveyFormPage() {
         const loadSurvey = async () => {
             try {
                 setLoading(true);
-                const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8080';
-                const response = await fetch(`${backendUrl}/surveys/${surveyId}/public`);
 
-                if (!response.ok) {
-                    throw new Error('Survey not found or not available');
-                }
-
-                const responseData = await response.json();
-
-                // Handle the new API response structure
-                let surveyData;
-                if (responseData.success && responseData.data) {
-                    surveyData = responseData.data;
-                } else if (responseData.title) {
-                    // Fallback for old format
-                    surveyData = responseData;
-                } else {
-                    throw new Error(responseData.message || 'Invalid survey data');
-                }
+                // Use apiClient for consistent error handling
+                const surveyData = await apiClient.get(`/public/surveys/${surveyId}`);
 
                 setSurvey(surveyData);
 
@@ -55,7 +39,7 @@ export default function SurveyFormPage() {
 
             } catch (error) {
                 console.error('Error loading survey:', error);
-                setError('Survey not found or not available');
+                setError(apiClient.getErrorMessage(error));
             } finally {
                 setLoading(false);
             }
@@ -172,55 +156,13 @@ export default function SurveyFormPage() {
                 answers: formattedAnswers
             };
 
-            const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8080';
-            let success = false;
-            let errorMessage = null;
+            // Use apiClient for consistent error handling and response structure
+            await apiClient.post(`/public/surveys/${surveyId}/responses`, submissionData);
+            setSubmitted(true);
 
-            if (isAuthenticated()) {
-                // Use authenticated request with JWT token
-                try {
-                    const response = await apiClient.post(`/public/surveys/${surveyId}/responses`, submissionData);
-                    const data = apiClient.extractData(response);
-                    success = true;
-                } catch (apiError) {
-                    const errorDetails = apiClient.getErrorDetails(apiError);
-                    errorMessage = errorDetails.message || 'Failed to submit survey';
-                }
-            } else {
-                // Anonymous submission
-                try {
-                    const response = await fetch(`${backendUrl}/api/public/surveys/${surveyId}/responses`, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify(submissionData),
-                    });
-
-                    if (response.ok) {
-                        const responseData = await response.json();
-                        if (responseData.success) {
-                            success = true;
-                        } else {
-                            errorMessage = responseData.message || 'Failed to submit survey';
-                        }
-                    } else {
-                        const errorData = await response.text().catch(() => 'Failed to submit survey');
-                        errorMessage = errorData || 'Failed to submit survey';
-                    }
-                } catch (fetchError) {
-                    errorMessage = 'Failed to submit survey. Please check your connection.';
-                }
-            }
-
-            if (success) {
-                setSubmitted(true);
-            } else {
-                setError(errorMessage);
-            }
         } catch (error) {
             console.error('Error submitting survey:', error);
-            setError('Failed to submit survey. Please try again.');
+            setError(apiClient.getErrorMessage(error));
         } finally {
             setSubmitting(false);
         }
