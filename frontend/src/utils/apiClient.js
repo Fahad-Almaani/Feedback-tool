@@ -77,11 +77,12 @@ const axiosInstance = axios.create({
 // Request interceptor to add authentication token
 axiosInstance.interceptors.request.use(
   (config) => {
-    // Don't add token for auth endpoints (login, register)
-    const isAuthEndpoint =
-      config.url?.includes("/auth/") || config.url?.includes("/users/create");
+    // Only exclude specific auth endpoints that don't need tokens (login, register)
+    const isPublicAuthEndpoint =
+      config.url?.includes("/auth/login") ||
+      config.url?.includes("/users/create");
 
-    if (!isAuthEndpoint) {
+    if (!isPublicAuthEndpoint) {
       const token = authUtils.getToken();
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
@@ -89,7 +90,7 @@ axiosInstance.interceptors.request.use(
     }
 
     // Store request info for error handling
-    config._isAuthEndpoint = isAuthEndpoint;
+    config._isPublicAuthEndpoint = isPublicAuthEndpoint;
     return config;
   },
   (error) => {
@@ -183,12 +184,12 @@ axiosInstance.interceptors.response.use(
         // Handle specific status codes
         switch (status) {
           case 401:
-            // Only logout if this is NOT an auth endpoint (login/register)
-            if (!error.config?._isAuthEndpoint) {
+            // Only logout if this is NOT a public auth endpoint (login/register)
+            if (!error.config?._isPublicAuthEndpoint) {
               authUtils.logout();
               apiError.message = "Session expired. Please login again.";
             } else {
-              // For auth endpoints, just pass through the error without logout
+              // For public auth endpoints, just pass through the error without logout
               apiError.message = data.message || "Invalid credentials";
             }
             break;
@@ -207,12 +208,12 @@ axiosInstance.interceptors.response.use(
       // Handle legacy error responses
       switch (status) {
         case 401:
-          // Only logout if this is NOT an auth endpoint (login/register)
-          if (!error.config?._isAuthEndpoint) {
+          // Only logout if this is NOT a public auth endpoint (login/register)
+          if (!error.config?._isPublicAuthEndpoint) {
             authUtils.logout();
             throw new Error("Session expired. Please login again.");
           } else {
-            // For auth endpoints, just pass through the error without logout
+            // For public auth endpoints, just pass through the error without logout
             throw new Error(data?.message || "Invalid credentials");
           }
         case 403:
@@ -301,6 +302,10 @@ export const apiClient = {
       status: null,
       timestamp: null,
     };
+  },
+
+  getUserMe() {
+    return apiClient.get("/auth/me");
   },
 
   // Generic HTTP methods with enhanced error handling

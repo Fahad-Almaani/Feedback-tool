@@ -18,6 +18,8 @@ export const AuthProvider = ({ children }) => {
     const [loading, setLoading] = useState(true);
     // verified indicates that the user object was fetched/confirmed from the server
     const [verified, setVerified] = useState(false);
+    // Add a flag to track if we've completed the initial auth check
+    const [authChecked, setAuthChecked] = useState(false);
     const navigate = useNavigate();
 
     // Set up navigation callback for apiClient
@@ -38,21 +40,23 @@ export const AuthProvider = ({ children }) => {
                 if (mounted) {
                     setUser(null);
                     setVerified(false);
+                    setAuthChecked(true);
                     setLoading(false);
                 }
                 return;
             }
 
             try {
+                // Set token immediately to prevent auth issues during verification
+                apiClient.auth.setToken(token);
+
                 // Ask backend for authoritative user profile
-                const profile = await apiClient.get('/auth/me');
+                const profile = await apiClient.getUserMe();
 
                 if (mounted) {
-                    // Ensure token is stored in apiClient/auth too
-                    apiClient.auth.setToken(token);
-
                     setUser({ ...profile, token });
                     setVerified(true);
+                    setAuthChecked(true);
 
                     // Keep localStorage in sync with authoritative profile
                     localStorage.setItem('user_data', JSON.stringify(profile));
@@ -64,6 +68,7 @@ export const AuthProvider = ({ children }) => {
                 if (mounted) {
                     setUser(null);
                     setVerified(false);
+                    setAuthChecked(true);
                 }
             } finally {
                 if (mounted) setLoading(false);
@@ -99,7 +104,7 @@ export const AuthProvider = ({ children }) => {
             // Fetch authoritative profile from backend to avoid trusting client-side storage
             let profile;
             try {
-                profile = await apiClient.get('/auth/me');
+                profile = await apiClient.getUserMe();
             } catch (err) {
                 // If backend doesn't provide /auth/me immediately, fall back to data returned by login
                 profile = {
@@ -114,6 +119,7 @@ export const AuthProvider = ({ children }) => {
             localStorage.setItem('user_data', JSON.stringify(profile));
             setUser({ ...profile, token: data.token });
             setVerified(true);
+            setAuthChecked(true);
 
             return {
                 success: true,
@@ -156,7 +162,7 @@ export const AuthProvider = ({ children }) => {
             // Fetch authoritative profile from backend (or fallback to returned data)
             let profile;
             try {
-                profile = await apiClient.get('/auth/me');
+                profile = await apiClient.getUserMe();
             } catch (err) {
                 profile = {
                     userId: data.userId,
@@ -169,6 +175,7 @@ export const AuthProvider = ({ children }) => {
             localStorage.setItem('user_data', JSON.stringify(profile));
             setUser({ ...profile, token: data.token });
             setVerified(true);
+            setAuthChecked(true);
 
             return {
                 success: true,
@@ -200,10 +207,14 @@ export const AuthProvider = ({ children }) => {
             // Ensure user state is cleared
             setUser(null);
             setVerified(false);
+            setAuthChecked(true);
         }
     };
 
     const isAuthenticated = () => {
+        // Don't check authentication status while still loading or before initial check
+        if (loading || !authChecked) return false;
+
         // Only consider authenticated if user exists, token is present and profile was verified by server
         return !!user && !!user.token && verified;
     };
@@ -230,18 +241,20 @@ export const AuthProvider = ({ children }) => {
         refreshUser: useCallback(async () => {
             try {
                 setLoading(true);
-                const profile = await apiClient.get('/auth/me');
+                const profile = await apiClient.getUserMe();
                 const token = apiClient.auth.getToken();
                 if (profile) {
                     localStorage.setItem('user_data', JSON.stringify(profile));
                     setUser({ ...profile, token });
                     setVerified(true);
+                    setAuthChecked(true);
                 }
             } catch (error) {
                 // if refresh fails, clear auth
                 apiClient.auth.removeToken();
                 setUser(null);
                 setVerified(false);
+                setAuthChecked(true);
                 throw error;
             } finally {
                 setLoading(false);
@@ -251,7 +264,8 @@ export const AuthProvider = ({ children }) => {
         hasRole,
         isAdmin,
         isUser,
-        loading
+        loading,
+        authChecked
     };
 
     return (

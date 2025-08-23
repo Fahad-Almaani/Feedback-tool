@@ -2,6 +2,7 @@ package com.training.feedbacktool.service;
 
 import com.training.feedbacktool.dto.LoginRequest;
 import com.training.feedbacktool.dto.LoginResponse;
+import com.training.feedbacktool.dto.UserProfileResponse;
 import com.training.feedbacktool.entity.User;
 import com.training.feedbacktool.repository.UserRepository;
 import com.training.feedbacktool.util.JwtUtil;
@@ -60,6 +61,29 @@ public class AuthService {
             // to prevent edge cases where frontend thinks user is logged out but backend
             // doesn't
             throw new IllegalArgumentException("Invalid token");
+        }
+    }
+
+    /**
+     * Get current user profile from JWT token
+     */
+    public UserProfileResponse getCurrentUser(String token) {
+        try {
+            // Extract user ID from token
+            Long userId = jwtUtil.extractUserId(token);
+
+            // Find user in database
+            User user = userRepository.findById(userId)
+                    .orElseThrow(() -> new IllegalArgumentException("User not found"));
+
+            return new UserProfileResponse(
+                    user.getId(),
+                    user.getEmail(),
+                    user.getName(),
+                    user.getRole(),
+                    user.getCreatedAt());
+        } catch (Exception e) {
+            throw new IllegalArgumentException("Invalid token or user not found");
         }
     }
 }
