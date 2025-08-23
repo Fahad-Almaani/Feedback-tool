@@ -60,31 +60,33 @@ export default function LandingPage() {
         {
             id: 1,
             title: "Intelligent Analytics",
-            description: "Get deep insights from your feedback data with our AI-powered analytics dashboard.",
+            description: "AI-powered reporting that surfaces trends and highlights so you can act on feedback faster.",
             icon: AnalyticsIcon
         },
         {
             id: 2,
-            title: "Enterprise Security",
-            description: "Bank-level security ensures your data remains private and protected at all times.",
+            title: "Secure Data Handling",
+            description: "Privacy-first storage and access controls to keep respondent data safe.",
             icon: SecurityIcon
         },
         {
             id: 3,
-            title: "Lightning Fast",
-            description: "Optimized performance delivers results in milliseconds, not minutes.",
+            title: "AI-Assisted Survey Creation",
+            description: "Get help drafting questions and improving phrasing with built-in AI suggestions.",
             icon: SpeedIcon
         },
         {
             id: 4,
-            title: "Team Collaboration",
-            description: "Work together seamlessly with powerful collaboration tools and real-time updates.",
+            title: "Ready-made Templates",
+            description: "Start quickly with professionally designed, customizable survey templates.",
             icon: CollaborationIcon
         }
     ];
 
     const benefits = [
         "Create professional surveys in minutes",
+        "AI-assisted question drafting and phrasing",
+        "Ready-made, customizable templates",
         "Real-time response tracking and analytics",
         "Custom branding and white-label options",
         "Advanced question types and logic",
@@ -197,10 +199,10 @@ export default function LandingPage() {
                 <div className={styles.sectionContainer}>
                     <div className={styles.sectionHeader}>
                         <h2 className={styles.sectionTitle}>
-                            Why Choose FeedbackPro?
+                            Why teams choose FeedbackPro
                         </h2>
                         <p className={styles.sectionSubtitle}>
-                            Powerful features designed to transform how you collect and analyze feedback
+                            Helpful features that simplify how you collect and analyze feedback
                         </p>
                     </div>
 
