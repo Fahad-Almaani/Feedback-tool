@@ -817,6 +817,8 @@ export default function EditSurveyPage() {
                             <div className={styles.actionSection}>
                                 {errors.submit && <div className={styles.errorBanner}>{errors.submit}</div>}
 
+                          
+
                                 <div className={styles.actionButtons}>
                                     <button
                                         onClick={() => navigate("/admin")}
@@ -830,6 +832,11 @@ export default function EditSurveyPage() {
                                         onClick={() => handleSubmit("DRAFT")}
                                         className={styles.saveDraftButton}
                                         disabled={isSubmitting || !survey.title.trim()}
+                                        title={
+                                            hasResponses
+                                                ? "Save changes and make survey inactive (users cannot submit responses)"
+                                                : "Save as draft (users cannot submit responses until published)"
+                                        }
                                     >
                                         {isSubmitting ? (
                                             <>
@@ -841,7 +848,10 @@ export default function EditSurveyPage() {
                                                 <svg className={styles.saveIcon} viewBox="0 0 24 24" fill="currentColor">
                                                     <path d="M17.593 3.322c1.1.128 1.907 1.077 1.907 2.185V21L12 17.25 4.5 21V5.507c0-1.108.806-2.057 1.907-2.185a48.507 48.507 0 0111.186 0z" />
                                                 </svg>
-                                                Update Survey
+                                                {hasResponses
+                                                    ? (survey.status === "ACTIVE" ? "Save & Make Inactive" : "Save Changes")
+                                                    : "Save as Draft"
+                                                }
                                             </>
                                         )}
                                     </button>
@@ -850,6 +860,7 @@ export default function EditSurveyPage() {
                                         onClick={() => handleSubmit("ACTIVE")}
                                         className={styles.publishButton}
                                         disabled={isSubmitting || !survey.title.trim() || (!hasResponses && questions.length === 0)}
+                                        title="Make survey active and allow users to submit responses"
                                     >
                                         {isSubmitting ? (
                                             <>
