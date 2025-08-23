@@ -267,6 +267,7 @@
   opacity: 0;
   transform: translateY(50px);
   transition: all var(--transition-slow);
+  padding-top: 80px; /* Add padding to account for fixed navbar */
 }
 
 .heroSection.fadeInUp {
@@ -1117,6 +1118,10 @@
     display: none;
   }
 
+  .heroSection {
+    padding-top: 70px; /* Slightly reduce padding on mobile */
+  }
+
   .heroContainer {
     padding: var(--space-xl) var(--space-md);
   }
@@ -1156,6 +1161,10 @@
 }
 
 @media (max-width: 480px) {
+  .heroSection {
+    padding-top: 60px; /* Further reduce padding on very small screens */
+  }
+
   .heroTitle {
     font-size: var(--font-size-2xl);
   }
@@ -1186,6 +1195,41 @@
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+  }
+}
+
+/* Short screen height adjustments */
+@media (max-height: 600px) {
+  .heroSection {
+    min-height: auto;
+    padding-top: 80px;
+    padding-bottom: var(--space-lg);
+  }
+
+  .heroContainer {
+    padding: var(--space-lg) var(--space-lg);
+  }
+}
+
+@media (max-height: 500px) and (max-width: 768px) {
+  .heroSection {
+    padding-top: 70px;
+  }
+}
+
+@media (max-height: 400px) {
+  .heroSection {
+    padding-top: 60px;
+  }
+
+  .heroTitle {
+    font-size: var(--font-size-2xl);
+    margin-bottom: var(--space-md);
+  }
+
+  .heroDescription {
+    font-size: var(--font-size-base);
+    margin-bottom: var(--space-md);
   }
 }
 
