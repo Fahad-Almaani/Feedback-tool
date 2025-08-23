@@ -5,7 +5,7 @@ import { useNavigate } from "react-router-dom";
 import InputWithAI from "../../components/Input/InputWithAI";
 import { improveSurveyTitle, improveSurveyDescription } from "../../utils/TextPhrasing";
 import { improveQuestionPhrasing } from "../../utils/QuestionPhrasing";
-import { Type, FileText, Star, CheckSquare, ChevronDown, GripVertical, Move3D, List } from "lucide-react";
+import { Type, FileText, Star, CheckSquare, ChevronDown, GripVertical, Move3D, List, ArrowLeft } from "lucide-react";
 import styles from "./SurveyCreationPage.module.css";
 import {
     DndContext,
@@ -589,9 +589,7 @@ export default function SurveyCreationPage() {
                             onClick={() => navigate("/admin")}
                             className={styles.backButton}
                         >
-                            <svg className={styles.backIcon} viewBox="0 0 24 24" fill="currentColor">
-                                <path d="M19 12H5m0 0l7 7m-7-7l7-7" />
-                            </svg>
+                            <ArrowLeft className={styles.backIcon} size={20} />
                             Back
                         </button>
                         <div className={styles.titleSection}>
