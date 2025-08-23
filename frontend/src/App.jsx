@@ -15,6 +15,7 @@ import SurveyCreationPage from './pages/SurveyCreation/SurveyCreationPage';
 import EditSurveyPage from './pages/SurveyEdit/EditSurveyPage';
 import SurveyFormPage from './pages/SurveyForm/SurveyFormPage';
 import SurveyViewPage from './pages/SurveyView/SurveyViewPage';
+import UserResponseView from './pages/UserResponseView';
 
 // Component to handle login route with return URL logic
 const LoginRoute = () => {
@@ -124,6 +125,11 @@ const AppRoutes = () => {
       <Route path="/user/dashboard" element={
         <ProtectedRoute requiredRole="USER">
           <UserDashboard />
+        </ProtectedRoute>
+      } />
+      <Route path="/user/response/:surveyId" element={
+        <ProtectedRoute requiredRole="USER">
+          <UserResponseView />
         </ProtectedRoute>
       } />
 
