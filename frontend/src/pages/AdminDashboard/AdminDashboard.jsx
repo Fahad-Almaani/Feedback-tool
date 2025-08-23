@@ -6,9 +6,6 @@ import {
   Line,
   BarChart,
   Bar,
-  PieChart,
-  Pie,
-  Cell,
   XAxis,
   YAxis,
   Tooltip,
@@ -343,18 +340,7 @@ export default function AdminDashboard() {
     setCurrentPage(1);
   }, [filterStatus, searchTerm]);
 
-  const surveyStatusDistribution = useMemo(() => {
-    const statusCounts = surveys.reduce((acc, survey) => {
-      acc[survey.status] = (acc[survey.status] || 0) + 1;
-      return acc;
-    }, {});
 
-    return [
-      { name: "Active", value: statusCounts.ACTIVE || 0, color: "#43e97b" },
-      { name: "Inactive", value: statusCounts.INACTIVE || 0, color: "#ff6b6b" },
-      { name: "Draft", value: statusCounts.DRAFT || 0, color: "#feca57" }
-    ].filter(item => item.value > 0); // Only show statuses that have surveys
-  }, [surveys]);
 
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -771,7 +757,7 @@ export default function AdminDashboard() {
           </div>
         </div>
 
-        {/* Charts Section */}
+        {/* Analytics Grid - Response Trends and Recent Responses */}
         <div className={styles.contentGrid}>
           {/* Response Trends */}
           <div className={styles.section}>
@@ -782,7 +768,7 @@ export default function AdminDashboard() {
               </h2>
               <p className={styles.sectionSubtitle}>Real-time response activity trends</p>
             </div>
-            <div className={styles.sectionContent}>
+            <div className={`${styles.sectionContent} ${styles.chartSectionContent}`}>
               {loading ? (
                 <div className={styles.chartLoadingContainer}>
                   <div className={styles.spinner}></div>
@@ -794,7 +780,7 @@ export default function AdminDashboard() {
                 </div>
               ) : (
                 <div className={styles.chartContainer}>
-                  <ResponsiveContainer width="100%" height={300}>
+                  <ResponsiveContainer width="100%" height={250}>
                     <AreaChart data={chartData}>
                       <defs>
                         <linearGradient id="colorResponses" x1="0" y1="0" x2="0" y2="1">
@@ -828,103 +814,63 @@ export default function AdminDashboard() {
             </div>
           </div>
 
-          {/* Survey Status Distribution */}
+          {/* Recent Responses */}
           <div className={styles.section}>
             <div className={styles.sectionHeader}>
               <h2 className={styles.sectionTitle}>
-                <BarChart3 className={styles.sectionIcon} size={24} />
-                Survey Status Distribution
+                <FileEdit className={styles.sectionIcon} size={24} />
+                Recent Responses
               </h2>
-              <p className={styles.sectionSubtitle}>Overview of survey statuses</p>
+              <p className={styles.sectionSubtitle}>Latest 5 survey responses submitted</p>
             </div>
             <div className={styles.sectionContent}>
-              <div className={styles.chartContainer}>
-                <ResponsiveContainer width="100%" height={300}>
-                  <PieChart>
-                    <Pie
-                      data={surveyStatusDistribution}
-                      cx="50%"
-                      cy="50%"
-                      outerRadius={80}
-                      dataKey="value"
-                      labelLine={false}
-                      label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                    >
-                      {surveyStatusDistribution.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
-                      ))}
-                    </Pie>
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: 'rgba(255,255,255,0.95)',
-                        border: 'none',
-                        borderRadius: '12px',
-                        boxShadow: '0 10px 15px rgba(0,0,0,0.1)'
-                      }}
-                    />
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Recent Responses */}
-        <div className={styles.section}>
-          <div className={styles.sectionHeader}>
-            <h2 className={styles.sectionTitle}>
-              <FileEdit className={styles.sectionIcon} size={24} />
-              Recent Responses
-            </h2>
-            <p className={styles.sectionSubtitle}>Latest 5 survey responses submitted</p>
-          </div>
-          <div className={styles.sectionContent}>
-            <div className={styles.responsesList}>
-              {recentResponses.length === 0 ? (
-                <div className={styles.emptyResponsesState}>
-                  <AlertCircle className={styles.emptyResponsesIcon} size={48} />
-                  <div className={styles.emptyResponsesTitle}>No responses yet</div>
-                  <div className={styles.emptyResponsesDescription}>Survey responses will appear here when submitted</div>
-                </div>
-              ) : (
-                recentResponses.map((response, index) => (
-                  <div key={response.responseId || response.id || index} className={styles.responseItem}>
-                    <div className={styles.responseIcon}>
-                      <FileEdit size={20} />
-                    </div>
-                    <div className={styles.responseContent}>
-                      <div className={styles.responseHeader}>
-                        <div className={styles.responseSurvey}>{response.surveyName}</div>
-                        <div className={styles.responseTime} title={response.formattedDate}>
-                          {response.formattedTime}
-                        </div>
-                      </div>
-                      <div className={styles.responseDetails}>
-                        <div className={styles.responseUser}>
-                          <User className={styles.userIcon} size={14} />
-                          <span>{response.userName || 'Anonymous User'}</span>
-                        </div>
-                        <div className={styles.responseCompletion}>
-                          <div className={styles.completionText}>
-                            {response.completionPercentage}% completed
-                          </div>
-                          <div className={styles.completionBar}>
-                            <div
-                              className={styles.completionFill}
-                              style={{ width: `${response.completionPercentage}%` }}
-                            ></div>
-                          </div>
-                          {response.completionTimeSeconds && (
-                            <div className={styles.completionTime}>
-                              ⏱️ {formatCompletionTime(response.completionTimeSeconds)}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </div>
+              <div className={styles.responsesList}>
+                {recentResponses.length === 0 ? (
+                  <div className={styles.emptyResponsesState}>
+                    <AlertCircle className={styles.emptyResponsesIcon} size={48} />
+                    <div className={styles.emptyResponsesTitle}>No responses yet</div>
+                    <div className={styles.emptyResponsesDescription}>Survey responses will appear here when submitted</div>
                   </div>
-                ))
-              )}
+                ) : (
+                  recentResponses.map((response, index) => (
+                    <div key={response.responseId || response.id || index} className={styles.responseItem}>
+                      <div className={styles.responseIcon}>
+                        <FileEdit size={20} />
+                      </div>
+                      <div className={styles.responseContent}>
+                        <div className={styles.responseHeader}>
+                          <div className={styles.responseSurvey}>{response.surveyName}</div>
+                          <div className={styles.responseTime} title={response.formattedDate}>
+                            {response.formattedTime}
+                          </div>
+                        </div>
+                        <div className={styles.responseDetails}>
+                          <div className={styles.responseUser}>
+                            <User className={styles.userIcon} size={14} />
+                            <span>{response.userName || 'Anonymous User'}</span>
+                          </div>
+                          <div className={styles.responseCompletion}>
+                            <div className={styles.completionText}>
+                              {response.completionPercentage}% completed
+                            </div>
+                            <div className={styles.completionBar}>
+                              <div
+                                className={styles.completionFill}
+                                style={{ width: `${response.completionPercentage}%` }}
+                              ></div>
+                            </div>
+                            {response.completionTimeSeconds && (
+                              <div className={styles.completionTime}>
+                                ⏱️ {formatCompletionTime(response.completionTimeSeconds)}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
             </div>
           </div>
         </div>

@@ -310,6 +310,11 @@
   grid-template-columns: 2fr 1fr;
   gap: var(--space-xl);
   margin-bottom: var(--space-xl);
+  align-items: start;
+}
+
+.contentGrid .section {
+  height: fit-content;
 }
 
 .mainContentGrid {
@@ -933,6 +938,11 @@
   padding: var(--space-lg);
 }
 
+/* Compact content for chart sections */
+.chartSectionContent {
+  padding: var(--space-md) var(--space-lg) var(--space-md) var(--space-lg) !important;
+}
+
 /* Survey List */
 .surveyFilters {
   display: flex;
@@ -1101,8 +1111,23 @@
 .chartContainer {
   background: rgba(255, 255, 255, 0.5);
   border-radius: var(--radius-lg);
-  padding: var(--space-lg);
-  margin-bottom: var(--space-lg);
+  padding: var(--space-sm);
+}
+
+.chartLoadingContainer,
+.chartEmptyContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 250px;
+  color: var(--text-secondary);
+}
+
+.emptyChartMessage {
+  font-size: var(--font-size-base);
+  color: var(--text-secondary);
+  text-align: center;
 }
 
 .chartTitle {
