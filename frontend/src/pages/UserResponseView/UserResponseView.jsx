@@ -24,7 +24,6 @@ const UserResponseView = () => {
     const [userResponse, setUserResponse] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
-    const [isMockData, setIsMockData] = useState(false);
 
     useEffect(() => {
         const fetchUserResponse = async () => {
@@ -43,32 +42,23 @@ const UserResponseView = () => {
             } catch (err) {
                 console.error('Error fetching user response:', err);
 
-                // Fallback: try to get survey details and create mock response
+                // Try to get survey details for context
                 try {
                     const surveyData = await SurveyService.getPublicSurvey(surveyId);
                     setSurvey(surveyData);
-
-                    // Show a brief loading message for mock data generation
-                    await new Promise(resolve => setTimeout(resolve, 500));
-
-                    // Create mock response for demonstration
-                    const mockResponse = {
-                        responseId: `mock-${surveyId}`,
-                        surveyId: surveyId,
-                        submittedAt: new Date().toISOString(),
-                        completionTimeSeconds: 180, // 3 minutes
-                        answers: surveyData.questions?.map((question, index) => ({
-                            questionId: question.id,
-                            questionText: question.questionText,
-                            answerText: generateMockAnswer(question, index)
-                        })) || []
-                    };
-
-                    setUserResponse(mockResponse);
-                    setIsMockData(true);
                 } catch (surveyErr) {
                     console.error('Error fetching survey details:', surveyErr);
-                    setError('Failed to load your response. This might be because you haven\'t completed this survey yet.');
+                }
+
+                // Set appropriate error message based on the error
+                if (err.response?.status === 404) {
+                    setError('You haven\'t completed this survey yet, or your response could not be found.');
+                } else if (err.response?.status === 401) {
+                    setError('You are not authorized to view this response. Please log in again.');
+                } else if (err.response?.status === 403) {
+                    setError('You don\'t have permission to view this response.');
+                } else {
+                    setError('Failed to load your response. Please try again later.');
                 }
             } finally {
                 setLoading(false);
@@ -79,55 +69,6 @@ const UserResponseView = () => {
             fetchUserResponse();
         }
     }, [surveyId]);
-
-    // Helper function to generate mock answers for demonstration
-    const generateMockAnswer = (question, index) => {
-        switch (question.type) {
-            case 'RATING':
-                return Math.floor(Math.random() * 5) + 1;
-            case 'MULTIPLE_CHOICE':
-            case 'RADIO':
-                try {
-                    const options = JSON.parse(question.optionsJson || '[]');
-                    return options[Math.floor(Math.random() * options.length)] || 'Option 1';
-                } catch {
-                    return 'Selected option';
-                }
-            case 'CHECKBOX':
-                try {
-                    const options = JSON.parse(question.optionsJson || '[]');
-                    const selectedCount = Math.floor(Math.random() * Math.min(3, options.length)) + 1;
-                    const selected = [];
-                    for (let i = 0; i < selectedCount; i++) {
-                        const option = options[Math.floor(Math.random() * options.length)];
-                        if (!selected.includes(option)) {
-                            selected.push(option);
-                        }
-                    }
-                    return selected.length > 0 ? selected : ['Selected option'];
-                } catch {
-                    return ['Selected option'];
-                }
-            case 'TEXT':
-            case 'LONG_TEXT':
-                const textResponses = [
-                    'This is my detailed response to the question. I found it very relevant and important.',
-                    'Great question! I have some thoughts on this topic that I\'d like to share.',
-                    'I believe this is an important consideration for our organization.',
-                    'My experience with this has been positive overall.',
-                    'This area definitely needs improvement in my opinion.'
-                ];
-                return textResponses[index % textResponses.length];
-            case 'EMAIL':
-                return 'user@example.com';
-            case 'NUMBER':
-                return Math.floor(Math.random() * 100) + 1;
-            case 'DATE':
-                return new Date().toISOString().split('T')[0];
-            default:
-                return 'My response to this question';
-        }
-    };
 
     const formatDate = (dateString) => {
         if (!dateString) return 'N/A';
@@ -259,11 +200,6 @@ const UserResponseView = () => {
                     <div className={styles.headerInfo}>
                         <h1 className={styles.surveyTitle}>{survey?.title}</h1>
                         <p className={styles.surveyDescription}>{survey?.description}</p>
-                        {isMockData && (
-                            <div className={styles.mockDataNotice}>
-                                <span>📝 Demo Mode: This shows sample response data for demonstration</span>
-                            </div>
-                        )}
                         <div className={styles.responseMeta}>
                             <span className={styles.metaItem}>
                                 <CheckCircle size={16} />

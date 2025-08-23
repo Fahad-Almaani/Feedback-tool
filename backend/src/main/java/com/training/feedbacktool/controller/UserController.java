@@ -5,6 +5,7 @@ import com.training.feedbacktool.service.UserService;
 import com.training.feedbacktool.dto.CreateUserRequest;
 import com.training.feedbacktool.dto.CreateUserResponse;
 import com.training.feedbacktool.dto.UserDashboardResponse;
+import com.training.feedbacktool.dto.UserOwnResponseDTO;
 import com.training.feedbacktool.util.JwtUtil;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -13,6 +14,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -93,6 +95,53 @@ public class UserController {
         } catch (Exception e) {
             ApiResponse<UserDashboardResponse> response = ApiResponse.error(
                     "Failed to get user dashboard: " + e.getMessage(),
+                    HttpStatus.INTERNAL_SERVER_ERROR);
+            return ResponseEntity.internalServerError().body(response);
+        }
+    }
+
+    @GetMapping("/responses/survey/{surveyId}")
+    @PreAuthorize("hasRole('USER') or hasRole('ADMIN')")
+    public ResponseEntity<ApiResponse<UserOwnResponseDTO>> getUserResponse(@PathVariable Long surveyId,
+            HttpServletRequest request) {
+        try {
+            // Extract JWT token from Authorization header
+            String authorizationHeader = request.getHeader("Authorization");
+            if (authorizationHeader == null || !authorizationHeader.startsWith("Bearer ")) {
+                ApiResponse<UserOwnResponseDTO> response = ApiResponse.error(
+                        "Authorization header missing or invalid",
+                        HttpStatus.UNAUTHORIZED);
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
+            }
+
+            String jwt = authorizationHeader.substring(7);
+            Long userId;
+            try {
+                userId = jwtUtil.extractUserId(jwt);
+                if (userId == null) {
+                    ApiResponse<UserOwnResponseDTO> response = ApiResponse.error("User ID not found in token",
+                            HttpStatus.UNAUTHORIZED);
+                    return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
+                }
+            } catch (Exception e) {
+                ApiResponse<UserOwnResponseDTO> response = ApiResponse.error(
+                        "Invalid token format: " + e.getMessage(),
+                        HttpStatus.UNAUTHORIZED);
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
+            }
+
+            UserOwnResponseDTO userResponse = service.getUserResponse(userId, surveyId);
+            ApiResponse<UserOwnResponseDTO> response = ApiResponse.success(userResponse,
+                    "User response retrieved successfully");
+            return ResponseEntity.ok(response);
+
+        } catch (IllegalArgumentException e) {
+            ApiResponse<UserOwnResponseDTO> response = ApiResponse.error(e.getMessage(),
+                    HttpStatus.NOT_FOUND);
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+        } catch (Exception e) {
+            ApiResponse<UserOwnResponseDTO> response = ApiResponse.error(
+                    "Failed to get user response: " + e.getMessage(),
                     HttpStatus.INTERNAL_SERVER_ERROR);
             return ResponseEntity.internalServerError().body(response);
         }

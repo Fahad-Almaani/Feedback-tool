@@ -35,4 +35,8 @@ public interface AnswersRepository extends JpaRepository<Answer, Long> {
     @Query("SELECT MIN(a.createdAt) FROM Answer a WHERE a.user.id = :userId AND a.question.survey.id = :surveyId")
     java.time.Instant findCompletionDateByUserAndSurvey(@Param("userId") Long userId, @Param("surveyId") Long surveyId);
 
+    // Find answers by user and survey - for getting user's own response
+    @Query("SELECT a FROM Answer a WHERE a.user.id = :userId AND a.question.survey.id = :surveyId ORDER BY a.question.orderNumber")
+    List<Answer> findByUserIdAndSurveyId(@Param("userId") Long userId, @Param("surveyId") Long surveyId);
+
 }
