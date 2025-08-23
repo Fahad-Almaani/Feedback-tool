@@ -776,8 +776,8 @@ export default function SurveyViewPage() {
                                 </div>
                                 <div className={styles.metricContent}>
                                     <div className={styles.metricValue}>
-                                        {surveyResults?.totalResponses && surveyResults?.totalQuestions
-                                            ? Math.round((surveyResults.totalResponses / surveyResults.totalQuestions) * 100)
+                                        {surveyResults?.questionResults && surveyResults.questionResults.length > 0
+                                            ? Math.round(surveyResults.questionResults.reduce((sum, question) => sum + question.completionRate, 0) / surveyResults.questionResults.length)
                                             : 0}%
                                     </div>
                                     <div className={styles.metricLabel}>Completion Rate</div>
