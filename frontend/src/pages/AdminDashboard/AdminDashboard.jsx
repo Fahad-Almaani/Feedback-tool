@@ -512,12 +512,41 @@ export default function AdminDashboard() {
           <div className={styles.statCard}>
             <div className={styles.statHeader}>
               <Activity className={styles.statIcon} size={24} />
+              {statistics.totalSurveys > 0 && (
+                <div className={`${styles.statTrend} ${getTrendClass(statistics.responsesThisWeek, statistics.responsesLastWeek)}`}>
+                  {getTrendIcon(statistics.responsesThisWeek, statistics.responsesLastWeek)}
+                  {statistics.responsesThisWeek >= statistics.responsesLastWeek ? '+' : ''}
+                  {Math.abs(statistics.responsesThisWeek - statistics.responsesLastWeek)}
+                </div>
+              )}
             </div>
             <div className={styles.quickActionsInCard}>
               <div className={styles.analyticsInfo}>
-                <div className={styles.analyticsTitle}>Analytics Overview</div>
-                <div className={styles.analyticsSubtitle}>Track performance metrics</div>
+                <div className={styles.analyticsSubtitle}>
+                  {statistics.totalSurveys > 0
+                    ? `Avg: ${Math.round(statistics.totalResponses / statistics.totalSurveys)} responses/survey`
+                    : 'No survey data available'
+                  }
+                </div>
+                {statistics.totalSurveys > 0 && (
+                  <div className={styles.analyticsMetrics}>
+                    <div className={styles.metricItem}>
+                      <TrendingUp size={14} />
+                      <span>{statistics.responsesThisWeek} this week</span>
+                    </div>
+                    <div className={styles.metricItem}>
+                      <CheckCircle size={14} />
+                      <span>
+                        {surveys.length > 0
+                          ? `${Math.round(surveys.reduce((sum, s) => sum + (s.completionRate || 0), 0) / surveys.length)}% avg completion`
+                          : '0% completion'
+                        }
+                      </span>
+                    </div>
+                  </div>
+                )}
               </div>
+
             </div>
           </div>
         </div>
@@ -758,7 +787,7 @@ export default function AdminDashboard() {
         </div>
 
         {/* Analytics Grid - Response Trends and Recent Responses */}
-        <div className={styles.contentGrid}>
+        <div className={styles.contentGrid} data-section="analytics">
           {/* Response Trends */}
           <div className={styles.section}>
             <div className={styles.sectionHeader}>

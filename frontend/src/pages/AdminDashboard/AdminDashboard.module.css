@@ -362,6 +362,39 @@
   font-weight: 500;
 }
 
+.analyticsMetrics {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  margin-top: var(--space-xs);
+}
+
+.metricItem {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+  padding: 2px 0;
+}
+
+.metricItem svg {
+  width: 14px;
+  height: 14px;
+  color: var(--primary-color);
+  flex-shrink: 0;
+}
+
+.metricItem span {
+  font-weight: 500;
+}
+
+.quickActions {
+  display: flex;
+  gap: var(--space-xs);
+  margin-top: var(--space-sm);
+}
+
 .quickActionBtn {
   display: flex;
   align-items: center;
