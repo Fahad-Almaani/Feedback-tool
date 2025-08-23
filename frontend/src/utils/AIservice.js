@@ -199,8 +199,11 @@ ${feedbackType ? `Feedback type: ${feedbackType}` : ""}`;
  * @returns {Promise<Object>} Generated survey structure with title, description, and questions
  */
 export const generateSurvey = async (description) => {
-  console.log("🔍 AI Survey Generation - Starting with description:", description);
-  
+  console.log(
+    "🔍 AI Survey Generation - Starting with description:",
+    description
+  );
+
   const systemPrompt = `You are an AI assistant specialized in creating complete survey structures.
 Based on the user's description, generate a comprehensive survey with:
 1. A clear, engaging title
@@ -234,12 +237,12 @@ Make questions clear, unbiased, and relevant to the survey purpose.`;
 
   try {
     console.log("📤 Sending request to AI with system prompt");
-    
+
     const response = await generateFromAI({
       prompt: `Create a survey for: ${description}`,
       systemPrompt,
       temperature: 0.7,
-      model: "gemini-1.5-pro"
+      model: "gemini-1.5-pro",
     });
 
     console.log("📥 Raw AI response:", response);
@@ -248,9 +251,12 @@ Make questions clear, unbiased, and relevant to the survey purpose.`;
     let surveyData;
     try {
       // Clean the response - remove any markdown code blocks
-      const cleanResponse = response.replace(/```json\s*/gi, '').replace(/```\s*/gi, '').trim();
+      const cleanResponse = response
+        .replace(/```json\s*/gi, "")
+        .replace(/```\s*/gi, "")
+        .trim();
       console.log("🧹 Cleaned response:", cleanResponse);
-      
+
       surveyData = JSON.parse(cleanResponse);
       console.log("✅ Parsed survey data:", surveyData);
     } catch (parseError) {
@@ -260,7 +266,11 @@ Make questions clear, unbiased, and relevant to the survey purpose.`;
     }
 
     // Validate the structure
-    if (!surveyData.title || !surveyData.questions || !Array.isArray(surveyData.questions)) {
+    if (
+      !surveyData.title ||
+      !surveyData.questions ||
+      !Array.isArray(surveyData.questions)
+    ) {
       console.error("❌ Invalid survey structure:", surveyData);
       throw new Error("AI returned incomplete survey structure");
     }
@@ -272,29 +282,35 @@ Make questions clear, unbiased, and relevant to the survey purpose.`;
         console.error(`❌ Invalid question at index ${i}:`, question);
         throw new Error(`Question ${i + 1} is missing required fields`);
       }
-      
+
       // Validate question types
-      const validTypes = ['TEXT', 'LONG_TEXT', 'RATING', 'MULTIPLE_CHOICE'];
+      const validTypes = ["TEXT", "LONG_TEXT", "RATING", "MULTIPLE_CHOICE"];
       if (!validTypes.includes(question.type)) {
-        console.error(`❌ Invalid question type at index ${i}: ${question.type}`);
-        question.type = 'TEXT'; // Default fallback
+        console.error(
+          `❌ Invalid question type at index ${i}: ${question.type}`
+        );
+        question.type = "TEXT"; // Default fallback
       }
-      
+
       // Ensure MULTIPLE_CHOICE has options
-      if (question.type === 'MULTIPLE_CHOICE' && (!question.options || !Array.isArray(question.options))) {
-        console.error(`❌ MULTIPLE_CHOICE question missing options at index ${i}`);
-        question.options = ['Option 1', 'Option 2', 'Option 3'];
+      if (
+        question.type === "MULTIPLE_CHOICE" &&
+        (!question.options || !Array.isArray(question.options))
+      ) {
+        console.error(
+          `❌ MULTIPLE_CHOICE question missing options at index ${i}`
+        );
+        question.options = ["Option 1", "Option 2", "Option 3"];
       }
     }
 
     console.log("✅ Survey generation successful:", {
       title: surveyData.title,
       questionCount: surveyData.questions.length,
-      questionTypes: surveyData.questions.map(q => q.type)
+      questionTypes: surveyData.questions.map((q) => q.type),
     });
 
     return surveyData;
-
   } catch (error) {
     console.error("❌ Survey generation failed:", error);
     throw new Error(`Failed to generate survey: ${error.message}`);

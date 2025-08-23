@@ -121,64 +121,64 @@ export default function SurveyCreationPage() {
     // AI Generate Survey handler
     const handleAIGenerateSurvey = async () => {
         console.log("🚀 AI Survey Generation - Starting process");
-        
+
         if (!aiSurveyInput.trim()) {
             console.log("❌ Empty input provided");
             setAIError("Please enter a description for your survey.");
             return;
         }
-        
+
         console.log("📝 Survey input:", aiSurveyInput);
         setIsAIGenerating(true);
         setAIError("");
-        
+
         try {
             console.log("📡 Importing AI service...");
             const { generateSurvey } = await import("../../utils/AIservice.js");
-            
+
             console.log("🤖 Calling generateSurvey function...");
             const response = await generateSurvey(aiSurveyInput);
-            
+
             console.log("📥 AI Response received:", response);
-            
+
             if (response && response.title && Array.isArray(response.questions)) {
                 console.log("✅ Valid response structure, processing...");
-                
+
                 setSurvey(prev => ({
                     ...prev,
                     title: response.title,
                     description: response.description || "",
                 }));
-                
+
                 const aiQuestions = response.questions.map((q, idx) => {
                     console.log(`🔧 Processing question ${idx + 1}:`, q);
                     return {
                         id: Date.now() + idx,
                         type: q.type,
                         questionText: q.text,
-                        optionsJson: q.type === "MULTIPLE_CHOICE" 
-                            ? JSON.stringify(q.options) 
-                            : q.type === "RATING" 
-                                ? JSON.stringify({ 
-                                    scale: q.ratingScale || 5, 
-                                    labels: { 
-                                        min: q.minLabel || "Poor", 
-                                        max: q.maxLabel || "Excellent" 
-                                    } 
-                                }) 
+                        optionsJson: q.type === "MULTIPLE_CHOICE"
+                            ? JSON.stringify(q.options)
+                            : q.type === "RATING"
+                                ? JSON.stringify({
+                                    scale: q.ratingScale || 5,
+                                    labels: {
+                                        min: q.minLabel || "Poor",
+                                        max: q.maxLabel || "Excellent"
+                                    }
+                                })
                                 : null,
                         orderNumber: idx + 1,
                         required: !!q.required
                     };
                 });
-                
+
                 console.log("📋 Processed questions:", aiQuestions);
-                
+
                 setQuestions(aiQuestions);
                 setIsAIGenerated(true);
                 setShowAIGenerateModal(false);
                 setUnsavedChanges(true);
-                
+
                 console.log("🎉 Survey generation completed successfully!");
             } else {
                 console.error("❌ Invalid response structure:", response);
