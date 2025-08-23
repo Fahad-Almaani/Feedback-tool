@@ -127,6 +127,16 @@ export default function SurveyFormPage() {
         return new Date() > new Date(survey.endDate);
     };
 
+    // Check if survey is inactive
+    const isSurveyInactive = () => {
+        return survey?.status === "INACTIVE";
+    };
+
+    // Check if survey is not available for responses
+    const isSurveyNotAvailable = () => {
+        return isSurveyInactive() || isSurveyExpired();
+    };
+
     // Check if survey is private and handle authentication
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -381,6 +391,8 @@ export default function SurveyFormPage() {
                             <p className={styles.surveyDescription}>{survey.description}</p>
                         )}
 
+                       
+
                         {/* Survey End Date Info */}
                         {survey.endDate && (
                             <div className={styles.endDateInfo}>
@@ -397,7 +409,7 @@ export default function SurveyFormPage() {
                         )}
 
                         {/* Expired Survey Warning */}
-                        {isSurveyExpired() && (
+                        {isSurveyExpired() && !isSurveyInactive() && (
                             <div className={styles.expiredWarning}>
                                 <svg className={styles.warningIcon} viewBox="0 0 24 24" fill="currentColor">
                                     <path fillRule="evenodd" d="M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75 9.75-4.365 9.75-9.75S17.385 2.25 12 2.25zm-1.72 6.97a.75.75 0 10-1.06 1.06L10.94 12l-1.72 1.72a.75.75 0 101.06 1.06L12 13.06l1.72 1.72a.75.75 0 101.06-1.06L13.06 12l1.72-1.72a.75.75 0 10-1.06-1.06L12 10.94l-1.72-1.72z" clipRule="evenodd" />
@@ -430,7 +442,7 @@ export default function SurveyFormPage() {
 
                 {/* Survey Form */}
                 <div className={styles.formContainer}>
-                    {!isSurveyExpired() ? (
+                    {!isSurveyNotAvailable() ? (
                         <form onSubmit={handleSubmit} className={styles.surveyForm}>
                             {error && (
                                 <div className={styles.errorMessage}>
@@ -487,8 +499,13 @@ export default function SurveyFormPage() {
                             <svg className={styles.expiredIcon} viewBox="0 0 24 24" fill="currentColor">
                                 <path fillRule="evenodd" d="M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75 9.75-4.365 9.75-9.75S17.385 2.25 12 2.25zm-1.72 6.97a.75.75 0 10-1.06 1.06L10.94 12l-1.72 1.72a.75.75 0 101.06 1.06L12 13.06l1.72 1.72a.75.75 0 101.06-1.06L13.06 12l1.72-1.72a.75.75 0 10-1.06-1.06L12 10.94l-1.72-1.72z" clipRule="evenodd" />
                             </svg>
-                            <h3>Survey No Longer Available</h3>
-                            <p>This survey has closed and is no longer accepting new responses.</p>
+                            <h3>Survey Unavailable</h3>
+                            <p>
+                                {isSurveyInactive()
+                                    ? "This survey is currently inactive and not accepting responses. Please contact the survey administrator if you believe this is an error."
+                                    : "This survey has closed and is no longer accepting new responses."
+                                }
+                            </p>
                             <button onClick={() => navigate('/')} className={styles.homeButton}>
                                 Return to Home
                             </button>
