@@ -735,10 +735,7 @@ export default function SurveyViewPage() {
                                 <div className={styles.metricContent}>
                                     <div className={styles.metricValue}>{surveyResults?.totalResponses || 0}</div>
                                     <div className={styles.metricLabel}>Total Responses</div>
-                                    <div className={styles.metricTrend}>
-                                        <TrendingUp size={12} />
-                                        +12% this week
-                                    </div>
+                                   
                                 </div>
                             </div>
 
@@ -749,10 +746,7 @@ export default function SurveyViewPage() {
                                 <div className={styles.metricContent}>
                                     <div className={styles.metricValue}>{analyticsData?.respondentAnalysis.totalRespondents || 0}</div>
                                     <div className={styles.metricLabel}>Unique Respondents</div>
-                                    <div className={styles.metricTrend}>
-                                        <TrendingUp size={12} />
-                                        +8% this week
-                                    </div>
+                                    
                                 </div>
                             </div>
 
@@ -763,10 +757,7 @@ export default function SurveyViewPage() {
                                 <div className={styles.metricContent}>
                                     <div className={styles.metricValue}>{analyticsData?.respondentAnalysis.averageCompletionTime || "N/A"}</div>
                                     <div className={styles.metricLabel}>Avg. Completion Time</div>
-                                    <div className={styles.metricTrend}>
-                                        <TrendingUp size={12} />
-                                        -5% improvement
-                                    </div>
+                                    
                                 </div>
                             </div>
 
@@ -781,10 +772,7 @@ export default function SurveyViewPage() {
                                             : 0}%
                                     </div>
                                     <div className={styles.metricLabel}>Completion Rate</div>
-                                    <div className={styles.metricTrend}>
-                                        <TrendingUp size={12} />
-                                        +3% this week
-                                    </div>
+                                  
                                 </div>
                             </div>
                         </div>
