@@ -296,7 +296,7 @@ export default function SurveyViewPage() {
             questionText: question.questionText.length > 30
                 ? question.questionText.substring(0, 30) + "..."
                 : question.questionText,
-            completion: Math.round((question.totalAnswers / surveyResults.totalResponses) * 100),
+            completion: Math.min(100, Math.round((question.totalAnswers / surveyResults.totalResponses) * 100)),
             total: question.totalAnswers,
             type: question.questionType
         }));
@@ -735,10 +735,7 @@ export default function SurveyViewPage() {
                                 <div className={styles.metricContent}>
                                     <div className={styles.metricValue}>{surveyResults?.totalResponses || 0}</div>
                                     <div className={styles.metricLabel}>Total Responses</div>
-                                    <div className={styles.metricTrend}>
-                                        <TrendingUp size={12} />
-                                        +12% this week
-                                    </div>
+                                   
                                 </div>
                             </div>
 
@@ -749,10 +746,7 @@ export default function SurveyViewPage() {
                                 <div className={styles.metricContent}>
                                     <div className={styles.metricValue}>{analyticsData?.respondentAnalysis.totalRespondents || 0}</div>
                                     <div className={styles.metricLabel}>Unique Respondents</div>
-                                    <div className={styles.metricTrend}>
-                                        <TrendingUp size={12} />
-                                        +8% this week
-                                    </div>
+                                    
                                 </div>
                             </div>
 
@@ -763,10 +757,7 @@ export default function SurveyViewPage() {
                                 <div className={styles.metricContent}>
                                     <div className={styles.metricValue}>{analyticsData?.respondentAnalysis.averageCompletionTime || "N/A"}</div>
                                     <div className={styles.metricLabel}>Avg. Completion Time</div>
-                                    <div className={styles.metricTrend}>
-                                        <TrendingUp size={12} />
-                                        -5% improvement
-                                    </div>
+                                    
                                 </div>
                             </div>
 
@@ -776,15 +767,12 @@ export default function SurveyViewPage() {
                                 </div>
                                 <div className={styles.metricContent}>
                                     <div className={styles.metricValue}>
-                                        {surveyResults?.totalResponses && surveyResults?.totalQuestions
-                                            ? Math.round((surveyResults.totalResponses / surveyResults.totalQuestions) * 100)
+                                        {surveyResults?.questionResults && surveyResults.questionResults.length > 0
+                                            ? Math.min(100, Math.round(surveyResults.questionResults.reduce((sum, question) => sum + Math.min(100, question.completionRate || 0), 0) / surveyResults.questionResults.length))
                                             : 0}%
                                     </div>
                                     <div className={styles.metricLabel}>Completion Rate</div>
-                                    <div className={styles.metricTrend}>
-                                        <TrendingUp size={12} />
-                                        +3% this week
-                                    </div>
+                                  
                                 </div>
                             </div>
                         </div>
@@ -1312,8 +1300,8 @@ export default function SurveyViewPage() {
                                                                         </div>
                                                                     </div>
                                                                     <div className={styles.chartWrapper}>
-                                                                        <ResponsiveContainer width="100%" height={280}>
-                                                                            <PieChart margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
+                                                                        <ResponsiveContainer width="100%" height={320}>
+                                                                            <PieChart margin={{ top: 20, right: 30, left: 20, bottom: 60 }}>
                                                                                 <defs>
                                                                                     {Object.entries(analytics.optionCounts).map((entry, index) => (
                                                                                         <linearGradient key={`gradient-${index}`} id={`gradient-${index}`} x1="0" y1="0" x2="1" y2="1">
@@ -1342,6 +1330,17 @@ export default function SurveyViewPage() {
                                                                                         <Cell key={`cell-${index}`} fill={`url(#gradient-${index})`} />
                                                                                     ))}
                                                                                 </Pie>
+                                                                                <Legend
+                                                                                    verticalAlign="bottom"
+                                                                                    height={36}
+                                                                                    iconType="circle"
+                                                                                    wrapperStyle={{
+                                                                                        paddingTop: '20px',
+                                                                                        fontSize: '12px',
+                                                                                        color: '#64748b'
+                                                                                    }}
+                                                                                    formatter={(value, entry) => entry.payload.fullName}
+                                                                                />
                                                                                 <Tooltip
                                                                                     contentStyle={{
                                                                                         backgroundColor: 'rgba(15, 23, 42, 0.95)',
@@ -1357,6 +1356,37 @@ export default function SurveyViewPage() {
                                                                                 />
                                                                             </PieChart>
                                                                         </ResponsiveContainer>
+                                                                    </div>
+                                                                </div>
+                                                            )}
+
+                                                        {/* Multiple Choice Empty State */}
+                                                        {['MULTIPLE_CHOICE', 'RADIO', 'DROPDOWN'].includes(question.type) &&
+                                                            (!analytics.optionCounts ||
+                                                                typeof analytics.optionCounts !== 'object' ||
+                                                                Object.keys(analytics.optionCounts).length === 0) && (
+                                                                <div className={styles.beautifulChartCard}>
+                                                                    <div className={styles.chartCardHeader}>
+                                                                        <h6 className={styles.chartCardTitle}>Option Distribution</h6>
+                                                                        <div className={styles.chartCardSubtitle}>No responses yet</div>
+                                                                    </div>
+                                                                    <div className={styles.chartWrapper}>
+                                                                        <div style={{
+                                                                            display: 'flex',
+                                                                            flexDirection: 'column',
+                                                                            alignItems: 'center',
+                                                                            justifyContent: 'center',
+                                                                            height: '280px',
+                                                                            color: '#94A3B8',
+                                                                            fontSize: '14px',
+                                                                            gap: '12px'
+                                                                        }}>
+                                                                            <div style={{ fontSize: '48px', opacity: 0.3 }}>🗳️</div>
+                                                                            <div>No option selections yet</div>
+                                                                            <div style={{ fontSize: '12px', opacity: 0.7 }}>
+                                                                                Charts will appear once users submit responses
+                                                                            </div>
+                                                                        </div>
                                                                     </div>
                                                                 </div>
                                                             )}
