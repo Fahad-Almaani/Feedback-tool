@@ -414,6 +414,16 @@ export class UserService {
     const response = await apiClient.get(`${this.baseUrl}/dashboard`);
     return apiClient.extractData(response);
   }
+
+  /**
+   * Get user's response to a specific survey
+   */
+  static async getUserResponse(surveyId) {
+    const response = await apiClient.get(
+      `${this.baseUrl}/responses/survey/${surveyId}`
+    );
+    return apiClient.extractData(response);
+  }
 }
 
 /**

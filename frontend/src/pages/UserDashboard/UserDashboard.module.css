@@ -206,6 +206,11 @@
   margin-bottom: var(--space-xl);
 }
 
+/* Full width section that spans both columns */
+.fullWidth {
+  grid-column: 1 / -1;
+}
+
 /* Section Styles */
 .section {
   background: var(--bg-overlay);
@@ -254,6 +259,7 @@
 /* Survey Cards */
 .surveyGrid {
   display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
   gap: var(--space-md);
 }
 
