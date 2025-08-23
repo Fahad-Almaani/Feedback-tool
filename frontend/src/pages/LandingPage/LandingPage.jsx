@@ -145,34 +145,14 @@ export default function LandingPage() {
                         </p>
 
                         <div className={styles.heroActions}>
+                            {/* Removed "Start Free Trial" and "Watch Demo" per product availability.
+                                Keep a neutral Get Started link for signups. */}
                             <Link to="/signup" className={styles.primaryCta}>
-                                Start Free Trial
+                                Get Started
                                 <ArrowRightIcon />
                             </Link>
-                            <button className={styles.secondaryCta}>
-                                <svg viewBox="0 0 24 24" fill="currentColor" className={styles.playIcon}>
-                                    <path d="M8 5v14l11-7z" />
-                                </svg>
-                                Watch Demo
-                            </button>
                         </div>
 
-                        {/* <div className={styles.socialProof}>
-                            <div className={styles.trustIndicators}>
-                                <div className={styles.trustItem}>
-                                    <span className={styles.trustNumber}>50K+</span>
-                                    <span className={styles.trustLabel}>Active Users</span>
-                                </div>
-                                <div className={styles.trustItem}>
-                                    <span className={styles.trustNumber}>1M+</span>
-                                    <span className={styles.trustLabel}>Surveys Created</span>
-                                </div>
-                                <div className={styles.trustItem}>
-                                    <span className={styles.trustNumber}>99.9%</span>
-                                    <span className={styles.trustLabel}>Uptime</span>
-                                </div>
-                            </div>
-                        </div> */}
                     </div>
 
                     <div className={styles.heroVisual}>
@@ -305,7 +285,7 @@ export default function LandingPage() {
 
                         <div className={styles.ctaActions}>
                             <Link to="/signup" className={styles.ctaPrimary}>
-                                Start Your Free Trial
+                                Get Started
                                 <ArrowRightIcon />
                             </Link>
                             <Link to="/login" className={styles.ctaSecondary}>
@@ -332,7 +312,6 @@ export default function LandingPage() {
 
                         <div className={styles.footerText}>
                             <p>&copy; 2024 FeedbackPro. All rights reserved.</p>
-                            <p>Built with ❤️ for better feedback experiences</p>
                         </div>
                     </div>
                 </div>
