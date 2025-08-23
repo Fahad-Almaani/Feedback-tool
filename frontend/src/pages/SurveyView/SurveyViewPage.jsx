@@ -1312,8 +1312,8 @@ export default function SurveyViewPage() {
                                                                         </div>
                                                                     </div>
                                                                     <div className={styles.chartWrapper}>
-                                                                        <ResponsiveContainer width="100%" height={280}>
-                                                                            <PieChart margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
+                                                                        <ResponsiveContainer width="100%" height={320}>
+                                                                            <PieChart margin={{ top: 20, right: 30, left: 20, bottom: 60 }}>
                                                                                 <defs>
                                                                                     {Object.entries(analytics.optionCounts).map((entry, index) => (
                                                                                         <linearGradient key={`gradient-${index}`} id={`gradient-${index}`} x1="0" y1="0" x2="1" y2="1">
@@ -1342,6 +1342,17 @@ export default function SurveyViewPage() {
                                                                                         <Cell key={`cell-${index}`} fill={`url(#gradient-${index})`} />
                                                                                     ))}
                                                                                 </Pie>
+                                                                                <Legend
+                                                                                    verticalAlign="bottom"
+                                                                                    height={36}
+                                                                                    iconType="circle"
+                                                                                    wrapperStyle={{
+                                                                                        paddingTop: '20px',
+                                                                                        fontSize: '12px',
+                                                                                        color: '#64748b'
+                                                                                    }}
+                                                                                    formatter={(value, entry) => entry.payload.fullName}
+                                                                                />
                                                                                 <Tooltip
                                                                                     contentStyle={{
                                                                                         backgroundColor: 'rgba(15, 23, 42, 0.95)',
@@ -1357,6 +1368,37 @@ export default function SurveyViewPage() {
                                                                                 />
                                                                             </PieChart>
                                                                         </ResponsiveContainer>
+                                                                    </div>
+                                                                </div>
+                                                            )}
+
+                                                        {/* Multiple Choice Empty State */}
+                                                        {['MULTIPLE_CHOICE', 'RADIO', 'DROPDOWN'].includes(question.type) &&
+                                                            (!analytics.optionCounts ||
+                                                                typeof analytics.optionCounts !== 'object' ||
+                                                                Object.keys(analytics.optionCounts).length === 0) && (
+                                                                <div className={styles.beautifulChartCard}>
+                                                                    <div className={styles.chartCardHeader}>
+                                                                        <h6 className={styles.chartCardTitle}>Option Distribution</h6>
+                                                                        <div className={styles.chartCardSubtitle}>No responses yet</div>
+                                                                    </div>
+                                                                    <div className={styles.chartWrapper}>
+                                                                        <div style={{
+                                                                            display: 'flex',
+                                                                            flexDirection: 'column',
+                                                                            alignItems: 'center',
+                                                                            justifyContent: 'center',
+                                                                            height: '280px',
+                                                                            color: '#94A3B8',
+                                                                            fontSize: '14px',
+                                                                            gap: '12px'
+                                                                        }}>
+                                                                            <div style={{ fontSize: '48px', opacity: 0.3 }}>🗳️</div>
+                                                                            <div>No option selections yet</div>
+                                                                            <div style={{ fontSize: '12px', opacity: 0.7 }}>
+                                                                                Charts will appear once users submit responses
+                                                                            </div>
+                                                                        </div>
                                                                     </div>
                                                                 </div>
                                                             )}
