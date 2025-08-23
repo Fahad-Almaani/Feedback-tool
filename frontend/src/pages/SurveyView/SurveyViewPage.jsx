@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState, useMemo, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import {
@@ -51,8 +51,10 @@ import {
     Copy,
     RefreshCw,
     Edit3,
-    Trash2
+    Trash2,
+    QrCode
 } from "lucide-react";
+import QRCode from "qrcode";
 import styles from "./SurveyViewPage.module.css";
 import { SurveyService, ResponseService } from "../../services/apiServices";
 import { useDialog } from "../../hooks/useDialog";
@@ -98,6 +100,8 @@ export default function SurveyViewPage() {
     const [expandedQuestions, setExpandedQuestions] = useState(new Set());
     const [showShareModal, setShowShareModal] = useState(false);
     const [showExportDropdown, setShowExportDropdown] = useState(false);
+    const [qrCodeDataUrl, setQrCodeDataUrl] = useState(null);
+    const qrCanvasRef = useRef(null);
 
     // Helper functions (moved before useMemo to avoid hoisting issues)
     const generateResponseTrendData = (responses) => {
@@ -170,9 +174,54 @@ export default function SurveyViewPage() {
         return typeMap[type] || type;
     };
 
-    const calculateAverageCompletionTime = (respondents) => {
-        // Mock calculation - in real app, you'd track start/end times
-        return "3.5 min";
+    const formatCompletionTimeFromSeconds = (seconds) => {
+        if (!seconds || seconds <= 0) {
+            return "N/A";
+        }
+
+        // Format the time
+        if (seconds < 60) {
+            return `${Math.round(seconds)}s`;
+        } else if (seconds < 3600) {
+            const minutes = Math.floor(seconds / 60);
+            const remainingSeconds = Math.round(seconds % 60);
+            return remainingSeconds > 0 ? `${minutes}m ${remainingSeconds}s` : `${minutes}m`;
+        } else {
+            const hours = Math.floor(seconds / 3600);
+            const minutes = Math.round((seconds % 3600) / 60);
+            return minutes > 0 ? `${hours}h ${minutes}m` : `${hours}h`;
+        }
+    };
+
+    const calculateAverageCompletionTime = (responses) => {
+        if (!responses || !responses.responses) {
+            return "N/A";
+        }
+
+        // Extract completion times from responses
+        const completionTimes = responses.responses
+            .map(response => response.completionTimeSeconds)
+            .filter(time => time && time > 0);
+
+        if (completionTimes.length === 0) {
+            return "N/A";
+        }
+
+        // Calculate average
+        const averageSeconds = completionTimes.reduce((sum, time) => sum + time, 0) / completionTimes.length;
+
+        // Format the time
+        if (averageSeconds < 60) {
+            return `${Math.round(averageSeconds)}s`;
+        } else if (averageSeconds < 3600) {
+            const minutes = Math.floor(averageSeconds / 60);
+            const seconds = Math.round(averageSeconds % 60);
+            return seconds > 0 ? `${minutes}m ${seconds}s` : `${minutes}m`;
+        } else {
+            const hours = Math.floor(averageSeconds / 3600);
+            const minutes = Math.round((averageSeconds % 3600) / 60);
+            return minutes > 0 ? `${hours}h ${minutes}m` : `${hours}h`;
+        }
     };
 
     // Fetch survey data
@@ -270,7 +319,7 @@ export default function SurveyViewPage() {
             totalRespondents: respondents.length,
             authenticatedUsers: respondents.filter(r => !r.isAnonymous).length,
             anonymousUsers: respondents.filter(r => r.isAnonymous).length,
-            averageCompletionTime: calculateAverageCompletionTime(respondents),
+            averageCompletionTime: formatCompletionTimeFromSeconds(surveyResponses?.averageCompletionTimeSeconds),
             completionRateByQuestion: questionCompletionData
         };
 
@@ -301,6 +350,56 @@ export default function SurveyViewPage() {
         navigator.clipboard.writeText(shareUrl);
         // Show toast notification
     };
+
+    const generateQRCode = async () => {
+        const shareUrl = `${window.location.origin}/survey/${surveyId}`;
+
+        try {
+            // Generate QR code as data URL
+            const dataUrl = await QRCode.toDataURL(shareUrl, {
+                width: 256,
+                margin: 2,
+                color: {
+                    dark: '#000000',
+                    light: '#ffffff'
+                },
+                errorCorrectionLevel: 'H'
+            });
+
+            setQrCodeDataUrl(dataUrl);
+            return dataUrl;
+        } catch (error) {
+            console.error('Error generating QR code:', error);
+            return null;
+        }
+    };
+
+    const downloadQRCode = async () => {
+        let dataUrl = qrCodeDataUrl;
+
+        if (!dataUrl) {
+            dataUrl = await generateQRCode();
+            if (!dataUrl) {
+                console.error('Failed to generate QR code for download');
+                return;
+            }
+        }
+
+        // Create download link
+        const link = document.createElement('a');
+        link.download = `survey-${surveyId}-qr-code.png`;
+        link.href = dataUrl;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
+    // Generate QR code when share modal opens
+    useEffect(() => {
+        if (showShareModal && !qrCodeDataUrl) {
+            generateQRCode();
+        }
+    }, [showShareModal, surveyId, qrCodeDataUrl]);
 
     const exportData = async (format = 'csv', type = 'responses') => {
         try {
@@ -607,8 +706,7 @@ export default function SurveyViewPage() {
             <nav className={styles.tabNavigation}>
                 <div className={styles.tabContainer}>
                     {[
-                        { id: "overview", label: "Overview", icon: Eye },
-                        { id: "analytics", label: "Analytics", icon: BarChart3 },
+                        { id: "overview", label: "Overview & Analytics", icon: BarChart3 },
                         { id: "responses", label: "Responses", icon: MessageSquare },
                         { id: "questions", label: "Response Analytics", icon: FileText }
                     ].map(({ id, label, icon: Icon }) => (
@@ -691,7 +789,7 @@ export default function SurveyViewPage() {
                             </div>
                         </div>
 
-                        {/* Charts Grid */}
+                        {/* Charts Grid - Combined Overview and Analytics */}
                         <div className={styles.chartsGrid}>
                             {/* Response Trend */}
                             <div className={styles.chartCard}>
@@ -766,79 +864,6 @@ export default function SurveyViewPage() {
                                     </ResponsiveContainer>
                                 </div>
                             </div>
-                        </div>
-
-                        {/* Respondent Analysis */}
-                        <div className={styles.analysisCard}>
-                            <div className={styles.cardHeader}>
-                                <h3 className={styles.cardTitle}>Respondent Analysis</h3>
-                                <p className={styles.cardSubtitle}>Breakdown of survey participants</p>
-                            </div>
-                            <div className={styles.respondentStats}>
-                                <div className={styles.statItem}>
-                                    <UserCheck className={styles.statIcon} size={20} />
-                                    <div className={styles.statContent}>
-                                        <div className={styles.statValue}>{analyticsData?.respondentAnalysis.authenticatedUsers || 0}</div>
-                                        <div className={styles.statLabel}>Authenticated Users</div>
-                                    </div>
-                                </div>
-                                <div className={styles.statItem}>
-                                    <UserX className={styles.statIcon} size={20} />
-                                    <div className={styles.statContent}>
-                                        <div className={styles.statValue}>{analyticsData?.respondentAnalysis.anonymousUsers || 0}</div>
-                                        <div className={styles.statLabel}>Anonymous Users</div>
-                                    </div>
-                                </div>
-                                <div className={styles.statItem}>
-                                    <Globe className={styles.statIcon} size={20} />
-                                    <div className={styles.statContent}>
-                                        <div className={styles.statValue}>
-                                            {analyticsData?.respondentAnalysis.authenticatedUsers && analyticsData?.respondentAnalysis.totalRespondents
-                                                ? Math.round((analyticsData.respondentAnalysis.authenticatedUsers / analyticsData.respondentAnalysis.totalRespondents) * 100)
-                                                : 0}%
-                                        </div>
-                                        <div className={styles.statLabel}>Authentication Rate</div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                )}
-
-                {activeTab === "analytics" && (
-                    <div className={styles.tabContent}>
-                        {/* Advanced Analytics Charts */}
-                        <div className={styles.chartsGrid}>
-                            {/* Question Completion Rates */}
-                            <div className={styles.chartCard}>
-                                <div className={styles.chartHeader}>
-                                    <h3 className={styles.chartTitle}>Question Completion Rates</h3>
-                                    <p className={styles.chartSubtitle}>Completion percentage by question</p>
-                                </div>
-                                <div className={styles.chartContainer}>
-                                    <ResponsiveContainer width="100%" height={400}>
-                                        <BarChart data={analyticsData?.questionCompletionData || []} layout="horizontal">
-                                            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.2)" />
-                                            <XAxis type="number" domain={[0, 100]} stroke="#718096" fontSize={12} />
-                                            <YAxis dataKey="question" type="category" stroke="#718096" fontSize={12} width={60} />
-                                            <Tooltip
-                                                contentStyle={{
-                                                    backgroundColor: 'rgba(255,255,255,0.95)',
-                                                    border: 'none',
-                                                    borderRadius: '12px',
-                                                    boxShadow: '0 10px 25px rgba(0,0,0,0.1)'
-                                                }}
-                                                formatter={(value, name) => [`${value}%`, 'Completion Rate']}
-                                                labelFormatter={(label) => {
-                                                    const item = analyticsData?.questionCompletionData?.find(q => q.question === label);
-                                                    return item ? item.questionText : label;
-                                                }}
-                                            />
-                                            <Bar dataKey="completion" fill={COLORS.primary} radius={[0, 4, 4, 0]} />
-                                        </BarChart>
-                                    </ResponsiveContainer>
-                                </div>
-                            </div>
 
                             {/* Response Time Analysis */}
                             {analyticsData?.timeAnalytics?.hourlyData && (
@@ -901,41 +926,39 @@ export default function SurveyViewPage() {
                                     </div>
                                 </div>
                             )}
+                        </div>
 
-                            {/* Completion Radar Chart */}
-                            <div className={styles.chartCard}>
-                                <div className={styles.chartHeader}>
-                                    <h3 className={styles.chartTitle}>Question Performance Radar</h3>
-                                    <p className={styles.chartSubtitle}>Multi-dimensional question analysis</p>
+                        {/* Respondent Analysis */}
+                        <div className={styles.analysisCard}>
+                            <div className={styles.cardHeader}>
+                                <h3 className={styles.cardTitle}>Respondent Analysis</h3>
+                                <p className={styles.cardSubtitle}>Breakdown of survey participants</p>
+                            </div>
+                            <div className={styles.respondentStats}>
+                                <div className={styles.statItem}>
+                                    <UserCheck className={styles.statIcon} size={20} />
+                                    <div className={styles.statContent}>
+                                        <div className={styles.statValue}>{analyticsData?.respondentAnalysis.authenticatedUsers || 0}</div>
+                                        <div className={styles.statLabel}>Authenticated Users</div>
+                                    </div>
                                 </div>
-                                <div className={styles.chartContainer}>
-                                    <ResponsiveContainer width="100%" height={300}>
-                                        <RadarChart data={analyticsData?.questionCompletionData?.slice(0, 6) || []}>
-                                            <PolarGrid stroke="rgba(255,255,255,0.2)" />
-                                            <PolarAngleAxis dataKey="question" tick={{ fontSize: 12, fill: '#718096' }} />
-                                            <PolarRadiusAxis
-                                                angle={0}
-                                                domain={[0, 100]}
-                                                tick={{ fontSize: 10, fill: '#718096' }}
-                                            />
-                                            <Radar
-                                                name="Completion Rate"
-                                                dataKey="completion"
-                                                stroke={COLORS.warning}
-                                                fill={COLORS.warning}
-                                                fillOpacity={0.3}
-                                                strokeWidth={2}
-                                            />
-                                            <Tooltip
-                                                contentStyle={{
-                                                    backgroundColor: 'rgba(255,255,255,0.95)',
-                                                    border: 'none',
-                                                    borderRadius: '12px',
-                                                    boxShadow: '0 10px 25px rgba(0,0,0,0.1)'
-                                                }}
-                                            />
-                                        </RadarChart>
-                                    </ResponsiveContainer>
+                                <div className={styles.statItem}>
+                                    <UserX className={styles.statIcon} size={20} />
+                                    <div className={styles.statContent}>
+                                        <div className={styles.statValue}>{analyticsData?.respondentAnalysis.anonymousUsers || 0}</div>
+                                        <div className={styles.statLabel}>Anonymous Users</div>
+                                    </div>
+                                </div>
+                                <div className={styles.statItem}>
+                                    <Globe className={styles.statIcon} size={20} />
+                                    <div className={styles.statContent}>
+                                        <div className={styles.statValue}>
+                                            {analyticsData?.respondentAnalysis.authenticatedUsers && analyticsData?.respondentAnalysis.totalRespondents
+                                                ? Math.round((analyticsData.respondentAnalysis.authenticatedUsers / analyticsData.respondentAnalysis.totalRespondents) * 100)
+                                                : 0}%
+                                        </div>
+                                        <div className={styles.statLabel}>Authentication Rate</div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -1419,22 +1442,61 @@ export default function SurveyViewPage() {
                             </button>
                         </div>
                         <div className={styles.modalContent}>
-                            <div className={styles.shareUrlContainer}>
-                                <label className={styles.shareLabel}>Survey URL:</label>
-                                <div className={styles.shareInputGroup}>
-                                    <input
-                                        type="text"
-                                        value={`${window.location.origin}/survey/${surveyId}`}
-                                        readOnly
-                                        className={styles.shareInput}
-                                    />
-                                    <button
-                                        onClick={copyShareLink}
-                                        className={styles.copyButton}
-                                    >
-                                        <Copy size={16} />
-                                        Copy
-                                    </button>
+                            <div className={styles.shareContainer}>
+                                {/* URL Section */}
+                                <div className={styles.shareSection}>
+                                    <div className={styles.shareUrlContainer}>
+                                        <label className={styles.shareLabel}>Survey URL:</label>
+                                        <div className={styles.shareInputGroup}>
+                                            <input
+                                                type="text"
+                                                value={`${window.location.origin}/survey/${surveyId}`}
+                                                readOnly
+                                                className={styles.shareInput}
+                                            />
+                                            <button
+                                                onClick={copyShareLink}
+                                                className={styles.copyButton}
+                                            >
+                                                <Copy size={16} />
+                                                Copy
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* QR Code Section */}
+                                <div className={styles.shareSection}>
+                                    <div className={styles.qrCodeContainer}>
+                                        <label className={styles.shareLabel}>QR Code:</label>
+                                        <div className={styles.qrCodeWrapper}>
+                                            {qrCodeDataUrl ? (
+                                                <div className={styles.qrCodeDisplay}>
+                                                    <img
+                                                        src={qrCodeDataUrl}
+                                                        alt="Survey QR Code"
+                                                        className={styles.qrCodeImage}
+                                                    />
+                                                    <p className={styles.qrCodeDescription}>
+                                                        Scan this QR code to access the survey
+                                                    </p>
+                                                </div>
+                                            ) : (
+                                                <div className={styles.qrCodeLoading}>
+                                                    <QrCode size={64} className={styles.qrCodeIcon} />
+                                                    <p>Generating QR code...</p>
+                                                </div>
+                                            )}
+                                        </div>
+                                        <button
+                                            onClick={downloadQRCode}
+                                            className={styles.downloadQrButton}
+                                            disabled={!qrCodeDataUrl}
+                                        >
+                                            <Download size={16} />
+                                            Download QR Code
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         </div>

@@ -2,6 +2,7 @@ package com.training.feedbacktool.service;
 
 import com.training.feedbacktool.dto.LoginRequest;
 import com.training.feedbacktool.dto.LoginResponse;
+import com.training.feedbacktool.dto.UserProfileResponse;
 import com.training.feedbacktool.entity.User;
 import com.training.feedbacktool.repository.UserRepository;
 import com.training.feedbacktool.util.JwtUtil;
@@ -14,11 +15,14 @@ public class AuthService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
+    private final TokenBlacklistService tokenBlacklistService;
 
-    public AuthService(UserRepository userRepository, PasswordEncoder passwordEncoder, JwtUtil jwtUtil) {
+    public AuthService(UserRepository userRepository, PasswordEncoder passwordEncoder,
+            JwtUtil jwtUtil, TokenBlacklistService tokenBlacklistService) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtUtil = jwtUtil;
+        this.tokenBlacklistService = tokenBlacklistService;
     }
 
     public LoginResponse login(LoginRequest request) {
@@ -39,7 +43,47 @@ public class AuthService {
                 user.getEmail(),
                 user.getName(),
                 user.getRole(),
-                user.getId()
-        );
+                user.getId());
+    }
+
+    /**
+     * Logout a user by blacklisting their JWT token
+     */
+    public void logout(String token) {
+        try {
+            // Extract expiration date from token
+            var expirationDate = jwtUtil.extractExpiration(token);
+
+            // Add token to blacklist
+            tokenBlacklistService.blacklistToken(token, expirationDate);
+        } catch (Exception e) {
+            // Token might be invalid, but we still want to "logout" successfully
+            // to prevent edge cases where frontend thinks user is logged out but backend
+            // doesn't
+            throw new IllegalArgumentException("Invalid token");
+        }
+    }
+
+    /**
+     * Get current user profile from JWT token
+     */
+    public UserProfileResponse getCurrentUser(String token) {
+        try {
+            // Extract user ID from token
+            Long userId = jwtUtil.extractUserId(token);
+
+            // Find user in database
+            User user = userRepository.findById(userId)
+                    .orElseThrow(() -> new IllegalArgumentException("User not found"));
+
+            return new UserProfileResponse(
+                    user.getId(),
+                    user.getEmail(),
+                    user.getName(),
+                    user.getRole(),
+                    user.getCreatedAt());
+        } catch (Exception e) {
+            throw new IllegalArgumentException("Invalid token or user not found");
+        }
     }
 }

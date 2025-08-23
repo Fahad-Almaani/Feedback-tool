@@ -5,7 +5,7 @@ import { useNavigate } from "react-router-dom";
 import InputWithAI from "../../components/Input/InputWithAI";
 import { improveSurveyTitle, improveSurveyDescription } from "../../utils/TextPhrasing";
 import { improveQuestionPhrasing } from "../../utils/QuestionPhrasing";
-import { Type, FileText, Star, CheckSquare, ChevronDown, GripVertical, Move3D, List } from "lucide-react";
+import { Type, FileText, Star, CheckSquare, ChevronDown, GripVertical, Move3D, List, ArrowLeft } from "lucide-react";
 import styles from "./SurveyCreationPage.module.css";
 import {
     DndContext,
@@ -104,7 +104,8 @@ export default function SurveyCreationPage() {
     const [survey, setSurvey] = useState({
         title: "",
         description: "",
-        status: "DRAFT"
+        status: "DRAFT",
+        endDate: ""
     });
 
     // Questions state
@@ -112,6 +113,96 @@ export default function SurveyCreationPage() {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [errors, setErrors] = useState({});
     const [showTemplates, setShowTemplates] = useState(false);
+    const [showAIGenerateModal, setShowAIGenerateModal] = useState(false);
+    const [aiSurveyInput, setAISurveyInput] = useState("");
+    const [isAIGenerating, setIsAIGenerating] = useState(false);
+    const [aiError, setAIError] = useState("");
+    const [isAIGenerated, setIsAIGenerated] = useState(false);
+    // AI Generate Survey handler
+    const handleAIGenerateSurvey = async () => {
+        console.log("🚀 AI Survey Generation - Starting process");
+
+        if (!aiSurveyInput.trim()) {
+            console.log("❌ Empty input provided");
+            setAIError("Please enter a description for your survey.");
+            return;
+        }
+
+        console.log("📝 Survey input:", aiSurveyInput);
+        setIsAIGenerating(true);
+        setAIError("");
+
+        try {
+            console.log("📡 Importing AI service...");
+            const { generateSurvey } = await import("../../utils/AIservice.js");
+
+            console.log("🤖 Calling generateSurvey function...");
+            const response = await generateSurvey(aiSurveyInput);
+
+            console.log("📥 AI Response received:", response);
+
+            if (response && response.title && Array.isArray(response.questions)) {
+                console.log("✅ Valid response structure, processing...");
+
+                setSurvey(prev => ({
+                    ...prev,
+                    title: response.title,
+                    description: response.description || "",
+                }));
+
+                const aiQuestions = response.questions.map((q, idx) => {
+                    console.log(`🔧 Processing question ${idx + 1}:`, q);
+                    return {
+                        id: Date.now() + idx,
+                        type: q.type,
+                        questionText: q.text,
+                        optionsJson: q.type === "MULTIPLE_CHOICE"
+                            ? JSON.stringify(q.options)
+                            : q.type === "RATING"
+                                ? JSON.stringify({
+                                    scale: q.ratingScale || 5,
+                                    labels: {
+                                        min: q.minLabel || "Poor",
+                                        max: q.maxLabel || "Excellent"
+                                    }
+                                })
+                                : null,
+                        orderNumber: idx + 1,
+                        required: !!q.required
+                    };
+                });
+
+                console.log("📋 Processed questions:", aiQuestions);
+
+                setQuestions(aiQuestions);
+                setIsAIGenerated(true);
+                setShowAIGenerateModal(false);
+                setUnsavedChanges(true);
+
+                console.log("🎉 Survey generation completed successfully!");
+            } else {
+                console.error("❌ Invalid response structure:", response);
+                setAIError("AI did not return a valid survey structure. Please try again.");
+            }
+        } catch (err) {
+            console.error("❌ Survey generation error:", err);
+            console.error("Error details:", {
+                message: err.message,
+                stack: err.stack,
+                name: err.name
+            });
+            setAIError(`Failed to generate survey: ${err.message || "Please try again."}`);
+        }
+        setIsAIGenerating(false);
+    };
+
+    // Clear AI-generated survey
+    const handleClearAIGeneratedSurvey = () => {
+        setSurvey({ title: "", description: "", status: "DRAFT", endDate: "" });
+        setQuestions([]);
+        setIsAIGenerated(false);
+        setUnsavedChanges(true);
+    };
     const [autoSaveStatus, setAutoSaveStatus] = useState("");
     const [focusedQuestionIndex, setFocusedQuestionIndex] = useState(null);
     const [showKeyboardShortcuts, setShowKeyboardShortcuts] = useState(false);
@@ -278,7 +369,8 @@ export default function SurveyCreationPage() {
             type: "TEXT",
             questionText: "",
             optionsJson: null,
-            orderNumber: questions.length + 1
+            orderNumber: questions.length + 1,
+            required: false
         };
         setQuestions(prev => [...prev, newQuestion]);
         setFocusedQuestionIndex(questions.length);
@@ -452,19 +544,21 @@ export default function SurveyCreationPage() {
                 title: survey.title,
                 description: survey.description,
                 active: status === "ACTIVE",
+                endDate: survey.endDate ? new Date(survey.endDate).toISOString() : null,
                 questions: questions.map(q => ({
                     type: q.type,
                     questionText: q.questionText,
                     optionsJson: q.optionsJson,
-                    orderNumber: q.orderNumber
+                    orderNumber: q.orderNumber,
+                    required: q.required || false
                 }))
             };
 
             const response = await apiClient.post("/surveys", surveyData);
             const data = apiClient.extractData(response);
 
-            // Survey created successfully, navigate to admin dashboard
-            navigate("/admin");
+            // Survey created successfully, navigate to survey view page
+            navigate(`/admin/surveys/${data.id}`);
         } catch (error) {
             const errorDetails = apiClient.getErrorDetails(error);
             setErrors({ submit: errorDetails.message || "Failed to create survey" });
@@ -495,9 +589,7 @@ export default function SurveyCreationPage() {
                             onClick={() => navigate("/admin")}
                             className={styles.backButton}
                         >
-                            <svg className={styles.backIcon} viewBox="0 0 24 24" fill="currentColor">
-                                <path d="M19 12H5m0 0l7 7m-7-7l7-7" />
-                            </svg>
+                            <ArrowLeft className={styles.backIcon} size={20} />
                             Back
                         </button>
                         <div className={styles.titleSection}>
@@ -517,12 +609,26 @@ export default function SurveyCreationPage() {
                                 🎯 Templates
                             </button>
                             <button
+                                onClick={() => setShowAIGenerateModal(true)}
+                                className={styles.quickActionButton}
+                            >
+                                🤖 AI Generate Survey
+                            </button>
+                            <button
                                 onClick={() => setShowKeyboardShortcuts(!showKeyboardShortcuts)}
                                 className={styles.quickActionButton}
                             >
                                 ⌨️ Shortcuts
                             </button>
                         </div>
+
+                        {/* Clear AI Survey Button */}
+                        {isAIGenerated && (
+                            <div className={styles.aiGeneratedBanner}>
+                                <span>AI-generated survey loaded.</span>
+                                <button onClick={handleClearAIGeneratedSurvey} className={styles.clearAIBtn}>Clear</button>
+                            </div>
+                        )}
                     </div>
                     <div className={styles.headerRight}>
                         <div className={styles.statusIndicators}>
@@ -691,8 +797,74 @@ export default function SurveyCreationPage() {
                                             {survey.description.length}/500
                                         </div>
                                     </div>
+
+                                    <div className={styles.formGroup}>
+                                        <label className={styles.label}>
+                                            Survey End Date
+                                            <span className={styles.optional}>(optional)</span>
+                                        </label>
+                                        <input
+                                            type="datetime-local"
+                                            value={survey.endDate}
+                                            onChange={(e) => {
+                                                setSurvey(prev => ({ ...prev, endDate: e.target.value }));
+                                                setUnsavedChanges(true);
+                                            }}
+                                            className={styles.input}
+                                            placeholder="Set when the survey should stop accepting responses"
+                                        />
+                                        <div className={styles.helpText}>
+                                            If set, the survey will automatically stop accepting responses after this date and time.
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
+
+                            {/* AI Generate Survey Modal */}
+                            {showAIGenerateModal && (
+                                <div className={styles.aiGenerateOverlay}>
+                                    <div className={styles.aiGenerateModal}>
+                                        <div className={styles.aiGenerateHeader}>
+                                            <h3>AI Generate Survey</h3>
+                                            <button
+                                                onClick={() => setShowAIGenerateModal(false)}
+                                                className={styles.aiCloseButton}
+                                            >
+                                                ✕
+                                            </button>
+                                        </div>
+                                        <div className={styles.aiGenerateContent}>
+                                            <div className={styles.aiFormGroup}>
+                                                <label className={styles.aiLabel}>Describe your survey</label>
+                                                <textarea
+                                                    className={styles.aiTextarea}
+                                                    value={aiSurveyInput}
+                                                    onChange={e => setAISurveyInput(e.target.value)}
+                                                    placeholder="E.g. Customer feedback for a new product launch, employee engagement, event review..."
+                                                    disabled={isAIGenerating}
+                                                />
+                                                {aiError && <div className={styles.aiErrorText}>{aiError}</div>}
+                                            </div>
+                                            <div className={styles.aiActionButtons}>
+                                                <button
+                                                    onClick={handleAIGenerateSurvey}
+                                                    className={styles.aiGenerateButton}
+                                                    disabled={isAIGenerating}
+                                                >
+                                                    {isAIGenerating ? <><div className={styles.spinner}></div>Generating...</> : <>🤖 Generate Survey</>}
+                                                </button>
+                                                <button
+                                                    onClick={() => setShowAIGenerateModal(false)}
+                                                    className={styles.aiCancelButton}
+                                                    disabled={isAIGenerating}
+                                                >
+                                                    Cancel
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
 
                             {/* Questions Section */}
                             <div className={styles.section}>
@@ -1176,6 +1348,25 @@ function QuestionEditor({
                             )}
                         </div>
                     )}
+
+                    {/* Required Question Toggle */}
+                    <div className={styles.formGroup}>
+                        <label className={styles.checkboxLabel}>
+                            <input
+                                type="checkbox"
+                                checked={question.required || false}
+                                onChange={(e) => onUpdate(index, "required", e.target.checked)}
+                                className={styles.checkbox}
+                            />
+                            <span className={styles.checkboxText}>
+                                Make this question required
+                                <span className={styles.requiredBadge}>*</span>
+                            </span>
+                        </label>
+                        <div className={styles.helpText}>
+                            Required questions must be answered before submitting the survey
+                        </div>
+                    </div>
                 </div>
             )}
         </div>

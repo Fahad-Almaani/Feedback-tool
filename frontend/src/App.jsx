@@ -2,11 +2,13 @@ import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
+import LoadingSpinner from './components/LoadingSpinner';
 
 // Import components
 import Login from './pages/Login/Login';
 import SignUp from './pages/SignUp/SignUp';
-import ForgotPassword from './pages/ForgotPassword';
+import ForgotPassword from './pages/ForgotPassword/ForgotPassword';
+import ResetPassword from './pages/ResetPassword/ResetPassword';
 import NotFound from './pages/NotFound';
 import LandingPage from './pages/LandingPage/LandingPage';
 import AdminDashboard from './pages/AdminDashboard/AdminDashboard'
@@ -15,6 +17,7 @@ import SurveyCreationPage from './pages/SurveyCreation/SurveyCreationPage';
 import EditSurveyPage from './pages/SurveyEdit/EditSurveyPage';
 import SurveyFormPage from './pages/SurveyForm/SurveyFormPage';
 import SurveyViewPage from './pages/SurveyView/SurveyViewPage';
+import UserResponseView from './pages/UserResponseView';
 
 // Component to handle login route with return URL logic
 const LoginRoute = () => {
@@ -74,9 +77,12 @@ const AppRoutes = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-lg">Loading...</div>
-      </div>
+      <LoadingSpinner
+        fullScreen={true}
+        text="Initializing application..."
+        size="large"
+        variant="primary"
+      />
     );
   }
 
@@ -87,6 +93,8 @@ const AppRoutes = () => {
       <Route path="/login" element={<LoginRoute />} />
       <Route path="/signup" element={<SignUpRoute />} />
       <Route path="/forgot" element={<ForgotPassword />} />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
+      <Route path="/reset-password/:token" element={<ResetPassword />} />
 
       {/* Survey Form Route - Public/Anonymous access */}
       <Route path="/survey/:surveyId" element={<SurveyFormPage />} />
@@ -124,6 +132,11 @@ const AppRoutes = () => {
       <Route path="/user/dashboard" element={
         <ProtectedRoute requiredRole="USER">
           <UserDashboard />
+        </ProtectedRoute>
+      } />
+      <Route path="/user/response/:surveyId" element={
+        <ProtectedRoute requiredRole="USER">
+          <UserResponseView />
         </ProtectedRoute>
       } />
 

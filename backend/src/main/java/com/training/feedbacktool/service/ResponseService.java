@@ -3,15 +3,19 @@ package com.training.feedbacktool.service;
 import com.training.feedbacktool.dto.SubmitResponseRequest;
 import com.training.feedbacktool.entity.Answer;
 import com.training.feedbacktool.entity.Question;
+import com.training.feedbacktool.entity.Response;
 import com.training.feedbacktool.entity.Survey;
 import com.training.feedbacktool.entity.User;
 import com.training.feedbacktool.repository.AnswersRepository;
+import com.training.feedbacktool.repository.ResponsesRepository;
 import com.training.feedbacktool.repository.SurveyRepository;
 import com.training.feedbacktool.repository.UserRepository;
 import com.training.feedbacktool.util.JwtUtil;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
+import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
@@ -20,17 +24,23 @@ public class ResponseService {
 
     private final SurveyRepository surveyRepository;
     private final AnswersRepository answersRepository;
+    private final ResponsesRepository responsesRepository;
     private final UserRepository userRepository;
     private final JwtUtil jwtUtil;
+    private final EmailService emailService;
 
     public ResponseService(SurveyRepository surveyRepository,
             AnswersRepository answersRepository,
+            ResponsesRepository responsesRepository,
             UserRepository userRepository,
-            JwtUtil jwtUtil) {
+            JwtUtil jwtUtil,
+            EmailService emailService) {
         this.surveyRepository = surveyRepository;
         this.answersRepository = answersRepository;
+        this.responsesRepository = responsesRepository;
         this.userRepository = userRepository;
         this.jwtUtil = jwtUtil;
+        this.emailService = emailService;
     }
 
     @Transactional
@@ -42,6 +52,11 @@ public class ResponseService {
         // Check if survey is active
         if (!"ACTIVE".equalsIgnoreCase(survey.getStatus())) {
             throw new IllegalStateException("Survey is not accepting responses");
+        }
+
+        // Check if survey has expired
+        if (survey.getEndDate() != null && Instant.now().isAfter(survey.getEndDate())) {
+            throw new IllegalStateException("Survey has expired and is no longer accepting responses");
         }
 
         // Extract user from token if authenticated
@@ -64,6 +79,17 @@ public class ResponseService {
 
         // Validate required questions
         validateRequiredQuestions(questionsById, request);
+
+        // Create a Response entity for this survey submission
+        Response surveyResponse = Response.builder()
+                .survey(survey)
+                .user(user) // null for anonymous responses
+                .responseText("Survey response submitted") // Generic text for now
+                .completionTimeSeconds(request.completionTimeSeconds()) // Store completion time
+                .createdAt(Instant.now())
+                .build();
+
+        responsesRepository.save(surveyResponse);
 
         // Save answers
         for (SubmitResponseRequest.AnswerDTO answerDto : request.answers()) {
@@ -116,6 +142,16 @@ public class ResponseService {
             }
 
             answersRepository.save(answer);
+        }
+
+        // Send email notification to admin users after successful submission
+        try {
+            List<User> adminUsers = userRepository.findByRole("ADMIN");
+            String respondentInfo = user != null ? user.getName() + " (" + user.getEmail() + ")" : "Anonymous User";
+            emailService.sendSurveyResponseNotification(adminUsers, survey, respondentInfo);
+        } catch (Exception e) {
+            // Log the error but don't fail the submission if email notification fails
+            System.err.println("Failed to send email notification: " + e.getMessage());
         }
     }
 

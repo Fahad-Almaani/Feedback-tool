@@ -1,18 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
+import { useNavigate } from 'react-router-dom';
 import { UserService } from '../../services/apiServices';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import styles from './UserDashboard.module.css';
 
 const UserDashboard = () => {
     const { user, logout } = useAuth();
+    const navigate = useNavigate();
     const [completedSurveys, setCompletedSurveys] = useState([]);
-    const [pendingSurveys, setPendingSurveys] = useState([]);
     const [dashboardStats, setDashboardStats] = useState({
         completedSurveysCount: 0,
-        pendingSurveysCount: 0,
-        totalResponses: 0,
-        completionRate: 0
+        totalResponses: 0
     });
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -30,8 +29,10 @@ const UserDashboard = () => {
                 const dashboardData = await UserService.getUserDashboard();
 
                 // Update state with fetched data
-                setDashboardStats(dashboardData.stats);
-                setPendingSurveys(dashboardData.pendingSurveys);
+                setDashboardStats({
+                    completedSurveysCount: dashboardData.stats.completedSurveysCount,
+                    totalResponses: dashboardData.stats.totalResponses
+                });
                 setCompletedSurveys(dashboardData.completedSurveys);
 
             } catch (err) {
@@ -69,35 +70,7 @@ const UserDashboard = () => {
                     }
                 ];
 
-                const mockPendingSurveys = [
-                    {
-                        id: 4,
-                        title: "Q3 Performance Review Survey",
-                        description: "Quarterly performance and goal assessment survey",
-                        status: "PENDING",
-                        deadline: "2025-08-25",
-                        estimatedTime: "10 minutes"
-                    },
-                    {
-                        id: 5,
-                        title: "Website User Experience Survey",
-                        description: "Help us improve your website browsing experience",
-                        status: "ACTIVE",
-                        deadline: "2025-09-01",
-                        estimatedTime: "5 minutes"
-                    },
-                    {
-                        id: 6,
-                        title: "Team Collaboration Survey",
-                        description: "Share insights about team communication and collaboration",
-                        status: "ACTIVE",
-                        deadline: "2025-08-30",
-                        estimatedTime: "8 minutes"
-                    }
-                ];
-
                 setCompletedSurveys(mockCompletedSurveys);
-                setPendingSurveys(mockPendingSurveys);
 
             } finally {
                 setLoading(false);
@@ -107,18 +80,18 @@ const UserDashboard = () => {
         fetchDashboardData();
     }, []);
 
-    const handleLogout = () => {
-        logout();
-    };
-
-    const handleTakeSurvey = (surveyId) => {
-        // Navigate to survey taking page
-        console.log('Taking survey:', surveyId);
+    const handleLogout = async () => {
+        try {
+            await logout();
+        } catch (error) {
+            console.error('Logout error:', error);
+            // Logout should always succeed from the user's perspective
+        }
     };
 
     const handleViewResults = (surveyId) => {
-        // Navigate to survey results page
-        console.log('Viewing results for survey:', surveyId);
+        // Navigate to user response view page
+        navigate(`/user/response/${surveyId}`);
     };
 
     const getInitials = (name) => {
@@ -136,23 +109,6 @@ const UserDashboard = () => {
             day: 'numeric',
             year: 'numeric'
         });
-    };
-
-    const getDaysUntilDeadline = (deadline) => {
-        if (!deadline) return 'No deadline';
-
-        const today = new Date();
-        const deadlineDate = new Date(deadline);
-
-        if (isNaN(deadlineDate.getTime())) return 'Invalid date';
-
-        const diffTime = deadlineDate - today;
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-        if (diffDays < 0) return 'Overdue';
-        if (diffDays === 0) return 'Due today';
-        if (diffDays === 1) return '1 day left';
-        return `${diffDays} days left`;
     };
 
     if (loading) {
@@ -193,7 +149,7 @@ const UserDashboard = () => {
                 <div className={styles.headerContent}>
                     <div className={styles.headerLeft}>
                         <h1 className={styles.welcomeTitle}>Welcome back, {user?.name}</h1>
-                        <p className={styles.welcomeSubtitle}>Here's your survey dashboard</p>
+                        <p className={styles.welcomeSubtitle}>View your completed surveys</p>
                     </div>
                     <div className={styles.headerRight}>
                         <div className={styles.userInfo}>
@@ -231,92 +187,23 @@ const UserDashboard = () => {
                     </div>
                     <div className={styles.statCard}>
                         <svg className={styles.statIcon} viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                        <div className={styles.statValue}>{dashboardStats.pendingSurveysCount}</div>
-                        <div className={styles.statLabel}>Pending Surveys</div>
-                    </div>
-                    <div className={styles.statCard}>
-                        <svg className={styles.statIcon} viewBox="0 0 24 24" fill="currentColor">
                             <path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                         </svg>
                         <div className={styles.statValue}>{dashboardStats.totalResponses}</div>
                         <div className={styles.statLabel}>Total Responses</div>
                     </div>
-                    <div className={styles.statCard}>
-                        <svg className={styles.statIcon} viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M13 10V3L4 14h7v7l9-11h-7z" />
-                        </svg>
-                        <div className={styles.statValue}>{dashboardStats.completionRate}%</div>
-                        <div className={styles.statLabel}>Completion Rate</div>
-                    </div>
                 </div>
 
-                {/* Survey Sections */}
+                {/* Survey Section */}
                 <div className={styles.contentGrid}>
-                    {/* Pending Surveys */}
-                    <div className={styles.section}>
-                        <div className={styles.sectionHeader}>
-                            <h2 className={styles.sectionTitle}>
-                                <svg className={styles.sectionIcon} viewBox="0 0 24 24" fill="currentColor">
-                                    <path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                </svg>
-                                Pending Surveys
-                            </h2>
-                            <p className={styles.sectionSubtitle}>Surveys waiting for your response</p>
-                        </div>
-                        <div className={styles.sectionContent}>
-                            {pendingSurveys.length === 0 ? (
-                                <div className={styles.emptyState}>
-                                    <svg className={styles.emptyIcon} viewBox="0 0 24 24" fill="currentColor">
-                                        <path d="M9 12l2 2 4-4M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                    </svg>
-                                    <h3 className={styles.emptyTitle}>All caught up!</h3>
-                                    <p className={styles.emptyDescription}>
-                                        You have no pending surveys at the moment.
-                                    </p>
-                                </div>
-                            ) : (
-                                <div className={styles.surveyGrid}>
-                                    {pendingSurveys.map((survey) => (
-                                        <div key={survey.id} className={styles.surveyCard}>
-                                            <div className={styles.surveyHeader}>
-                                                <h3 className={styles.surveyTitle}>{survey.title}</h3>
-                                                <span className={`${styles.statusBadge} ${styles.statusPending}`}>
-                                                    {survey.status}
-                                                </span>
-                                            </div>
-                                            <p className={styles.surveyDescription}>{survey.description}</p>
-                                            <div className={styles.surveyMeta}>
-                                                <span>⏱️ {survey.estimatedTime || '5 minutes'}</span>
-                                                <span>📅 {getDaysUntilDeadline(survey.deadline)}</span>
-                                            </div>
-                                            <div className={styles.surveyActions}>
-                                                <button
-                                                    onClick={() => handleTakeSurvey(survey.id)}
-                                                    className={`${styles.actionButton} ${styles.primaryButton}`}
-                                                >
-                                                    <svg className={styles.actionIcon} viewBox="0 0 20 20" fill="currentColor">
-                                                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
-                                                    </svg>
-                                                    Take Survey
-                                                </button>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-                    </div>
-
                     {/* Completed Surveys */}
-                    <div className={styles.section}>
+                    <div className={`${styles.section} ${styles.fullWidth}`}>
                         <div className={styles.sectionHeader}>
                             <h2 className={styles.sectionTitle}>
                                 <svg className={styles.sectionIcon} viewBox="0 0 24 24" fill="currentColor">
                                     <path d="M9 12l2 2 4-4M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                                 </svg>
-                                Completed Surveys
+                                Your Completed Surveys
                             </h2>
                             <p className={styles.sectionSubtitle}>Your survey history and contributions</p>
                         </div>
@@ -344,7 +231,7 @@ const UserDashboard = () => {
                                             <p className={styles.surveyDescription}>{survey.description}</p>
                                             <div className={styles.surveyMeta}>
                                                 <span>✅ Completed: {formatDate(survey.completedDate)}</span>
-                                                <span>📊 {survey.responses || 0} responses</span>
+
                                             </div>
                                             <div className={styles.surveyActions}>
                                                 <button

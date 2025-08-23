@@ -60,38 +60,36 @@ export default function LandingPage() {
         {
             id: 1,
             title: "Intelligent Analytics",
-            description: "Get deep insights from your feedback data with our AI-powered analytics dashboard.",
+            description: "AI-powered reporting that surfaces trends and highlights so you can act on feedback faster.",
             icon: AnalyticsIcon
         },
         {
             id: 2,
-            title: "Enterprise Security",
-            description: "Bank-level security ensures your data remains private and protected at all times.",
+            title: "Secure Data Handling",
+            description: "Privacy-first storage and access controls to keep respondent data safe.",
             icon: SecurityIcon
         },
         {
             id: 3,
-            title: "Lightning Fast",
-            description: "Optimized performance delivers results in milliseconds, not minutes.",
+            title: "AI-Assisted Survey Creation",
+            description: "Get help drafting questions and improving phrasing with built-in AI suggestions.",
             icon: SpeedIcon
         },
         {
             id: 4,
-            title: "Team Collaboration",
-            description: "Work together seamlessly with powerful collaboration tools and real-time updates.",
+            title: "Ready-made Templates",
+            description: "Start quickly with professionally designed, customizable survey templates.",
             icon: CollaborationIcon
         }
     ];
 
     const benefits = [
         "Create professional surveys in minutes",
+        "AI-assisted question drafting and phrasing",
+        "Ready-made, customizable templates",
         "Real-time response tracking and analytics",
-        "Custom branding and white-label options",
-        "Advanced question types and logic",
         "Automated report generation",
-        "Multi-language support",
-        "GDPR compliant data handling",
-        "24/7 expert customer support"
+
     ];
 
     return (
@@ -145,34 +143,14 @@ export default function LandingPage() {
                         </p>
 
                         <div className={styles.heroActions}>
+                            {/* Removed "Start Free Trial" and "Watch Demo" per product availability.
+                                Keep a neutral Get Started link for signups. */}
                             <Link to="/signup" className={styles.primaryCta}>
-                                Start Free Trial
+                                Get Started
                                 <ArrowRightIcon />
                             </Link>
-                            <button className={styles.secondaryCta}>
-                                <svg viewBox="0 0 24 24" fill="currentColor" className={styles.playIcon}>
-                                    <path d="M8 5v14l11-7z" />
-                                </svg>
-                                Watch Demo
-                            </button>
                         </div>
 
-                        {/* <div className={styles.socialProof}>
-                            <div className={styles.trustIndicators}>
-                                <div className={styles.trustItem}>
-                                    <span className={styles.trustNumber}>50K+</span>
-                                    <span className={styles.trustLabel}>Active Users</span>
-                                </div>
-                                <div className={styles.trustItem}>
-                                    <span className={styles.trustNumber}>1M+</span>
-                                    <span className={styles.trustLabel}>Surveys Created</span>
-                                </div>
-                                <div className={styles.trustItem}>
-                                    <span className={styles.trustNumber}>99.9%</span>
-                                    <span className={styles.trustLabel}>Uptime</span>
-                                </div>
-                            </div>
-                        </div> */}
                     </div>
 
                     <div className={styles.heroVisual}>
@@ -217,10 +195,10 @@ export default function LandingPage() {
                 <div className={styles.sectionContainer}>
                     <div className={styles.sectionHeader}>
                         <h2 className={styles.sectionTitle}>
-                            Why Choose FeedbackPro?
+                            Why teams choose FeedbackPro
                         </h2>
                         <p className={styles.sectionSubtitle}>
-                            Powerful features designed to transform how you collect and analyze feedback
+                            Helpful features that simplify how you collect and analyze feedback
                         </p>
                     </div>
 
@@ -305,7 +283,7 @@ export default function LandingPage() {
 
                         <div className={styles.ctaActions}>
                             <Link to="/signup" className={styles.ctaPrimary}>
-                                Start Your Free Trial
+                                Get Started
                                 <ArrowRightIcon />
                             </Link>
                             <Link to="/login" className={styles.ctaSecondary}>
@@ -332,7 +310,6 @@ export default function LandingPage() {
 
                         <div className={styles.footerText}>
                             <p>&copy; 2024 FeedbackPro. All rights reserved.</p>
-                            <p>Built with ❤️ for better feedback experiences</p>
                         </div>
                     </div>
                 </div>

@@ -6,7 +6,7 @@ import { SurveyService } from "../../services/apiServices";
 import InputWithAI from "../../components/Input/InputWithAI";
 import { improveSurveyTitle, improveSurveyDescription } from "../../utils/TextPhrasing";
 import { improveQuestionPhrasing } from "../../utils/QuestionPhrasing";
-import { Type, FileText, Star, CheckSquare, ChevronDown, GripVertical, Move3D, List } from "lucide-react";
+import { Type, FileText, Star, CheckSquare, ChevronDown, GripVertical, Move3D, List, ArrowLeft } from "lucide-react";
 import styles from "./EditSurveyPage.module.css";
 import {
     DndContext,
@@ -61,7 +61,8 @@ export default function EditSurveyPage() {
     const [survey, setSurvey] = useState({
         title: "",
         description: "",
-        status: "DRAFT"
+        status: "DRAFT",
+        endDate: ""
     });
 
     // Questions state
@@ -86,7 +87,8 @@ export default function EditSurveyPage() {
                 setSurvey({
                     title: surveyData.title,
                     description: surveyData.description || "",
-                    status: surveyData.status
+                    status: surveyData.status,
+                    endDate: surveyData.endDate ? new Date(surveyData.endDate).toISOString().slice(0, 16) : ""
                 });
 
                 // Transform questions to match the creation form structure
@@ -95,7 +97,8 @@ export default function EditSurveyPage() {
                     type: q.type,
                     questionText: q.questionText,
                     optionsJson: q.optionsJson,
-                    orderNumber: q.orderNumber || index + 1
+                    orderNumber: q.orderNumber || index + 1,
+                    required: q.required || false
                 }));
 
                 setQuestions(transformedQuestions);
@@ -429,16 +432,20 @@ export default function EditSurveyPage() {
         }
 
         setIsSubmitting(true);
+        setErrors({}); // Clear previous errors
+
         try {
             const surveyData = {
                 title: survey.title,
                 description: survey.description,
                 active: status === "ACTIVE",
+                endDate: survey.endDate ? new Date(survey.endDate).toISOString() : null,
                 questions: questions.map(q => ({
                     type: q.type,
                     questionText: q.questionText,
                     optionsJson: q.optionsJson,
-                    orderNumber: q.orderNumber
+                    orderNumber: q.orderNumber,
+                    required: q.required || false
                 }))
             };
 
@@ -454,11 +461,7 @@ export default function EditSurveyPage() {
             if (errorMessage.includes("Cannot modify questions") ||
                 errorMessage.includes("already has responses")) {
                 setErrors({
-                    submit: "⚠️ This survey already has responses. You can only update the title, description, and status. To make structural changes, create a new survey instead."
-                });
-            } else if (errorMessage.includes("Cannot reactivate")) {
-                setErrors({
-                    submit: "⚠️ Cannot reactivate a survey that already has responses. Create a new survey instead."
+                    submit: "⚠️ This survey already has responses. You can only update the title, description, end date, and publish/unpublish status. To make structural changes, create a new survey instead."
                 });
             } else {
                 setErrors({ submit: errorMessage });
@@ -499,9 +502,7 @@ export default function EditSurveyPage() {
                             onClick={() => navigate("/admin")}
                             className={styles.backButton}
                         >
-                            <svg className={styles.backIcon} viewBox="0 0 24 24" fill="currentColor">
-                                <path d="M19 12H5m0 0l7 7m-7-7l7-7" />
-                            </svg>
+                            <ArrowLeft className={styles.backIcon} size={20} />
                             Back
                         </button>
                         <div className={styles.titleSection}>
@@ -609,7 +610,7 @@ export default function EditSurveyPage() {
                                 </svg>
                                 <div className={styles.warningText}>
                                     <h3>Survey Has Responses</h3>
-                                    <p>This survey already has responses from users. You can only modify the title, description, and status. To make structural changes to questions, create a new survey instead.</p>
+                                    <p>This survey already has responses from users. You can edit the title, description, end date, and publish/unpublish status, but cannot modify questions. To make structural changes to questions, create a new survey instead.</p>
                                 </div>
                             </div>
                         </div>
@@ -670,6 +671,26 @@ export default function EditSurveyPage() {
                                         />
                                         <div className={styles.characterCount}>
                                             {survey.description.length}/500
+                                        </div>
+                                    </div>
+
+                                    <div className={styles.formGroup}>
+                                        <label className={styles.label}>
+                                            Survey End Date
+                                            <span className={styles.optional}>(optional)</span>
+                                        </label>
+                                        <input
+                                            type="datetime-local"
+                                            value={survey.endDate}
+                                            onChange={(e) => {
+                                                setSurvey(prev => ({ ...prev, endDate: e.target.value }));
+                                                setUnsavedChanges(true);
+                                            }}
+                                            className={styles.input}
+                                            placeholder="Set when the survey should stop accepting responses"
+                                        />
+                                        <div className={styles.helpText}>
+                                            If set, the survey will automatically stop accepting responses after this date and time.
                                         </div>
                                     </div>
                                 </div>
@@ -794,6 +815,8 @@ export default function EditSurveyPage() {
                             <div className={styles.actionSection}>
                                 {errors.submit && <div className={styles.errorBanner}>{errors.submit}</div>}
 
+
+
                                 <div className={styles.actionButtons}>
                                     <button
                                         onClick={() => navigate("/admin")}
@@ -806,7 +829,12 @@ export default function EditSurveyPage() {
                                     <button
                                         onClick={() => handleSubmit("DRAFT")}
                                         className={styles.saveDraftButton}
-                                        disabled={isSubmitting || (!survey.title.trim() && questions.length === 0)}
+                                        disabled={isSubmitting || !survey.title.trim()}
+                                        title={
+                                            hasResponses
+                                                ? "Save changes and make survey inactive (users cannot submit responses)"
+                                                : "Save as draft (users cannot submit responses until published)"
+                                        }
                                     >
                                         {isSubmitting ? (
                                             <>
@@ -818,7 +846,10 @@ export default function EditSurveyPage() {
                                                 <svg className={styles.saveIcon} viewBox="0 0 24 24" fill="currentColor">
                                                     <path d="M17.593 3.322c1.1.128 1.907 1.077 1.907 2.185V21L12 17.25 4.5 21V5.507c0-1.108.806-2.057 1.907-2.185a48.507 48.507 0 0111.186 0z" />
                                                 </svg>
-                                                Update Survey
+                                                {hasResponses
+                                                    ? (survey.status === "ACTIVE" ? "Save & Make Inactive" : "Save Changes")
+                                                    : "Save as Draft"
+                                                }
                                             </>
                                         )}
                                     </button>
@@ -826,7 +857,8 @@ export default function EditSurveyPage() {
                                     <button
                                         onClick={() => handleSubmit("ACTIVE")}
                                         className={styles.publishButton}
-                                        disabled={isSubmitting || !survey.title.trim() || questions.length === 0}
+                                        disabled={isSubmitting || !survey.title.trim() || (!hasResponses && questions.length === 0)}
+                                        title="Make survey active and allow users to submit responses"
                                     >
                                         {isSubmitting ? (
                                             <>
@@ -838,8 +870,8 @@ export default function EditSurveyPage() {
                                                 <svg className={styles.publishIcon} viewBox="0 0 24 24" fill="currentColor">
                                                     <path d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
                                                 </svg>
-                                                Publish Survey
-                                                {survey.title.trim() && questions.length > 0 && (
+                                                {survey.status === "ACTIVE" ? "Update & Keep Published" : "Publish Survey"}
+                                                {survey.title.trim() && (hasResponses || questions.length > 0) && (
                                                     <span className={styles.readyBadge}>Ready!</span>
                                                 )}
                                             </>
@@ -1192,6 +1224,26 @@ function QuestionEditor({
                             )}
                         </div>
                     )}
+
+                    {/* Required Question Toggle */}
+                    <div className={styles.formGroup}>
+                        <label className={styles.checkboxLabel}>
+                            <input
+                                type="checkbox"
+                                checked={question.required || false}
+                                onChange={(e) => onUpdate(index, "required", e.target.checked)}
+                                className={styles.checkbox}
+                                disabled={disabled}
+                            />
+                            <span className={styles.checkboxText}>
+                                Make this question required
+                                <span className={styles.requiredBadge}>*</span>
+                            </span>
+                        </label>
+                        <div className={styles.helpText}>
+                            Required questions must be answered before submitting the survey
+                        </div>
+                    </div>
                 </div>
             )}
         </div>

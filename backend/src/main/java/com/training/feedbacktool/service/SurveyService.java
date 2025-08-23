@@ -49,6 +49,7 @@ public class SurveyService {
         s.setTitle(req.title().trim());
         s.setDescription(req.description());
         s.setStatus(Boolean.TRUE.equals(req.active()) ? "ACTIVE" : "DRAFT");
+        s.setEndDate(req.endDate());
 
         if (req.questions() != null && !req.questions().isEmpty()) {
             List<Question> questions = new ArrayList<>();
@@ -58,6 +59,7 @@ public class SurveyService {
                 q.setQuestionText(qReq.questionText());
                 q.setOptionsJson(qReq.optionsJson());
                 q.setOrderNumber(qReq.orderNumber());
+                q.setRequired(qReq.required());
                 q.setSurvey(s);
                 questions.add(q);
             }
@@ -71,7 +73,8 @@ public class SurveyService {
                 saved.getDescription(),
                 saved.getStatus(),
                 saved.getCreatedAt(),
-                saved.getUpdatedAt());
+                saved.getUpdatedAt(),
+                saved.getEndDate());
     }
 
     public List<SurveyResponse> listAll() {
@@ -82,7 +85,8 @@ public class SurveyService {
                         s.getDescription(),
                         s.getStatus(),
                         s.getCreatedAt(),
-                        s.getUpdatedAt()))
+                        s.getUpdatedAt(),
+                        s.getEndDate()))
                 .collect(Collectors.toList());
     }
 
@@ -129,6 +133,7 @@ public class SurveyService {
                             survey.getStatus(),
                             survey.getCreatedAt(),
                             survey.getUpdatedAt(),
+                            survey.getEndDate(),
                             questionCount != null ? questionCount.intValue() : 0,
                             totalResponses,
                             completionRate);
@@ -157,6 +162,7 @@ public class SurveyService {
                 survey.getStatus(),
                 survey.getCreatedAt(),
                 survey.getUpdatedAt(),
+                survey.getEndDate(),
                 questionResponses);
     }
 
@@ -174,27 +180,29 @@ public class SurveyService {
         boolean hasResponses = !existingAnswers.isEmpty();
 
         if (hasResponses) {
-            // If survey has responses, only allow updating title, description, and status
+            // If survey has responses, only allow updating title, description, end date and
+            // status
             // but NOT questions
             existingSurvey.setTitle(req.title().trim());
             existingSurvey.setDescription(req.description());
+            existingSurvey.setEndDate(req.endDate());
 
-            // Only allow status changes from ACTIVE to INACTIVE (to close survey)
-            // Don't allow changing from INACTIVE back to ACTIVE if there are responses
-            String currentStatus = existingSurvey.getStatus();
+            // Allow status changes between ACTIVE and INACTIVE for surveys with responses
+            // This allows users to publish/unpublish surveys even if they have responses
             String newStatus = Boolean.TRUE.equals(req.active()) ? "ACTIVE" : "INACTIVE";
-
-            if ("INACTIVE".equals(currentStatus) && "ACTIVE".equals(newStatus)) {
-                throw new IllegalArgumentException(
-                        "Cannot reactivate a survey that already has responses. Create a new survey instead.");
-            }
-
             existingSurvey.setStatus(newStatus);
 
-            // Don't modify questions at all when there are responses
+            // Check if questions are being modified when there are responses
             if (req.questions() != null && !req.questions().isEmpty()) {
-                throw new IllegalArgumentException(
-                        "Cannot modify questions on a survey that already has responses. Create a new survey instead.");
+                // Compare new questions with existing questions to see if there are actual
+                // changes
+                List<Question> existingQuestions = existingSurvey.getQuestions();
+                boolean questionsChanged = areQuestionsModified(existingQuestions, req.questions());
+
+                if (questionsChanged) {
+                    throw new IllegalArgumentException(
+                            "Cannot modify questions on a survey that already has responses. You can only update title, description, end date, and status.");
+                }
             }
         } else {
             // If no responses, allow full update (original logic)
@@ -210,6 +218,7 @@ public class SurveyService {
             existingSurvey.setTitle(req.title().trim());
             existingSurvey.setDescription(req.description());
             existingSurvey.setStatus(Boolean.TRUE.equals(req.active()) ? "ACTIVE" : "DRAFT");
+            existingSurvey.setEndDate(req.endDate());
 
             // Handle questions update - clear existing questions and add new ones
             existingSurvey.getQuestions().clear();
@@ -222,6 +231,7 @@ public class SurveyService {
                     q.setQuestionText(qReq.questionText());
                     q.setOptionsJson(qReq.optionsJson());
                     q.setOrderNumber(qReq.orderNumber());
+                    q.setRequired(qReq.required());
                     q.setSurvey(existingSurvey);
                     questions.add(q);
                 }
@@ -236,7 +246,51 @@ public class SurveyService {
                 saved.getDescription(),
                 saved.getStatus(),
                 saved.getCreatedAt(),
-                saved.getUpdatedAt());
+                saved.getUpdatedAt(),
+                saved.getEndDate());
+    }
+
+    /**
+     * Helper method to check if questions have been modified
+     */
+    private boolean areQuestionsModified(List<Question> existingQuestions, List<CreateQuestionRequest> newQuestions) {
+        if (existingQuestions.size() != newQuestions.size()) {
+            return true;
+        }
+
+        // Sort both lists by order number for comparison
+        List<Question> sortedExisting = existingQuestions.stream()
+                .sorted((q1, q2) -> {
+                    Integer order1 = q1.getOrderNumber() != null ? q1.getOrderNumber() : Integer.MAX_VALUE;
+                    Integer order2 = q2.getOrderNumber() != null ? q2.getOrderNumber() : Integer.MAX_VALUE;
+                    return order1.compareTo(order2);
+                })
+                .collect(Collectors.toList());
+
+        List<CreateQuestionRequest> sortedNew = newQuestions.stream()
+                .sorted((q1, q2) -> {
+                    Integer order1 = q1.orderNumber() != null ? q1.orderNumber() : Integer.MAX_VALUE;
+                    Integer order2 = q2.orderNumber() != null ? q2.orderNumber() : Integer.MAX_VALUE;
+                    return order1.compareTo(order2);
+                })
+                .collect(Collectors.toList());
+
+        // Compare each question
+        for (int i = 0; i < sortedExisting.size(); i++) {
+            Question existing = sortedExisting.get(i);
+            CreateQuestionRequest newQ = sortedNew.get(i);
+
+            // Compare key fields
+            if (!Objects.equals(existing.getType(), newQ.type()) ||
+                    !Objects.equals(existing.getQuestionText(), newQ.questionText()) ||
+                    !Objects.equals(existing.getOptionsJson(), newQ.optionsJson()) ||
+                    !Objects.equals(existing.getOrderNumber(), newQ.orderNumber()) ||
+                    !Objects.equals(existing.getRequired(), newQ.required())) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     @Transactional
@@ -394,7 +448,10 @@ public class SurveyService {
                 respondentId = "anonymous_" + answer.getId();
             }
 
-            answersByRespondent.computeIfAbsent(respondentId, unused -> new ArrayList<>()).add(answer);
+            if (!answersByRespondent.containsKey(respondentId)) {
+                answersByRespondent.put(respondentId, new ArrayList<>());
+            }
+            answersByRespondent.get(respondentId).add(answer);
         }
 
         // Create respondent DTOs
