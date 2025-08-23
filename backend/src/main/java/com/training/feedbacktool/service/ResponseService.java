@@ -15,6 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
@@ -26,17 +27,20 @@ public class ResponseService {
     private final ResponsesRepository responsesRepository;
     private final UserRepository userRepository;
     private final JwtUtil jwtUtil;
+    private final EmailService emailService;
 
     public ResponseService(SurveyRepository surveyRepository,
             AnswersRepository answersRepository,
             ResponsesRepository responsesRepository,
             UserRepository userRepository,
-            JwtUtil jwtUtil) {
+            JwtUtil jwtUtil,
+            EmailService emailService) {
         this.surveyRepository = surveyRepository;
         this.answersRepository = answersRepository;
         this.responsesRepository = responsesRepository;
         this.userRepository = userRepository;
         this.jwtUtil = jwtUtil;
+        this.emailService = emailService;
     }
 
     @Transactional
@@ -138,6 +142,16 @@ public class ResponseService {
             }
 
             answersRepository.save(answer);
+        }
+
+        // Send email notification to admin users after successful submission
+        try {
+            List<User> adminUsers = userRepository.findByRole("ADMIN");
+            String respondentInfo = user != null ? user.getName() + " (" + user.getEmail() + ")" : "Anonymous User";
+            emailService.sendSurveyResponseNotification(adminUsers, survey, respondentInfo);
+        } catch (Exception e) {
+            // Log the error but don't fail the submission if email notification fails
+            System.err.println("Failed to send email notification: " + e.getMessage());
         }
     }
 
