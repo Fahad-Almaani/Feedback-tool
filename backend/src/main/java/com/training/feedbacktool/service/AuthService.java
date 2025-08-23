@@ -14,11 +14,14 @@ public class AuthService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
+    private final TokenBlacklistService tokenBlacklistService;
 
-    public AuthService(UserRepository userRepository, PasswordEncoder passwordEncoder, JwtUtil jwtUtil) {
+    public AuthService(UserRepository userRepository, PasswordEncoder passwordEncoder,
+            JwtUtil jwtUtil, TokenBlacklistService tokenBlacklistService) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtUtil = jwtUtil;
+        this.tokenBlacklistService = tokenBlacklistService;
     }
 
     public LoginResponse login(LoginRequest request) {
@@ -39,7 +42,24 @@ public class AuthService {
                 user.getEmail(),
                 user.getName(),
                 user.getRole(),
-                user.getId()
-        );
+                user.getId());
+    }
+
+    /**
+     * Logout a user by blacklisting their JWT token
+     */
+    public void logout(String token) {
+        try {
+            // Extract expiration date from token
+            var expirationDate = jwtUtil.extractExpiration(token);
+
+            // Add token to blacklist
+            tokenBlacklistService.blacklistToken(token, expirationDate);
+        } catch (Exception e) {
+            // Token might be invalid, but we still want to "logout" successfully
+            // to prevent edge cases where frontend thinks user is logged out but backend
+            // doesn't
+            throw new IllegalArgumentException("Invalid token");
+        }
     }
 }

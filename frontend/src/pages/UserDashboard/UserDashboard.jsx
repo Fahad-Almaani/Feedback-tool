@@ -80,8 +80,13 @@ const UserDashboard = () => {
         fetchDashboardData();
     }, []);
 
-    const handleLogout = () => {
-        logout();
+    const handleLogout = async () => {
+        try {
+            await logout();
+        } catch (error) {
+            console.error('Logout error:', error);
+            // Logout should always succeed from the user's perspective
+        }
     };
 
     const handleViewResults = (surveyId) => {
@@ -226,7 +231,7 @@ const UserDashboard = () => {
                                             <p className={styles.surveyDescription}>{survey.description}</p>
                                             <div className={styles.surveyMeta}>
                                                 <span>✅ Completed: {formatDate(survey.completedDate)}</span>
-                                              
+
                                             </div>
                                             <div className={styles.surveyActions}>
                                                 <button
