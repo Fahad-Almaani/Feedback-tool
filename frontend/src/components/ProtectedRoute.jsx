@@ -1,15 +1,19 @@
 import React from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import LoadingSpinner from './LoadingSpinner';
 
 const ProtectedRoute = ({ children, requiredRole }) => {
     const { user, loading, isAuthenticated, hasRole } = useAuth();
 
     if (loading) {
         return (
-            <div className="flex items-center justify-center min-h-screen">
-                <div className="text-lg">Loading...</div>
-            </div>
+            <LoadingSpinner
+                fullScreen={true}
+                text="Verifying authentication..."
+                size="large"
+                variant="primary"
+            />
         );
     }
 

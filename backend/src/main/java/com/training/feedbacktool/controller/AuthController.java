@@ -4,6 +4,7 @@ import com.training.feedbacktool.common.ApiResponse;
 import com.training.feedbacktool.service.AuthService;
 import com.training.feedbacktool.dto.LoginRequest;
 import com.training.feedbacktool.dto.LoginResponse;
+import com.training.feedbacktool.dto.UserProfileResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -62,6 +63,36 @@ public class AuthController {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
         } catch (Exception e) {
             ApiResponse<String> response = ApiResponse.error("Logout failed: " + e.getMessage(),
+                    HttpStatus.INTERNAL_SERVER_ERROR);
+            return ResponseEntity.internalServerError().body(response);
+        }
+    }
+
+    @GetMapping("/me")
+    @PreAuthorize("hasRole('USER') or hasRole('ADMIN')")
+    public ResponseEntity<ApiResponse<UserProfileResponse>> getCurrentUser(HttpServletRequest request) {
+        try {
+            // Extract JWT token from Authorization header
+            String authorizationHeader = request.getHeader("Authorization");
+            if (authorizationHeader == null || !authorizationHeader.startsWith("Bearer ")) {
+                ApiResponse<UserProfileResponse> response = ApiResponse.error("Authorization header missing or invalid",
+                        HttpStatus.UNAUTHORIZED);
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
+            }
+
+            String jwt = authorizationHeader.substring(7);
+            UserProfileResponse userProfile = authService.getCurrentUser(jwt);
+
+            ApiResponse<UserProfileResponse> response = ApiResponse.success(userProfile,
+                    "User profile retrieved successfully");
+            return ResponseEntity.ok(response);
+        } catch (IllegalArgumentException e) {
+            ApiResponse<UserProfileResponse> response = ApiResponse.error("Invalid token: " + e.getMessage(),
+                    HttpStatus.UNAUTHORIZED);
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
+        } catch (Exception e) {
+            ApiResponse<UserProfileResponse> response = ApiResponse.error(
+                    "Failed to retrieve user profile: " + e.getMessage(),
                     HttpStatus.INTERNAL_SERVER_ERROR);
             return ResponseEntity.internalServerError().body(response);
         }

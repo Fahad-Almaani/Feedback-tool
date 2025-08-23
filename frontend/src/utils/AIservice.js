@@ -192,3 +192,127 @@ ${feedbackType ? `Feedback type: ${feedbackType}` : ""}`;
     temperature: 0.3,
   });
 };
+
+/**
+ * Generate a complete survey structure based on user description
+ * @param {string} description - Description of the survey the user wants to create
+ * @returns {Promise<Object>} Generated survey structure with title, description, and questions
+ */
+export const generateSurvey = async (description) => {
+  console.log(
+    "🔍 AI Survey Generation - Starting with description:",
+    description
+  );
+
+  const systemPrompt = `You are an AI assistant specialized in creating complete survey structures.
+Based on the user's description, generate a comprehensive survey with:
+1. A clear, engaging title
+2. A helpful description for survey takers
+3. A set of relevant questions (3-8 questions)
+
+Return ONLY a valid JSON object with this exact structure:
+{
+  "title": "Survey Title",
+  "description": "Brief description of the survey purpose",
+  "questions": [
+    {
+      "type": "TEXT|LONG_TEXT|RATING|MULTIPLE_CHOICE",
+      "text": "Question text",
+      "options": ["option1", "option2"] // Only for MULTIPLE_CHOICE
+      "ratingScale": 5, // Only for RATING (always use 5)
+      "minLabel": "Poor", // Only for RATING
+      "maxLabel": "Excellent", // Only for RATING
+      "required": true
+    }
+  ]
+}
+
+Question types:
+- TEXT: Short text responses
+- LONG_TEXT: Detailed text responses  
+- RATING: 0-5 numerical scale (always use scale 5)
+- MULTIPLE_CHOICE: Select from 2-6 options
+
+Make questions clear, unbiased, and relevant to the survey purpose.`;
+
+  try {
+    console.log("📤 Sending request to AI with system prompt");
+
+    const response = await generateFromAI({
+      prompt: `Create a survey for: ${description}`,
+      systemPrompt,
+      temperature: 0.7,
+      model: "gemini-1.5-pro",
+    });
+
+    console.log("📥 Raw AI response:", response);
+
+    // Try to parse the JSON response
+    let surveyData;
+    try {
+      // Clean the response - remove any markdown code blocks
+      const cleanResponse = response
+        .replace(/```json\s*/gi, "")
+        .replace(/```\s*/gi, "")
+        .trim();
+      console.log("🧹 Cleaned response:", cleanResponse);
+
+      surveyData = JSON.parse(cleanResponse);
+      console.log("✅ Parsed survey data:", surveyData);
+    } catch (parseError) {
+      console.error("❌ Failed to parse AI response as JSON:", parseError);
+      console.error("Raw response was:", response);
+      throw new Error("AI returned invalid JSON format");
+    }
+
+    // Validate the structure
+    if (
+      !surveyData.title ||
+      !surveyData.questions ||
+      !Array.isArray(surveyData.questions)
+    ) {
+      console.error("❌ Invalid survey structure:", surveyData);
+      throw new Error("AI returned incomplete survey structure");
+    }
+
+    // Validate questions
+    for (let i = 0; i < surveyData.questions.length; i++) {
+      const question = surveyData.questions[i];
+      if (!question.type || !question.text) {
+        console.error(`❌ Invalid question at index ${i}:`, question);
+        throw new Error(`Question ${i + 1} is missing required fields`);
+      }
+
+      // Validate question types
+      const validTypes = ["TEXT", "LONG_TEXT", "RATING", "MULTIPLE_CHOICE"];
+      if (!validTypes.includes(question.type)) {
+        console.error(
+          `❌ Invalid question type at index ${i}: ${question.type}`
+        );
+        question.type = "TEXT"; // Default fallback
+      }
+
+      // Ensure MULTIPLE_CHOICE has options
+      if (
+        question.type === "MULTIPLE_CHOICE" &&
+        (!question.options || !Array.isArray(question.options))
+      ) {
+        console.error(
+          `❌ MULTIPLE_CHOICE question missing options at index ${i}`
+        );
+        question.options = ["Option 1", "Option 2", "Option 3"];
+      }
+    }
+
+    console.log("✅ Survey generation successful:", {
+      title: surveyData.title,
+      questionCount: surveyData.questions.length,
+      questionTypes: surveyData.questions.map((q) => q.type),
+    });
+
+    return surveyData;
+  } catch (error) {
+    console.error("❌ Survey generation failed:", error);
+    throw new Error(`Failed to generate survey: ${error.message}`);
+  }
+};

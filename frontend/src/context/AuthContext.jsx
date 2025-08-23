@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { apiClient, errorHandler } from '../utils/apiClient';
 
@@ -14,7 +14,12 @@ export const useAuth = () => {
 
 export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null);
+    // loading: used while we validate token / fetch authoritative user info
     const [loading, setLoading] = useState(true);
+    // verified indicates that the user object was fetched/confirmed from the server
+    const [verified, setVerified] = useState(false);
+    // Add a flag to track if we've completed the initial auth check
+    const [authChecked, setAuthChecked] = useState(false);
     const navigate = useNavigate();
 
     // Set up navigation callback for apiClient
@@ -22,26 +27,59 @@ export const AuthProvider = ({ children }) => {
         apiClient.auth.setNavigationCallback(navigate);
     }, [navigate]);
 
-    // Initialize auth state from localStorage
+    // Initialize auth state from localStorage and verify token with backend
     useEffect(() => {
-        const token = localStorage.getItem('jwt_token');
-        const userData = localStorage.getItem('user_data');
+        let mounted = true;
 
-        if (token && userData) {
-            try {
-                const parsedUser = JSON.parse(userData);
-                setUser({
-                    ...parsedUser,
-                    token
-                });
-            } catch (error) {
-                console.error('Error parsing user data:', error);
-                // Clear invalid data
-                localStorage.removeItem('jwt_token');
-                localStorage.removeItem('user_data');
+        const init = async () => {
+            setLoading(true);
+            const token = localStorage.getItem('jwt_token');
+
+            if (!token) {
+                // no token, nothing to verify
+                if (mounted) {
+                    setUser(null);
+                    setVerified(false);
+                    setAuthChecked(true);
+                    setLoading(false);
+                }
+                return;
             }
-        }
-        setLoading(false);
+
+            try {
+                // Set token immediately to prevent auth issues during verification
+                apiClient.auth.setToken(token);
+
+                // Ask backend for authoritative user profile
+                const profile = await apiClient.getUserMe();
+
+                if (mounted) {
+                    setUser({ ...profile, token });
+                    setVerified(true);
+                    setAuthChecked(true);
+
+                    // Keep localStorage in sync with authoritative profile
+                    localStorage.setItem('user_data', JSON.stringify(profile));
+                }
+            } catch (error) {
+                // If verification fails, clear client state and storage
+                console.warn('Token verification failed, clearing local auth:', error.message || error);
+                apiClient.auth.removeToken();
+                if (mounted) {
+                    setUser(null);
+                    setVerified(false);
+                    setAuthChecked(true);
+                }
+            } finally {
+                if (mounted) setLoading(false);
+            }
+        };
+
+        init();
+
+        return () => {
+            mounted = false;
+        };
     }, []);
 
     const login = async (email, password) => {
@@ -58,23 +96,30 @@ export const AuthProvider = ({ children }) => {
                 console.log('Login response:', metadata.message);
             }
 
-            // Store token and user data
-            apiClient.auth.setToken(data.token);
-            localStorage.setItem('user_data', JSON.stringify({
-                userId: data.userId,
-                email: data.email,
-                name: data.name,
-                role: data.role
-            }));
 
-            // Update state
-            setUser({
-                userId: data.userId,
-                email: data.email,
-                name: data.name,
-                role: data.role,
-                token: data.token
-            });
+            // Store token first
+            apiClient.auth.setToken(data.token);
+            localStorage.setItem('jwt_token', data.token);
+
+            // Fetch authoritative profile from backend to avoid trusting client-side storage
+            let profile;
+            try {
+                profile = await apiClient.getUserMe();
+            } catch (err) {
+                // If backend doesn't provide /auth/me immediately, fall back to data returned by login
+                profile = {
+                    userId: data.userId,
+                    email: data.email,
+                    name: data.name,
+                    role: data.role,
+                };
+            }
+
+            // Persist and update state from authoritative profile
+            localStorage.setItem('user_data', JSON.stringify(profile));
+            setUser({ ...profile, token: data.token });
+            setVerified(true);
+            setAuthChecked(true);
 
             return {
                 success: true,
@@ -109,23 +154,28 @@ export const AuthProvider = ({ children }) => {
                 console.log('Registration response:', metadata.message);
             }
 
-            // Store token and user data
-            apiClient.auth.setToken(data.token);
-            localStorage.setItem('user_data', JSON.stringify({
-                userId: data.userId,
-                email: data.email,
-                name: data.name,
-                role: data.role
-            }));
 
-            // Update state
-            setUser({
-                userId: data.userId,
-                email: data.email,
-                name: data.name,
-                role: data.role,
-                token: data.token
-            });
+            // Store token first
+            apiClient.auth.setToken(data.token);
+            localStorage.setItem('jwt_token', data.token);
+
+            // Fetch authoritative profile from backend (or fallback to returned data)
+            let profile;
+            try {
+                profile = await apiClient.getUserMe();
+            } catch (err) {
+                profile = {
+                    userId: data.userId,
+                    email: data.email,
+                    name: data.name,
+                    role: data.role,
+                };
+            }
+
+            localStorage.setItem('user_data', JSON.stringify(profile));
+            setUser({ ...profile, token: data.token });
+            setVerified(true);
+            setAuthChecked(true);
 
             return {
                 success: true,
@@ -156,15 +206,22 @@ export const AuthProvider = ({ children }) => {
         } finally {
             // Ensure user state is cleared
             setUser(null);
+            setVerified(false);
+            setAuthChecked(true);
         }
     };
 
     const isAuthenticated = () => {
-        return user && user.token;
+        // Don't check authentication status while still loading or before initial check
+        if (loading || !authChecked) return false;
+
+        // Only consider authenticated if user exists, token is present and profile was verified by server
+        return !!user && !!user.token && verified;
     };
 
     const hasRole = (requiredRole) => {
-        return user && user.role === requiredRole;
+        // Don't trust local-only user objects: the 'verified' flag ensures server confirmation
+        return isAuthenticated() && user.role === requiredRole;
     };
 
     const isAdmin = () => {
@@ -180,11 +237,35 @@ export const AuthProvider = ({ children }) => {
         login,
         register,
         logout,
+        // Re-fetch authoritative profile from server
+        refreshUser: useCallback(async () => {
+            try {
+                setLoading(true);
+                const profile = await apiClient.getUserMe();
+                const token = apiClient.auth.getToken();
+                if (profile) {
+                    localStorage.setItem('user_data', JSON.stringify(profile));
+                    setUser({ ...profile, token });
+                    setVerified(true);
+                    setAuthChecked(true);
+                }
+            } catch (error) {
+                // if refresh fails, clear auth
+                apiClient.auth.removeToken();
+                setUser(null);
+                setVerified(false);
+                setAuthChecked(true);
+                throw error;
+            } finally {
+                setLoading(false);
+            }
+        }, []),
         isAuthenticated,
         hasRole,
         isAdmin,
         isUser,
-        loading
+        loading,
+        authChecked
     };
 
     return (

@@ -6,9 +6,6 @@ import {
   Line,
   BarChart,
   Bar,
-  PieChart,
-  Pie,
-  Cell,
   XAxis,
   YAxis,
   Tooltip,
@@ -32,7 +29,16 @@ import {
   ChevronLeft,
   ChevronRight,
   FileText,
-  Trash2
+  Trash2,
+  Plus,
+  Target,
+  Activity,
+  Users,
+  TrendingUp,
+  CheckCircle,
+  AlertCircle,
+  FileEdit,
+  User
 } from "lucide-react";
 import styles from "./AdminDashboard.module.css";
 import { apiClient } from "../../utils/apiClient";
@@ -54,7 +60,7 @@ export default function AdminDashboard() {
   const [filterStatus, setFilterStatus] = useState("ALL");
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage] = useState(5);
+  const [itemsPerPage] = useState(6);
   const [loading, setLoading] = useState(true);
   const [isVisible, setIsVisible] = useState(false);
   const [error, setError] = useState(null);
@@ -334,18 +340,7 @@ export default function AdminDashboard() {
     setCurrentPage(1);
   }, [filterStatus, searchTerm]);
 
-  const surveyStatusDistribution = useMemo(() => {
-    const statusCounts = surveys.reduce((acc, survey) => {
-      acc[survey.status] = (acc[survey.status] || 0) + 1;
-      return acc;
-    }, {});
 
-    return [
-      { name: "Active", value: statusCounts.ACTIVE || 0, color: "#43e97b" },
-      { name: "Inactive", value: statusCounts.INACTIVE || 0, color: "#ff6b6b" },
-      { name: "Draft", value: statusCounts.DRAFT || 0, color: "#feca57" }
-    ].filter(item => item.value > 0); // Only show statuses that have surveys
-  }, [surveys]);
 
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -481,9 +476,7 @@ export default function AdminDashboard() {
         <div className={styles.statsGrid}>
           <div className={styles.statCard}>
             <div className={styles.statHeader}>
-              <svg className={styles.statIcon} viewBox="0 0 24 24" fill="currentColor">
-                <path d="M9 12l2 2 4-4M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
+              <Target className={styles.statIcon} size={24} />
               <div className={`${styles.statTrend} ${getTrendClass(statistics.totalSurveys, statistics.totalSurveys - 1)}`}>
                 {getTrendIcon(statistics.totalSurveys, statistics.totalSurveys - 1)} +{statistics.newSurveysThisMonth}
               </div>
@@ -494,9 +487,7 @@ export default function AdminDashboard() {
 
           <div className={styles.statCard}>
             <div className={styles.statHeader}>
-              <svg className={styles.statIcon} viewBox="0 0 24 24" fill="currentColor">
-                <path d="M13 10V3L4 14h7v7l9-11h-7z" />
-              </svg>
+              <CheckCircle className={styles.statIcon} size={24} />
               <div className={`${styles.statTrend} ${getTrendClass(statistics.activeSurveys, Math.max(0, statistics.activeSurveys - 1))}`}>
                 {getTrendIcon(statistics.activeSurveys, Math.max(0, statistics.activeSurveys - 1))}
                 {statistics.activeSurveys > 0 ? '+' : ''}1
@@ -508,9 +499,7 @@ export default function AdminDashboard() {
 
           <div className={styles.statCard}>
             <div className={styles.statHeader}>
-              <svg className={styles.statIcon} viewBox="0 0 24 24" fill="currentColor">
-                <path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-              </svg>
+              <TrendingUp className={styles.statIcon} size={24} />
               <div className={`${styles.statTrend} ${getTrendClass(statistics.responsesThisWeek, statistics.responsesLastWeek)}`}>
                 {getTrendIcon(statistics.responsesThisWeek, statistics.responsesLastWeek)} +{statistics.responsesThisWeek - statistics.responsesLastWeek}
               </div>
@@ -519,29 +508,45 @@ export default function AdminDashboard() {
             <div className={styles.statLabel}>Total Responses</div>
           </div>
 
-          {/* Quick Actions Card */}
+          {/* Analytics Card */}
           <div className={styles.statCard}>
             <div className={styles.statHeader}>
-              <svg className={styles.statIcon} viewBox="0 0 24 24" fill="currentColor">
-                <path d="M11.25 4.533A9.707 9.707 0 006 3a9.735 9.735 0 00-3.25.555.75.75 0 00-.5.707v14.25a.75.75 0 001 .708A8.237 8.237 0 016 18.75c1.995 0 3.823.707 5.25 1.886V4.533zM12.75 20.636A8.214 8.214 0 0118 18.75c.966 0 1.89.166 2.75.47a.75.75 0 001-.708V4.262a.75.75 0 00-.5-.707A9.735 9.735 0 0018 3a9.707 9.707 0 00-5.25 1.533v16.103z" />
-              </svg>
+              <Activity className={styles.statIcon} size={24} />
+              {statistics.totalSurveys > 0 && (
+                <div className={`${styles.statTrend} ${getTrendClass(statistics.responsesThisWeek, statistics.responsesLastWeek)}`}>
+                  {getTrendIcon(statistics.responsesThisWeek, statistics.responsesLastWeek)}
+                  {statistics.responsesThisWeek >= statistics.responsesLastWeek ? '+' : ''}
+                  {Math.abs(statistics.responsesThisWeek - statistics.responsesLastWeek)}
+                </div>
+              )}
             </div>
             <div className={styles.quickActionsInCard}>
-              <button
-                className={styles.quickActionBtn}
-                onClick={() => navigate("/admin/surveys/create")}
-              >
-                <svg viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M12 4.5v15m7.5-7.5h-15" />
-                </svg>
-                Create Survey
-              </button>
-              <button className={styles.quickActionBtn}>
-                <svg viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
-                </svg>
-                Export Data
-              </button>
+              <div className={styles.analyticsInfo}>
+                <div className={styles.analyticsSubtitle}>
+                  {statistics.totalSurveys > 0
+                    ? `Avg: ${Math.round(statistics.totalResponses / statistics.totalSurveys)} responses/survey`
+                    : 'No survey data available'
+                  }
+                </div>
+                {statistics.totalSurveys > 0 && (
+                  <div className={styles.analyticsMetrics}>
+                    <div className={styles.metricItem}>
+                      <TrendingUp size={14} />
+                      <span>{statistics.responsesThisWeek} this week</span>
+                    </div>
+                    <div className={styles.metricItem}>
+                      <CheckCircle size={14} />
+                      <span>
+                        {surveys.length > 0
+                          ? `${Math.round(surveys.reduce((sum, s) => sum + (s.completionRate || 0), 0) / surveys.length)}% avg completion`
+                          : '0% completion'
+                        }
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </div>
+
             </div>
           </div>
         </div>
@@ -551,13 +556,22 @@ export default function AdminDashboard() {
           {/* Survey Management - Full Width */}
           <div className={styles.surveyManagementSection}>
             <div className={styles.sectionHeader}>
-              <h2 className={styles.sectionTitle}>
-                <svg className={styles.sectionIcon} viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                </svg>
-                Survey Management
-              </h2>
-              <p className={styles.sectionSubtitle}>Manage all your surveys and track their performance</p>
+              <div className={styles.sectionHeaderContent}>
+                <div className={styles.sectionTitleGroup}>
+                  <h2 className={styles.sectionTitle}>
+                    <ClipboardList className={styles.sectionIcon} size={24} />
+                    Survey Management
+                  </h2>
+
+                </div>
+                <button
+                  className={styles.createSurveyButton}
+                  onClick={() => navigate("/admin/surveys/create")}
+                >
+                  <Plus size={18} />
+                  Create Survey
+                </button>
+              </div>
             </div>
             <div className={styles.sectionContent}>
               {/* Search and Filters */}
@@ -772,20 +786,18 @@ export default function AdminDashboard() {
           </div>
         </div>
 
-        {/* Charts Section */}
-        <div className={styles.contentGrid}>
+        {/* Analytics Grid - Response Trends and Recent Responses */}
+        <div className={styles.contentGrid} data-section="analytics">
           {/* Response Trends */}
           <div className={styles.section}>
             <div className={styles.sectionHeader}>
               <h2 className={styles.sectionTitle}>
-                <svg className={styles.sectionIcon} viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M2.25 18L9 11.25l4.306 4.307a11.95 11.95 0 015.814-5.519l2.74-1.22m0 0l-5.94-2.28m5.94 2.28l-2.28 5.941" />
-                </svg>
+                <TrendingUp className={styles.sectionIcon} size={24} />
                 Response Trends
               </h2>
               <p className={styles.sectionSubtitle}>Real-time response activity trends</p>
             </div>
-            <div className={styles.sectionContent}>
+            <div className={`${styles.sectionContent} ${styles.chartSectionContent}`}>
               {loading ? (
                 <div className={styles.chartLoadingContainer}>
                   <div className={styles.spinner}></div>
@@ -797,7 +809,7 @@ export default function AdminDashboard() {
                 </div>
               ) : (
                 <div className={styles.chartContainer}>
-                  <ResponsiveContainer width="100%" height={300}>
+                  <ResponsiveContainer width="100%" height={250}>
                     <AreaChart data={chartData}>
                       <defs>
                         <linearGradient id="colorResponses" x1="0" y1="0" x2="0" y2="1">
@@ -831,114 +843,63 @@ export default function AdminDashboard() {
             </div>
           </div>
 
-          {/* Survey Status Distribution */}
+          {/* Recent Responses */}
           <div className={styles.section}>
             <div className={styles.sectionHeader}>
               <h2 className={styles.sectionTitle}>
-                <svg className={styles.sectionIcon} viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M10.5 6a7.5 7.5 0 107.5 7.5h-7.5V6z" />
-                  <path d="M13.5 10.5H21A7.5 7.5 0 0013.5 3v7.5z" />
-                </svg>
-                Survey Status Distribution
+                <FileEdit className={styles.sectionIcon} size={24} />
+                Recent Responses
               </h2>
-              <p className={styles.sectionSubtitle}>Overview of survey statuses</p>
+              <p className={styles.sectionSubtitle}>Latest 5 survey responses submitted</p>
             </div>
             <div className={styles.sectionContent}>
-              <div className={styles.chartContainer}>
-                <ResponsiveContainer width="100%" height={300}>
-                  <PieChart>
-                    <Pie
-                      data={surveyStatusDistribution}
-                      cx="50%"
-                      cy="50%"
-                      outerRadius={80}
-                      dataKey="value"
-                      labelLine={false}
-                      label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                    >
-                      {surveyStatusDistribution.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
-                      ))}
-                    </Pie>
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: 'rgba(255,255,255,0.95)',
-                        border: 'none',
-                        borderRadius: '12px',
-                        boxShadow: '0 10px 15px rgba(0,0,0,0.1)'
-                      }}
-                    />
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Recent Responses */}
-        <div className={styles.section}>
-          <div className={styles.sectionHeader}>
-            <h2 className={styles.sectionTitle}>
-              <svg className={styles.sectionIcon} viewBox="0 0 24 24" fill="currentColor">
-                <path d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25zM6.75 12h.008v.008H6.75V12zm0 3h.008v.008H6.75V15zm0 3h.008v.008H6.75V18z" />
-              </svg>
-              Recent Responses
-            </h2>
-            <p className={styles.sectionSubtitle}>Latest 5 survey responses submitted</p>
-          </div>
-          <div className={styles.sectionContent}>
-            <div className={styles.responsesList}>
-              {recentResponses.length === 0 ? (
-                <div className={styles.emptyResponsesState}>
-                  <svg className={styles.emptyResponsesIcon} viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25zM6.75 12h.008v.008H6.75V12zm0 3h.008v.008H6.75V15zm0 3h.008v.008H6.75V18z" />
-                  </svg>
-                  <div className={styles.emptyResponsesTitle}>No responses yet</div>
-                  <div className={styles.emptyResponsesDescription}>Survey responses will appear here when submitted</div>
-                </div>
-              ) : (
-                recentResponses.map((response, index) => (
-                  <div key={response.responseId || response.id || index} className={styles.responseItem}>
-                    <div className={styles.responseIcon}>
-                      <svg viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25zM6.75 12h.008v.008H6.75V12zm0 3h.008v.008H6.75V15zm0 3h.008v.008H6.75V18z" />
-                      </svg>
-                    </div>
-                    <div className={styles.responseContent}>
-                      <div className={styles.responseHeader}>
-                        <div className={styles.responseSurvey}>{response.surveyName}</div>
-                        <div className={styles.responseTime} title={response.formattedDate}>
-                          {response.formattedTime}
-                        </div>
-                      </div>
-                      <div className={styles.responseDetails}>
-                        <div className={styles.responseUser}>
-                          <svg className={styles.userIcon} viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
-                          </svg>
-                          <span>{response.userName || 'Anonymous User'}</span>
-                        </div>
-                        <div className={styles.responseCompletion}>
-                          <div className={styles.completionText}>
-                            {response.completionPercentage}% completed
-                          </div>
-                          <div className={styles.completionBar}>
-                            <div
-                              className={styles.completionFill}
-                              style={{ width: `${response.completionPercentage}%` }}
-                            ></div>
-                          </div>
-                          {response.completionTimeSeconds && (
-                            <div className={styles.completionTime}>
-                              ⏱️ {formatCompletionTime(response.completionTimeSeconds)}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </div>
+              <div className={styles.responsesList}>
+                {recentResponses.length === 0 ? (
+                  <div className={styles.emptyResponsesState}>
+                    <AlertCircle className={styles.emptyResponsesIcon} size={48} />
+                    <div className={styles.emptyResponsesTitle}>No responses yet</div>
+                    <div className={styles.emptyResponsesDescription}>Survey responses will appear here when submitted</div>
                   </div>
-                ))
-              )}
+                ) : (
+                  recentResponses.map((response, index) => (
+                    <div key={response.responseId || response.id || index} className={styles.responseItem}>
+                      <div className={styles.responseIcon}>
+                        <FileEdit size={20} />
+                      </div>
+                      <div className={styles.responseContent}>
+                        <div className={styles.responseHeader}>
+                          <div className={styles.responseSurvey}>{response.surveyName}</div>
+                          <div className={styles.responseTime} title={response.formattedDate}>
+                            {response.formattedTime}
+                          </div>
+                        </div>
+                        <div className={styles.responseDetails}>
+                          <div className={styles.responseUser}>
+                            <User className={styles.userIcon} size={14} />
+                            <span>{response.userName || 'Anonymous User'}</span>
+                          </div>
+                          <div className={styles.responseCompletion}>
+                            <div className={styles.completionText}>
+                              {response.completionPercentage}% completed
+                            </div>
+                            <div className={styles.completionBar}>
+                              <div
+                                className={styles.completionFill}
+                                style={{ width: `${response.completionPercentage}%` }}
+                              ></div>
+                            </div>
+                            {response.completionTimeSeconds && (
+                              <div className={styles.completionTime}>
+                                ⏱️ {formatCompletionTime(response.completionTimeSeconds)}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
             </div>
           </div>
         </div>
