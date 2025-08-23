@@ -6,7 +6,8 @@ import ProtectedRoute from './components/ProtectedRoute';
 // Import components
 import Login from './pages/Login/Login';
 import SignUp from './pages/SignUp/SignUp';
-import ForgotPassword from './pages/ForgotPassword';
+import ForgotPassword from './pages/ForgotPassword/ForgotPassword';
+import ResetPassword from './pages/ResetPassword/ResetPassword';
 import NotFound from './pages/NotFound';
 import LandingPage from './pages/LandingPage/LandingPage';
 import AdminDashboard from './pages/AdminDashboard/AdminDashboard'
@@ -88,6 +89,8 @@ const AppRoutes = () => {
       <Route path="/login" element={<LoginRoute />} />
       <Route path="/signup" element={<SignUpRoute />} />
       <Route path="/forgot" element={<ForgotPassword />} />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
+      <Route path="/reset-password/:token" element={<ResetPassword />} />
 
       {/* Survey Form Route - Public/Anonymous access */}
       <Route path="/survey/:surveyId" element={<SurveyFormPage />} />

@@ -348,6 +348,44 @@ export class ResponseService {
 }
 
 /**
+ * Authentication service layer - encapsulates auth-related API operations
+ */
+export class AuthService {
+  static baseUrl = "/auth";
+
+  /**
+   * Request password reset
+   */
+  static async requestPasswordReset(email) {
+    const response = await apiClient.post(`${this.baseUrl}/forgot-password`, {
+      email,
+    });
+    return apiClient.extractData(response);
+  }
+
+  /**
+   * Reset password with token
+   */
+  static async resetPassword(token, newPassword) {
+    const response = await apiClient.post(`${this.baseUrl}/reset-password`, {
+      token,
+      newPassword,
+    });
+    return apiClient.extractData(response);
+  }
+
+  /**
+   * Validate reset token
+   */
+  static async validateResetToken(token) {
+    const response = await apiClient.get(
+      `${this.baseUrl}/reset-password/validate/${token}`
+    );
+    return apiClient.extractData(response);
+  }
+}
+
+/**
  * User service layer - encapsulates user-related API operations
  */
 export class UserService {
