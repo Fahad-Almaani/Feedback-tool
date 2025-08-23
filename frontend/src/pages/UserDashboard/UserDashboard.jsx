@@ -226,7 +226,7 @@ const UserDashboard = () => {
                                             <p className={styles.surveyDescription}>{survey.description}</p>
                                             <div className={styles.surveyMeta}>
                                                 <span>✅ Completed: {formatDate(survey.completedDate)}</span>
-                                                <span>📊 {survey.responses || 0} responses</span>
+                                              
                                             </div>
                                             <div className={styles.surveyActions}>
                                                 <button
