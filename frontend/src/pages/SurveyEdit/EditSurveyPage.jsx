@@ -432,6 +432,8 @@ export default function EditSurveyPage() {
         }
 
         setIsSubmitting(true);
+        setErrors({}); // Clear previous errors
+
         try {
             const surveyData = {
                 title: survey.title,
@@ -459,11 +461,7 @@ export default function EditSurveyPage() {
             if (errorMessage.includes("Cannot modify questions") ||
                 errorMessage.includes("already has responses")) {
                 setErrors({
-                    submit: "⚠️ This survey already has responses. You can only update the title, description, and status. To make structural changes, create a new survey instead."
-                });
-            } else if (errorMessage.includes("Cannot reactivate")) {
-                setErrors({
-                    submit: "⚠️ Cannot reactivate a survey that already has responses. Create a new survey instead."
+                    submit: "⚠️ This survey already has responses. You can only update the title, description, end date, and publish/unpublish status. To make structural changes, create a new survey instead."
                 });
             } else {
                 setErrors({ submit: errorMessage });
@@ -614,7 +612,7 @@ export default function EditSurveyPage() {
                                 </svg>
                                 <div className={styles.warningText}>
                                     <h3>Survey Has Responses</h3>
-                                    <p>This survey already has responses from users. You can only modify the title, description, and status. To make structural changes to questions, create a new survey instead.</p>
+                                    <p>This survey already has responses from users. You can edit the title, description, end date, and publish/unpublish status, but cannot modify questions. To make structural changes to questions, create a new survey instead.</p>
                                 </div>
                             </div>
                         </div>
@@ -831,7 +829,7 @@ export default function EditSurveyPage() {
                                     <button
                                         onClick={() => handleSubmit("DRAFT")}
                                         className={styles.saveDraftButton}
-                                        disabled={isSubmitting || (!survey.title.trim() && questions.length === 0)}
+                                        disabled={isSubmitting || !survey.title.trim()}
                                     >
                                         {isSubmitting ? (
                                             <>
@@ -851,7 +849,7 @@ export default function EditSurveyPage() {
                                     <button
                                         onClick={() => handleSubmit("ACTIVE")}
                                         className={styles.publishButton}
-                                        disabled={isSubmitting || !survey.title.trim() || questions.length === 0}
+                                        disabled={isSubmitting || !survey.title.trim() || (!hasResponses && questions.length === 0)}
                                     >
                                         {isSubmitting ? (
                                             <>
@@ -863,8 +861,8 @@ export default function EditSurveyPage() {
                                                 <svg className={styles.publishIcon} viewBox="0 0 24 24" fill="currentColor">
                                                     <path d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
                                                 </svg>
-                                                Publish Survey
-                                                {survey.title.trim() && questions.length > 0 && (
+                                                {survey.status === "ACTIVE" ? "Update & Keep Published" : "Publish Survey"}
+                                                {survey.title.trim() && (hasResponses || questions.length > 0) && (
                                                     <span className={styles.readyBadge}>Ready!</span>
                                                 )}
                                             </>
