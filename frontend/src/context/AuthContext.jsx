@@ -146,9 +146,17 @@ export const AuthProvider = ({ children }) => {
         }
     };
 
-    const logout = () => {
-        apiClient.auth.removeToken();
-        setUser(null);
+    const logout = async () => {
+        try {
+            // Call backend logout endpoint to blacklist the token
+            await apiClient.auth.logoutWithBackend();
+        } catch (error) {
+            // The logoutWithBackend method already handles errors gracefully
+            console.error('Logout error:', error);
+        } finally {
+            // Ensure user state is cleared
+            setUser(null);
+        }
     };
 
     const isAuthenticated = () => {

@@ -47,6 +47,22 @@ const authUtils = {
       window.location.href = "/login";
     }
   },
+
+  // Method for manual logout that calls backend
+  async logoutWithBackend() {
+    try {
+      const token = this.getToken();
+      if (token) {
+        // Call backend logout - note: this might fail if token is invalid
+        await axiosInstance.post("/auth/logout");
+      }
+    } catch (error) {
+      // Don't throw error for logout - we want to clear local storage anyway
+      console.warn("Backend logout failed:", error.message);
+    } finally {
+      this.logout(); // Always clear local storage and navigate
+    }
+  },
 };
 
 // Create axios instance with default configuration

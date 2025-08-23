@@ -232,8 +232,13 @@ export default function AdminDashboard() {
 
 
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    try {
+      await logout();
+    } catch (error) {
+      console.error('Logout error:', error);
+      // Logout should always succeed from the user's perspective
+    }
   };
 
   const handleDeleteSurvey = async (surveyId, surveyTitle) => {

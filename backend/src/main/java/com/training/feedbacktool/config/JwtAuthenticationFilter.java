@@ -1,6 +1,7 @@
 package com.training.feedbacktool.config;
 
 import com.training.feedbacktool.util.JwtUtil;
+import com.training.feedbacktool.service.TokenBlacklistService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -19,9 +20,11 @@ import java.util.List;
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtUtil jwtUtil;
+    private final TokenBlacklistService tokenBlacklistService;
 
-    public JwtAuthenticationFilter(JwtUtil jwtUtil) {
+    public JwtAuthenticationFilter(JwtUtil jwtUtil, TokenBlacklistService tokenBlacklistService) {
         this.jwtUtil = jwtUtil;
+        this.tokenBlacklistService = tokenBlacklistService;
     }
 
     @Override
@@ -55,8 +58,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         // context
         if (email != null && SecurityContextHolder.getContext().getAuthentication() == null) {
             try {
-                // Validate the token
-                if (!jwtUtil.isTokenExpired(jwt)) {
+                // Check if token is blacklisted (for proper logout functionality)
+                if (tokenBlacklistService.isTokenBlacklisted(jwt)) {
+                    if (!isPublicEndpoint) {
+                        logger.warn("Token is blacklisted");
+                    }
+                } else if (!jwtUtil.isTokenExpired(jwt)) {
                     // Extract role from token
                     String role = jwtUtil.extractRole(jwt);
                     // Note: userId is available via jwtUtil.extractUserId(jwt) if needed
