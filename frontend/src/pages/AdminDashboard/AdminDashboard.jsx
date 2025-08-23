@@ -60,7 +60,7 @@ export default function AdminDashboard() {
   const [filterStatus, setFilterStatus] = useState("ALL");
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage] = useState(5);
+  const [itemsPerPage] = useState(6);
   const [loading, setLoading] = useState(true);
   const [isVisible, setIsVisible] = useState(false);
   const [error, setError] = useState(null);
@@ -533,7 +533,7 @@ export default function AdminDashboard() {
                     <ClipboardList className={styles.sectionIcon} size={24} />
                     Survey Management
                   </h2>
-                  <p className={styles.sectionSubtitle}>Manage all your surveys and track their performance</p>
+
                 </div>
                 <button
                   className={styles.createSurveyButton}
