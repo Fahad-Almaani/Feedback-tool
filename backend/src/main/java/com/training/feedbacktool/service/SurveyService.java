@@ -441,11 +441,11 @@ public class SurveyService {
                 respondentId = "user_" + answer.getUser().getId();
                 uniqueUsers.add(answer.getUser());
             } else {
-                // For anonymous users, we need to group them somehow
-                // Since we can't identify them, we'll treat each answer as from a different
-                // anonymous user
-                // In a real scenario, you might want to group by session or IP
-                respondentId = "anonymous_" + answer.getId();
+                // For anonymous users, group by creation time proximity (same minute)
+                // This assumes answers from the same anonymous user will be submitted within
+                // the same minute
+                respondentId = "anonymous_" + answer.getCreatedAt().toString().substring(0, 16); // Group by minute
+                                                                                                 // (YYYY-MM-DDTHH:MM)
             }
 
             if (!answersByRespondent.containsKey(respondentId)) {
@@ -519,7 +519,8 @@ public class SurveyService {
             List<SurveyResultsResponse.AnswerSummaryDTO> answerSummaries = questionAnswers.stream()
                     .map(answer -> {
                         User user = answer.getUser();
-                        String respondentId = user != null ? "user_" + user.getId() : "anonymous_" + answer.getId();
+                        String respondentId = user != null ? "user_" + user.getId()
+                                : "anonymous_" + answer.getCreatedAt().toString().substring(0, 16);
 
                         SurveyResultsResponse.RespondentInfoDTO respondentInfo = new SurveyResultsResponse.RespondentInfoDTO(
                                 respondentId,

@@ -296,7 +296,7 @@ export default function SurveyViewPage() {
             questionText: question.questionText.length > 30
                 ? question.questionText.substring(0, 30) + "..."
                 : question.questionText,
-            completion: Math.round((question.totalAnswers / surveyResults.totalResponses) * 100),
+            completion: Math.min(100, Math.round((question.totalAnswers / surveyResults.totalResponses) * 100)),
             total: question.totalAnswers,
             type: question.questionType
         }));
@@ -777,7 +777,7 @@ export default function SurveyViewPage() {
                                 <div className={styles.metricContent}>
                                     <div className={styles.metricValue}>
                                         {surveyResults?.questionResults && surveyResults.questionResults.length > 0
-                                            ? Math.round(surveyResults.questionResults.reduce((sum, question) => sum + question.completionRate, 0) / surveyResults.questionResults.length)
+                                            ? Math.min(100, Math.round(surveyResults.questionResults.reduce((sum, question) => sum + Math.min(100, question.completionRate || 0), 0) / surveyResults.questionResults.length))
                                             : 0}%
                                     </div>
                                     <div className={styles.metricLabel}>Completion Rate</div>
