@@ -21,6 +21,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.lang.reflect.Method;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -99,11 +100,9 @@ public class SurveyService {
                     // Get question count
                     Long questionCount = repo.countQuestionsBySurveyId(survey.getId());
 
-                    // Get response counts (authenticated + anonymous)
-                    Long authenticatedResponses = repo.countAuthenticatedResponsesBySurveyId(survey.getId());
-                    Long anonymousResponses = repo.countAnonymousResponsesBySurveyId(survey.getId());
-                    int totalResponses = (authenticatedResponses != null ? authenticatedResponses.intValue() : 0) +
-                            (anonymousResponses != null ? anonymousResponses.intValue() : 0);
+                    // Get total responses (each Response represents a complete survey submission)
+                    List<Response> responses = responsesRepository.findBySurveyId(survey.getId());
+                    int totalResponses = responses.size();
 
                     // Calculate completion rate (mock calculation - in real scenario you'd need
                     // more complex logic)
@@ -431,46 +430,57 @@ public class SurveyService {
         // Get all answers for this survey
         List<Answer> allAnswers = answersRepository.findBySurveyId(surveyId);
 
-        // Group answers by user (including anonymous)
+        // Get all responses for this survey (each Response represents a complete survey
+        // submission)
+        List<Response> allResponses = responsesRepository.findBySurveyId(surveyId);
+
+        // Group answers by response (each Response is a separate submission)
         Map<String, List<Answer>> answersByRespondent = new HashMap<>();
         Set<User> uniqueUsers = new HashSet<>();
 
-        for (Answer answer : allAnswers) {
-            String respondentId;
-            if (answer.getUser() != null) {
-                respondentId = "user_" + answer.getUser().getId();
-                uniqueUsers.add(answer.getUser());
-            } else {
-                // For anonymous users, we need to group them somehow
-                // Since we can't identify them, we'll treat each answer as from a different
-                // anonymous user
-                // In a real scenario, you might want to group by session or IP
-                respondentId = "anonymous_" + answer.getId();
-            }
+        for (Response response : allResponses) {
+            String respondentId = "response_" + response.getId();
 
-            if (!answersByRespondent.containsKey(respondentId)) {
-                answersByRespondent.put(respondentId, new ArrayList<>());
+            // Get all answers for this specific response
+            List<Answer> responseAnswers = allAnswers.stream()
+                    .filter(answer -> {
+                        // Match answers to response by user and time proximity (within 5 minutes)
+                        if (response.getUser() != null && answer.getUser() != null) {
+                            // For authenticated users, match by user and time
+                            return response.getUser().getId().equals(answer.getUser().getId()) &&
+                                    Math.abs(Duration.between(response.getCreatedAt(), answer.getCreatedAt())
+                                            .toMinutes()) <= 5;
+                        } else if (response.getUser() == null && answer.getUser() == null) {
+                            // For anonymous users, match by time proximity (within 5 minutes)
+                            return Math.abs(
+                                    Duration.between(response.getCreatedAt(), answer.getCreatedAt()).toMinutes()) <= 5;
+                        }
+                        return false;
+                    })
+                    .collect(Collectors.toList());
+
+            if (!responseAnswers.isEmpty()) {
+                answersByRespondent.put(respondentId, responseAnswers);
+                if (response.getUser() != null) {
+                    uniqueUsers.add(response.getUser());
+                }
             }
-            answersByRespondent.get(respondentId).add(answer);
         }
 
-        // Create respondent DTOs
+        // Create respondent DTOs based on Response entities
         List<SurveyResultsResponse.RespondentDTO> respondents = new ArrayList<>();
 
-        for (Map.Entry<String, List<Answer>> entry : answersByRespondent.entrySet()) {
-            String respondentId = entry.getKey();
-            List<Answer> userAnswers = entry.getValue();
+        for (Response response : allResponses) {
+            String respondentId = "response_" + response.getId();
+            List<Answer> responseAnswers = answersByRespondent.getOrDefault(respondentId, new ArrayList<>());
 
-            // Get user info from first answer
-            Answer firstAnswer = userAnswers.get(0);
-            User user = firstAnswer.getUser();
-
+            User user = response.getUser();
             boolean isAnonymous = user == null;
             String name = isAnonymous ? "Anonymous User" : user.getName();
             String email = isAnonymous ? null : user.getEmail();
 
             // Create response details for this respondent
-            List<SurveyResultsResponse.ResponseDetailDTO> responses = userAnswers.stream()
+            List<SurveyResultsResponse.ResponseDetailDTO> responses = responseAnswers.stream()
                     .map(answer -> new SurveyResultsResponse.ResponseDetailDTO(
                             answer.getQuestion().getId(),
                             answer.getQuestion().getQuestionText(),
@@ -480,19 +490,13 @@ public class SurveyService {
                     .sorted((r1, r2) -> r1.questionId().compareTo(r2.questionId()))
                     .collect(Collectors.toList());
 
-            // Find earliest submission time
-            Instant firstSubmission = userAnswers.stream()
-                    .map(Answer::getCreatedAt)
-                    .min(Instant::compareTo)
-                    .orElse(Instant.now());
-
             respondents.add(new SurveyResultsResponse.RespondentDTO(
                     respondentId,
                     name,
                     email,
                     isAnonymous,
-                    userAnswers.size(),
-                    firstSubmission,
+                    responseAnswers.size(),
+                    response.getCreatedAt(),
                     responses));
         }
 
@@ -501,7 +505,7 @@ public class SurveyService {
 
         // Create question results with advanced analytics
         List<SurveyResultsResponse.QuestionResultDTO> questionResults = new ArrayList<>();
-        int totalRespondents = respondents.size();
+        int totalRespondents = allResponses.size(); // Count based on Response entities, not grouped respondents
 
         for (Question question : survey.getQuestions()) {
             List<Answer> questionAnswers = allAnswers.stream()
@@ -519,7 +523,8 @@ public class SurveyService {
             List<SurveyResultsResponse.AnswerSummaryDTO> answerSummaries = questionAnswers.stream()
                     .map(answer -> {
                         User user = answer.getUser();
-                        String respondentId = user != null ? "user_" + user.getId() : "anonymous_" + answer.getId();
+                        String respondentId = user != null ? "user_" + user.getId()
+                                : "anonymous_" + answer.getCreatedAt().toString().substring(0, 16);
 
                         SurveyResultsResponse.RespondentInfoDTO respondentInfo = new SurveyResultsResponse.RespondentInfoDTO(
                                 respondentId,
@@ -561,7 +566,7 @@ public class SurveyService {
                 survey.getTitle(),
                 survey.getDescription(),
                 survey.getCreatedAt(),
-                respondents.size(),
+                allResponses.size(), // Count total Response entities (survey submissions)
                 survey.getQuestions().size(),
                 questionResults,
                 respondents);
