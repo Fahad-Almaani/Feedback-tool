@@ -88,12 +88,8 @@ export default function LandingPage() {
         "AI-assisted question drafting and phrasing",
         "Ready-made, customizable templates",
         "Real-time response tracking and analytics",
-        "Custom branding and white-label options",
-        "Advanced question types and logic",
         "Automated report generation",
-        "Multi-language support",
-        "GDPR compliant data handling",
-        "24/7 expert customer support"
+
     ];
 
     return (
