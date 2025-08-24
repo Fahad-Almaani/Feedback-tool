@@ -138,27 +138,27 @@ public class UserService {
                 List<Response> userResponses = responsesRepository.findByUserId(userId);
                 Double averageCompletionTimeMinutes = null;
                 Integer totalTimeSpentMinutes = null;
-                
+
                 if (!userResponses.isEmpty()) {
-                    // Calculate average completion time
-                    List<Integer> completionTimes = userResponses.stream()
-                            .filter(response -> response.getCompletionTimeSeconds() != null)
-                            .map(Response::getCompletionTimeSeconds)
-                            .collect(Collectors.toList());
-                    
-                    if (!completionTimes.isEmpty()) {
-                        double avgSeconds = completionTimes.stream()
-                                .mapToInt(Integer::intValue)
-                                .average()
-                                .orElse(0.0);
-                        averageCompletionTimeMinutes = Math.round(avgSeconds / 60.0 * 100.0) / 100.0;
-                        
-                        // Calculate total time spent
-                        int totalSeconds = completionTimes.stream()
-                                .mapToInt(Integer::intValue)
-                                .sum();
-                        totalTimeSpentMinutes = totalSeconds / 60;
-                    }
+                        // Calculate average completion time
+                        List<Integer> completionTimes = userResponses.stream()
+                                        .filter(response -> response.getCompletionTimeSeconds() != null)
+                                        .map(Response::getCompletionTimeSeconds)
+                                        .collect(Collectors.toList());
+
+                        if (!completionTimes.isEmpty()) {
+                                double avgSeconds = completionTimes.stream()
+                                                .mapToInt(Integer::intValue)
+                                                .average()
+                                                .orElse(0.0);
+                                averageCompletionTimeMinutes = Math.round(avgSeconds / 60.0 * 100.0) / 100.0;
+
+                                // Calculate total time spent
+                                int totalSeconds = completionTimes.stream()
+                                                .mapToInt(Integer::intValue)
+                                                .sum();
+                                totalTimeSpentMinutes = totalSeconds / 60;
+                        }
                 }
 
                 UserDashboardStats stats = new UserDashboardStats(
