@@ -28,6 +28,9 @@ public class EmailService {
     @Value("${app.email.enabled:true}")
     private boolean emailEnabled;
 
+    @Value("${app.frontend.url:http://localhost:5173}")
+    private String frontendUrl;
+
     public EmailService(JavaMailSender mailSender) {
         this.mailSender = mailSender;
     }
@@ -97,9 +100,8 @@ public class EmailService {
     }
 
     private String buildResetUrl(String token) {
-        // In production, this should be configurable via environment variables
-        String baseUrl = "http://localhost:5173"; // Frontend URL
-        return baseUrl + "/reset-password/" + token;
+        // Frontend URL is now configurable via app.frontend.url property
+        return frontendUrl + "/reset-password/" + token;
     }
 
     private String buildPasswordResetEmailBody(String userFirstName, String resetUrl) {
