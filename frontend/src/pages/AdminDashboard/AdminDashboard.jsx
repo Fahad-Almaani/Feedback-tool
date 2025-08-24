@@ -735,7 +735,7 @@ export default function AdminDashboard() {
                             </div>
                           </div>
 
-                          <div className={styles.surveyProgress}>
+                          {/* <div className={styles.surveyProgress}>
                             <div className={styles.progressInfo}>
                               <span>Completion Rate: {survey.completionRate}%</span>
                               <span className={styles.progressPercentage}>{survey.completionRate}%</span>
@@ -746,7 +746,7 @@ export default function AdminDashboard() {
                                 style={{ width: `${survey.completionRate}%` }}
                               ></div>
                             </div>
-                          </div>
+                          </div> */}
                         </div>
                       ))}
                     </div>

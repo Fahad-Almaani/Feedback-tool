@@ -1363,9 +1363,6 @@ function QuestionEditor({
                                 <span className={styles.requiredBadge}>*</span>
                             </span>
                         </label>
-                        <div className={styles.helpText}>
-                            Required questions must be answered before submitting the survey
-                        </div>
                     </div>
                 </div>
             )}
