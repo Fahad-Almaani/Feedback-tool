@@ -11,7 +11,11 @@ const UserDashboard = () => {
     const [completedSurveys, setCompletedSurveys] = useState([]);
     const [dashboardStats, setDashboardStats] = useState({
         completedSurveysCount: 0,
-        totalResponses: 0
+        pendingSurveysCount: 0,
+        participationRate: 0,
+        averageCompletionTimeMinutes: null,
+        totalTimeSpentMinutes: null,
+        lastActivityDescription: 'No activity yet'
     });
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -31,7 +35,11 @@ const UserDashboard = () => {
                 // Update state with fetched data
                 setDashboardStats({
                     completedSurveysCount: dashboardData.stats.completedSurveysCount,
-                    totalResponses: dashboardData.stats.totalResponses
+                    pendingSurveysCount: dashboardData.stats.pendingSurveysCount,
+                    participationRate: dashboardData.stats.participationRate,
+                    averageCompletionTimeMinutes: dashboardData.stats.averageCompletionTimeMinutes,
+                    totalTimeSpentMinutes: dashboardData.stats.totalTimeSpentMinutes,
+                    lastActivityDescription: dashboardData.stats.lastActivityDescription
                 });
                 setCompletedSurveys(dashboardData.completedSurveys);
 
@@ -187,10 +195,27 @@ const UserDashboard = () => {
                     </div>
                     <div className={styles.statCard}>
                         <svg className={styles.statIcon} viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
                         </svg>
-                        <div className={styles.statValue}>{dashboardStats.totalResponses}</div>
-                        <div className={styles.statLabel}>Total Responses</div>
+                        <div className={styles.statValue}>
+                            {dashboardStats.averageCompletionTimeMinutes 
+                                ? `${dashboardStats.averageCompletionTimeMinutes}m` 
+                                : 'N/A'
+                            }
+                        </div>
+                        <div className={styles.statLabel}>Avg. Completion Time</div>
+                    </div>
+                    <div className={styles.statCard}>
+                        <svg className={styles.statIcon} viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zM12.5 7H11v6l5.25 3.15.75-1.23-4.5-2.67z" />
+                        </svg>
+                        <div className={styles.statValue}>
+                            {dashboardStats.totalTimeSpentMinutes !== null 
+                                ? `${dashboardStats.totalTimeSpentMinutes}m` 
+                                : 'N/A'
+                            }
+                        </div>
+                        <div className={styles.statLabel}>Total Time Spent</div>
                     </div>
                 </div>
 
