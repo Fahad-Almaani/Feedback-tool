@@ -2473,3 +2473,84 @@
 .typeIcon {
   color: var(--primary-color);
 }
+
+/* Checkbox Styles */
+.checkboxLabel {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  cursor: pointer;
+  padding: var(--space-sm);
+  border-radius: var(--radius-md);
+  transition: all var(--transition-normal);
+  background: rgba(255, 255, 255, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.checkboxLabel:hover {
+  background: rgba(255, 255, 255, 0.4);
+  border-color: rgba(102, 126, 234, 0.3);
+}
+
+.checkbox {
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.8);
+  cursor: pointer;
+  position: relative;
+  transition: all var(--transition-normal);
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  margin: 0;
+  flex-shrink: 0;
+}
+
+.checkbox:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
+}
+
+.checkbox:checked {
+  background: var(--primary-color);
+  border-color: var(--primary-color);
+}
+
+.checkbox:checked::after {
+  content: "✓";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: white;
+  font-size: 12px;
+  font-weight: bold;
+}
+
+.checkboxText {
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+.requiredBadge {
+  font-size: var(--font-size-xs);
+  color: var(--error-color);
+  font-weight: 600;
+  background: rgba(255, 107, 107, 0.1);
+  padding: 0.125rem 0.25rem;
+  border-radius: var(--radius-xs);
+  border: 1px solid rgba(255, 107, 107, 0.3);
+}
+
+.helpText {
+  font-size: var(--font-size-xs);
+  color: var(--text-light);
+  margin-top: var(--space-xs);
+  line-height: 1.4;
+}
