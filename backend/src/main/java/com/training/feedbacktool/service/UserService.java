@@ -134,17 +134,37 @@ public class UserService {
                                 .collect(Collectors.toList());
 
                 // Calculate stats
-                int totalSurveys = completedSurveys.size() + pendingSurveys.size();
-                int completionRate = totalSurveys > 0 ? (completedSurveys.size() * 100) / totalSurveys : 0;
-                int totalResponses = completedSurveys.stream()
-                                .mapToInt(survey -> survey.responses() != null ? survey.responses() : 0)
-                                .sum();
+                // Calculate average completion time from responses
+                List<Response> userResponses = responsesRepository.findByUserId(userId);
+                Double averageCompletionTimeMinutes = null;
+                Integer totalTimeSpentMinutes = null;
+
+                if (!userResponses.isEmpty()) {
+                        // Calculate average completion time
+                        List<Integer> completionTimes = userResponses.stream()
+                                        .filter(response -> response.getCompletionTimeSeconds() != null)
+                                        .map(Response::getCompletionTimeSeconds)
+                                        .collect(Collectors.toList());
+
+                        if (!completionTimes.isEmpty()) {
+                                double avgSeconds = completionTimes.stream()
+                                                .mapToInt(Integer::intValue)
+                                                .average()
+                                                .orElse(0.0);
+                                averageCompletionTimeMinutes = Math.round(avgSeconds / 60.0 * 100.0) / 100.0;
+
+                                // Calculate total time spent
+                                int totalSeconds = completionTimes.stream()
+                                                .mapToInt(Integer::intValue)
+                                                .sum();
+                                totalTimeSpentMinutes = totalSeconds / 60;
+                        }
+                }
 
                 UserDashboardStats stats = new UserDashboardStats(
                                 completedSurveys.size(),
-                                pendingSurveys.size(),
-                                totalResponses,
-                                completionRate);
+                                averageCompletionTimeMinutes,
+                                totalTimeSpentMinutes);
 
                 return new UserDashboardResponse(stats, pendingSurveys, completedSurveys);
         }

@@ -14,6 +14,10 @@ public interface ResponsesRepository extends JpaRepository<Response, Long> {
     @Query("SELECT r FROM Response r WHERE r.survey.id = :surveyId")
     List<Response> findBySurveyId(@Param("surveyId") Long surveyId);
 
+    // Find responses by user ID
+    @Query("SELECT r FROM Response r WHERE r.user.id = :userId")
+    List<Response> findByUserId(@Param("userId") Long userId);
+
     // Delete responses by survey ID
     @Modifying
     @Query("DELETE FROM Response r WHERE r.survey.id = :surveyId")
