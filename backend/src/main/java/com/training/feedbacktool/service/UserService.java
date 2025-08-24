@@ -173,7 +173,8 @@ public class UserService {
                                                 answer.getQuestion().getId(),
                                                 answer.getQuestion().getQuestionText(),
                                                 answer.getQuestion().getType(),
-                                                answer.getAnswerText()))
+                                                answer.getAnswerText(),
+                                                answer.getRatingValue()))
                                 .collect(Collectors.toList());
 
                 // Use response metadata if available, otherwise use answer data

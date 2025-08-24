@@ -103,7 +103,21 @@ const UserResponseView = () => {
 
         switch (question.type) {
             case 'RATING':
-                const rating = parseInt(answer.answerText);
+                // Prefer ratingValue field if available, fallback to parsing answerText
+                let rating;
+                if (answer.ratingValue !== null && answer.ratingValue !== undefined) {
+                    rating = answer.ratingValue;
+                } else if (answer.answerText && answer.answerText.startsWith('RATING:')) {
+                    rating = parseInt(answer.answerText.split(':')[1]);
+                } else {
+                    rating = parseInt(answer.answerText);
+                }
+
+                // Ensure rating is a valid number
+                if (isNaN(rating) || rating < 0 || rating > 5) {
+                    return <span className={styles.noAnswer}>Invalid rating value</span>;
+                }
+
                 return (
                     <div className={styles.ratingDisplay}>
                         {[...Array(5)].map((_, i) => (
