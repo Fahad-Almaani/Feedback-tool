@@ -28,6 +28,9 @@ public class EmailService {
     @Value("${app.email.enabled:true}")
     private boolean emailEnabled;
 
+    @Value("${app.frontend.url:http://localhost:5173}")
+    private String frontendUrl;
+
     public EmailService(JavaMailSender mailSender) {
         this.mailSender = mailSender;
     }
@@ -69,6 +72,54 @@ public class EmailService {
         message.setText(body);
 
         mailSender.send(message);
+    }
+
+    @Async
+    public void sendPasswordResetEmail(String to, String resetToken, String userFirstName) {
+        if (!emailEnabled) {
+            // For development/testing - just log the token
+            logger.info("=== PASSWORD RESET EMAIL ===");
+            logger.info("To: {}", to);
+            logger.info("Reset Token: {}", resetToken);
+            logger.info("Reset URL: http://localhost:5173/reset-password/{}", resetToken);
+            logger.info("============================");
+            return;
+        }
+
+        try {
+            String subject = "Reset Your Password - Feedback Tool";
+            String resetUrl = buildResetUrl(resetToken);
+            String emailBody = buildPasswordResetEmailBody(userFirstName, resetUrl);
+
+            sendEmail(to, subject, emailBody);
+            logger.info("Password reset email sent to: {}", to);
+        } catch (Exception e) {
+            logger.error("Failed to send password reset email to: {}", to, e);
+            throw new RuntimeException("Failed to send password reset email", e);
+        }
+    }
+
+    private String buildResetUrl(String token) {
+        // Frontend URL is now configurable via app.frontend.url property
+        return frontendUrl + "/reset-password/" + token;
+    }
+
+    private String buildPasswordResetEmailBody(String userFirstName, String resetUrl) {
+        return String.format("""
+                Hi %s,
+
+                We received a request to reset your password for your Feedback Tool account.
+
+                To reset your password, please click the link below:
+                %s
+
+                This link will expire in 1 hour for security reasons.
+
+                If you didn't request this password reset, please ignore this email. Your account remains secure.
+
+                Best regards,
+                The Feedback Tool Team
+                """, userFirstName, resetUrl);
     }
 
     private String buildNotificationEmailBody(Survey survey, String respondentInfo) {
